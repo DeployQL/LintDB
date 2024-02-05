@@ -1,0 +1,2 @@
+# LintDB
+Late Interaction DB
