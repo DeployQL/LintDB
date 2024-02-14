@@ -11,14 +11,23 @@ cmake_minimum_required(VERSION 3.25)
 include(CMakeFindDependencyMacro)
 
 # Setup vcpkg script with CMake (note: should be placed before project() call)
-set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake CACHE STRING "Vcpkg toolchain file")
+set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake CACHE STRING "Vcpkg toolchain file")
 
 project(lintdb)
 
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -O3")
-
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -fopenmp -pthread")
 set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
+
+set(AF_COMPUTE_LIBRARY "FFTW/LAPACK/BLAS")
+set(USE_CPU_MKL:BOOL OFF)
+set(USE_OPENCL_MKL OFF)
+set(AF_BUILD_CPU OFF)
+set(AF_BUILD_CUDA OFF)
+set(AF_BUILD_OPENCL OFF)
+set(AF_BUILD_ONEAPI OFF)
+set(AF_BUILD_EXAMPLES OFF)
+set(AF_BUILD_TESTS OFF)
 
 add_subdirectory(lintdb)
 # add_subdirectory(test)
@@ -29,10 +38,10 @@ if(OpenMP_CXX_FOUND)
 endif()
 
 find_package(OpenBLAS CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE OpenBLAS::OpenBLAS)
+target_link_libraries(lintdb PUBLIC OpenBLAS::OpenBLAS)
 
 find_package(LAPACK CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE LAPACK::LAPACK)
+target_link_libraries(lintdb PUBLIC LAPACK::LAPACK)
   
 # this is heuristically generated, and may not be correct
 find_package(faiss CONFIG REQUIRED)
@@ -44,6 +53,12 @@ target_link_libraries(lintdb PRIVATE RocksDB::rocksdb)
 
 find_package(flatbuffers CONFIG REQUIRED)
 target_link_libraries(lintdb PRIVATE flatbuffers::flatbuffers)
+
+find_package(ArrayFire CONFIG REQUIRED)
+target_link_libraries(lintdb PRIVATE ArrayFire::af ArrayFire::afcpu)
+
+find_package(glog CONFIG REQUIRED)
+target_link_libraries(lintdb PRIVATE glog::glog)
 
 include(CTest)
 add_subdirectory(tests)

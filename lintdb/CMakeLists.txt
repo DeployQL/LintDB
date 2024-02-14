@@ -2,9 +2,10 @@
 set(
     LINT_DB_SRC
     index.cpp
-    ResidualQuantizer.cpp
-    example.cpp
-    invlists/InvertedLists.cpp
+    plaid.cpp
+    invlists/RocksdbList.cpp
+    invlists/util.cpp
+    invlists/EncodedDocument.cpp
     schema/util.cpp
 )
 # file(GLOB LINT_DB_SRC "*.cpp" "invlist/*.cpp" "schema/*.cpp")
@@ -16,12 +17,17 @@ set(
     api.h
     assert.h
     exception.h
-    quantizer.h
-    ResidualQuantizer.h
+    plaid.h
+    constants.h
+    cf.h
     EmbeddingBlock.h
-    example.h
-    invlists/InvertedLists.h
-    schema/schema_generated.h
+    invlists/InvertedList.h
+    invlists/Iterator.h
+    invlists/EncodedDocument.h
+    invlists/RocksdbList.h
+    invlists/util.h
+    schema/forward_index_generated.h
+    schema/inverted_index_generated.h
     schema/util.h
 )
 

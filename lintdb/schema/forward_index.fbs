@@ -1,15 +1,10 @@
 namespace lintdb;
 
-table Code {
-    codes: [uint8];
-}
-
 // flatbuffers use uint32 internally and are limited to 2gb in size.
-table InvertedDocument {
+table ForwardIndexDocument {
     doc_id:string;
     num_tokens:uint32;
-    codes:[uint8];
-    residuals:[float];
+    residuals:[uint8]; // will have num_tokens * dim of residuals.
 }
 
-root_type InvertedDocument;
+root_type ForwardIndexDocument;

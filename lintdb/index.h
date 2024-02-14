@@ -5,51 +5,65 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
+#include <string>
 
-#include "lintdb/quantizer.h"
-#include "lintdb/ResidualQuantizer.h"
 #include "lintdb/api.h"
-#include "lintdb/invlists/InvertedLists.h"
+#include "lintdb/invlists/InvertedList.h"
+#include <faiss/IndexAdditiveQuantizer.h>
 #include <faiss/invlists/DirectMap.h>
+#include <faiss/IndexLSH.h>
 #include "lintdb/EmbeddingBlock.h"
 #include <faiss/Clustering.h>
-#include "lintdb/schema/schema_generated.h"
+#include <faiss/IndexPQ.h>
+#include <rocksdb/db.h>
 
 namespace lintdb {
 
+struct SearchResults {
+    std::vector<float> distances;
+    std::vector<idx_t> labels;
+};
 /**
  * IndexIVF controls the inverted file structure. 
  * 
  * It's training will be a k-means clustering. We borrow naming conventions from faiss.
 */
 struct IndexIVF {
-    // quantizer encodes and decodes the blocks of embeddings.
-    Quantizer* quantizer;
+    const std::string CENTROIDS_FILENAME = "_centroids.bin";
+    const std::string QUANTIZER_FILENAME = "_quantizer.bin";
+    const std::string BINARIZER_FILENAME = "_binarizer.bin";
+
+    // the path to the database.
+    std::string path;
+
+    rocksdb::DB* db;
+    std::vector<rocksdb::ColumnFamilyHandle*> column_families;
+    // quantizer encodes and decodes the blocks of embeddings. L2 of quantization.
+    faiss::IndexPQ quantizer;
+    // binarizer encodes the residuals. End stage of quantization.
+    faiss::IndexLSH binarizer;
+    // keep a copy of the centroids so that we can do a coarse quantization on queries.
+    af::array centroids;
+    size_t dim; // number of dimensions per embedding.
 
     // number of clusters.
     size_t nlist;
     bool is_trained = false;
 
-    // total number of documents in the index.
-    size_t ntotal = 0;
-
     //the inverted list data structure.
-    InvertedLists invlists;
-    bool own_invlists = true;
+    std::unique_ptr<InvertedList> invlists;
 
-     /** optional map that maps back ids to invlist entries. This
-     *  enables reconstruct() */
-    faiss::DirectMap direct_map;
-
-    /// do the codes in the invlists encode the vectors relative to the
-    /// centroids?
-    bool by_residual = true;
-
-    IndexIVF(Quantizer* quantizer, size_t nlist);
+    IndexIVF(
+        std::string path, // path to the database.
+        size_t nlist, // number of centroids to use in L1 quantizing.
+        size_t dim, // number of dimensions per embedding.
+        size_t code_nbits, // nbits used in the PQ encoding for codes.
+        size_t binarize_nbits // nbits used in the LSH encoding for residuals.
+    );
 
     // train will learn a k-means clustering for document assignment.
     // train operators directly on individual embeddings.
-    void train(size_t n,std::vector<float> embeddings);
+    void train(size_t n,std::vector<float>& embeddings);
 
     /**
      * search will find the nearest neighbors for a vector block.
@@ -59,8 +73,8 @@ struct IndexIVF {
      * @param distances the output array of distances.
      * @param labels the output array of labels.
     */
-    void search(EmbeddingBlock& block, size_t n_probe, std::vector<float> distances, std::vector<idx_t> labels) const;
-
+    SearchResults search(EmbeddingBlock& block, size_t n_probe) const;
+    SearchResults search_single_list(size_t idx, EmbeddingBlock& block, af::array& nlist_maxes) const;
     /**
      * add will add a block of embeddings to the index.
      * 
@@ -68,12 +82,25 @@ struct IndexIVF {
      * @param ids the ids of the embeddings.
     */
     void add(std::vector<EmbeddingBlock> blocks, std::vector<idx_t> ids);
-    void add_core(std::vector<EmbeddingBlock>, std::vector<idx_t> xids, std::vector<idx_t> coarse_idx);
 
-    std::vector<std::unique_ptr<EncodedDocument>> encode_vectors(std::vector<EmbeddingBlock> blocks) const;
+    std::unique_ptr<EncodedDocument> encode_vectors(EmbeddingBlock& block) const;
+    EmbeddingBlock decode_vectors(EncodedDocument& doc) const;
+
+    /**
+     * Index should be able to resume from a previous state.
+     * We want to persist the centroids, the quantizer, and the inverted lists.
+     * 
+     * Inverted lists are persisted to the database.
+    */
+    void save();
+
+    ~IndexIVF() {
+        for(auto cf : column_families) {
+            db->DestroyColumnFamilyHandle(cf);
+        }
+        delete db;
+    }
 };
-
-    size_t total_embeddings_in_blocks(std::vector<EmbeddingBlock> blocks);
 
 } // namespace lintdb
 

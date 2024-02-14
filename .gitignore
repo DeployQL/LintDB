@@ -50,3 +50,7 @@ Cargo.lock
 *.exe
 *.out
 *.app
+
+vcpkg_installed
+build
+.vscode

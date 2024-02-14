@@ -6,8 +6,11 @@
       "faiss",
       "rocksdb",
       "flatbuffers",
-      "openblas",
+      {"name": "openblas", "features": ["threads"]},
       "lapack",
-      "gtest"
+      {"name": "arrayfire", "features": ["cpu"]},
+      "gtest",
+      "glog",
+      "jsoncpp"
     ]
   }

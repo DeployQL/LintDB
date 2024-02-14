@@ -1,8 +1,8 @@
 set(
     LINT_DB_TESTS
-    quantizer_test.cpp
-    example_test.cpp
     index_test.cpp
+    plaid_test.cpp
+    rocksdb_test.cpp
 )
 
 add_executable(
@@ -10,11 +10,17 @@ add_executable(
   ${LINT_DB_TESTS}
 )
 
+
 # we use BLAS and LAPACK
 find_package(BLAS REQUIRED)
 target_link_libraries(lintdb-tests PRIVATE ${BLAS_LIBRARIES})
+find_package(OpenBLAS CONFIG REQUIRED)
+target_link_libraries(lintdb-tests PRIVATE OpenBLAS::OpenBLAS)
 find_package(LAPACK REQUIRED)
 target_link_libraries(lintdb-tests PRIVATE ${LAPACK_LIBRARIES})
+
+find_package(ArrayFire CONFIG REQUIRED)
+target_link_libraries(lintdb-tests PRIVATE ArrayFire::af ArrayFire::afcpu)
 
 enable_testing()
 
