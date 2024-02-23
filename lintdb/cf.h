@@ -22,10 +22,6 @@ namespace lintdb {
             return index_options;
         };
 }
-
-
-    // static const std::vector<rocksdb::ColumnFamilyDescriptor> kColumnFamilies =
-
     std::vector<rocksdb::ColumnFamilyDescriptor> create_column_families() {
         return  {
             rocksdb::ColumnFamilyDescriptor(
@@ -33,11 +29,23 @@ namespace lintdb {
                 rocksdb::ColumnFamilyOptions()
             ),
             rocksdb::ColumnFamilyDescriptor(
-                "index",
+                kIndexColumnFamily,
                 create_index_table_options()
             ),
             rocksdb::ColumnFamilyDescriptor(
                 kForwardColumnFamily,
+                rocksdb::ColumnFamilyOptions()
+            ),
+            rocksdb::ColumnFamilyDescriptor(
+                kCodesColumnFamily,
+                rocksdb::ColumnFamilyOptions()
+            ),
+            rocksdb::ColumnFamilyDescriptor(
+                kResidualsColumnFamily,
+                rocksdb::ColumnFamilyOptions()
+            ),
+            rocksdb::ColumnFamilyDescriptor(
+                kMappingColumnFamily,
                 rocksdb::ColumnFamilyOptions()
             )
         };

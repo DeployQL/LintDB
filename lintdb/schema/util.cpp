@@ -36,4 +36,22 @@ namespace lintdb {
 
         return builder;
     }
+
+    std::unique_ptr<flatbuffers::FlatBufferBuilder> create_doc_mapping(
+        const idx_t* coarse_idx,
+        const size_t idx_size
+        ) {
+
+        std::vector<uint32_t> casted_codes;
+        std::transform(coarse_idx, coarse_idx+idx_size, std::back_inserter(casted_codes), [](idx_t i) { return static_cast<uint32_t>(i); });
+
+        auto builder = std::make_unique<flatbuffers::FlatBufferBuilder>();
+        // auto codes = builder->CreateVector(flat_codes, num_tokens * code_size);
+        auto fb_centroids = builder->CreateVector(casted_codes.data(), casted_codes.size());
+        
+        auto doc = CreateDocumentClusterMapping(*builder, fb_centroids);
+        builder->Finish(doc);
+
+        return builder;
+    }
 }

@@ -9,7 +9,6 @@
 #include <filesystem>
 #include <faiss/utils/hamming.h>
 #include <iostream>
-#include <arrayfire.h>
 #include "lintdb/invlists/RocksdbList.h"
 #include "lintdb/invlists/util.h"
 #include <rocksdb/slice.h>

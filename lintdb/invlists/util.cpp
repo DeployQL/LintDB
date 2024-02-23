@@ -4,6 +4,7 @@
 #include <sstream>
 #include <algorithm>
 #include "lintdb/assert.h"
+#include <glog/logging.h>
 
 namespace lintdb {
    std::string Key::serialize() const {
@@ -17,18 +18,21 @@ namespace lintdb {
             store_bigendian(this->id, serialized_str);
         }
 
-       return std::string(serialized_str.begin(), serialized_str.end());
+        std::string result = std::string(serialized_str.begin(), serialized_str.end());
+
+        return result;
     }
 
     Key Key::from_slice(const rocksdb::Slice &slice) {
-        // 12 bytes are used for the prefix. tenant is 8 bytes, inverted_list_id is 4 bytes, and id is 8 bytes.
+        // tenant is 8 bytes, inverted_list_id is 8 bytes, and id is 8 bytes.
         // slices must have an id assigned.
-        LINTDB_THROW_IF_NOT(slice.size() > 12);
+        LINTDB_THROW_IF_NOT(slice.size() > 16);
 
         auto key_ptr = slice.data();
         uint64_t tenant = load_bigendian<uint64_t>(key_ptr);
-        size_t inverted_list_id = load_bigendian<size_t>(key_ptr + sizeof(tenant));
+        idx_t inverted_list_id = load_bigendian<idx_t>(key_ptr + sizeof(tenant));
         idx_t id = load_bigendian<idx_t>(key_ptr + sizeof(tenant) + sizeof(inverted_list_id));
+
 
         return Key {
             tenant,
@@ -44,7 +48,8 @@ namespace lintdb {
         store_bigendian(this->tenant, serialized_str);
         store_bigendian(this->id, serialized_str);
 
-       return std::string(serialized_str.begin(), serialized_str.end());
+        std::string result = std::string(serialized_str.begin(), serialized_str.end());
+        return result;
     }
 
     ForwardIndexKey ForwardIndexKey::from_slice(const rocksdb::Slice &slice) {

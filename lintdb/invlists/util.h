@@ -2,7 +2,7 @@
 #define LINTDB_INVLISTS_UTIL_H
 
 #include <string>
-#include <rocksdb/slice.h>
+#include <rocksdb/db.h>
 #include <vector>
 #include "lintdb/api.h"
 
@@ -15,7 +15,7 @@ namespace lintdb {
     */
     struct Key {
         uint64_t tenant;
-        size_t inverted_list_id;
+        idx_t inverted_list_id;
         idx_t id;
         bool exclude_id;
         

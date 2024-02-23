@@ -19,9 +19,6 @@ target_link_libraries(lintdb-tests PRIVATE OpenBLAS::OpenBLAS)
 find_package(LAPACK REQUIRED)
 target_link_libraries(lintdb-tests PRIVATE ${LAPACK_LIBRARIES})
 
-find_package(ArrayFire CONFIG REQUIRED)
-target_link_libraries(lintdb-tests PRIVATE ArrayFire::af ArrayFire::afcpu)
-
 enable_testing()
 
 find_package(GTest CONFIG REQUIRED)

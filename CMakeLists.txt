@@ -30,7 +30,6 @@ set(AF_BUILD_EXAMPLES OFF)
 set(AF_BUILD_TESTS OFF)
 
 add_subdirectory(lintdb)
-# add_subdirectory(test)
 
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
@@ -54,11 +53,12 @@ target_link_libraries(lintdb PRIVATE RocksDB::rocksdb)
 find_package(flatbuffers CONFIG REQUIRED)
 target_link_libraries(lintdb PRIVATE flatbuffers::flatbuffers)
 
-find_package(ArrayFire CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE ArrayFire::af ArrayFire::afcpu)
-
 find_package(glog CONFIG REQUIRED)
 target_link_libraries(lintdb PRIVATE glog::glog)
+
+# this is heuristically generated, and may not be correct
+find_package(Microsoft.GSL CONFIG REQUIRED)
+target_link_libraries(lintdb PRIVATE Microsoft.GSL::GSL)
 
 include(CTest)
 add_subdirectory(tests)

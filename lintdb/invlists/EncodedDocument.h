@@ -5,7 +5,6 @@
 #include <string>
 #include "lintdb/api.h"
 #include <vector>
-#include <arrayfire.h>
 
 namespace lintdb {
     /**

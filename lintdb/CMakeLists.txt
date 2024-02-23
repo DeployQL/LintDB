@@ -20,6 +20,7 @@ set(
     plaid.h
     constants.h
     cf.h
+    RawPassage.h
     EmbeddingBlock.h
     invlists/InvertedList.h
     invlists/Iterator.h
@@ -28,6 +29,7 @@ set(
     invlists/util.h
     schema/forward_index_generated.h
     schema/inverted_index_generated.h
+    schema/mapping_generated.h
     schema/util.h
 )
 
@@ -49,6 +51,8 @@ foreach(header ${LINT_DB_HEADERS})
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lintdb/${dir}
   )
 endforeach()
+
+add_subdirectory(python)
 
 install(TARGETS lintdb
   EXPORT lintdb-targets
