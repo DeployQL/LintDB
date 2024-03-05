@@ -12,6 +12,6 @@ struct Iterator {
 
     virtual ~Iterator() = default;
 };
-}
+} // namespace lintdb
 
 #endif

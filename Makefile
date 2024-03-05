@@ -30,3 +30,6 @@ debug-test:
 prepare:
 	sudo apt-get install xorg-dev gfortran libopenblas-dev liblapacke-dev libfftw3-dev clang cmake unzip
 	sudo apt-get install libboost-all-dev
+
+format:
+	find ./lintdb -iname '*.h' -o -iname '*.cpp' | xargs clang-format -i
