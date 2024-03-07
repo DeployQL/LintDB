@@ -1,5 +1,6 @@
 from pylintdb import pylintdb
 import numpy as np
+import tempfile
 
 def test_index_init():
     index = pylintdb.IndexIVF("/tmp/py_index", 32, 128, 1)
@@ -17,11 +18,6 @@ def test_index_init():
     data = np.random.rand(1500, 128).astype('float32')
     index.train(data)
 
-    # for i in range(2):
-    #     pass
-    ids = list(range(5))
-    index.remove(ids)
-
     dat = np.random.rand(100, 128).astype('float32')
     obj = pylintdb.RawPassage(
             dat,
@@ -36,3 +32,24 @@ def test_index_init():
     index.add_single(obj)
 
     index.add(passages)
+
+    index.search(dat, 10, 100)
+
+
+    ids = list(range(5))
+    index.remove(ids)
+
+
+def test_index_load():
+    # dir = tempfile.TemporaryDirectory()
+    # index = pylintdb.IndexIVF(dir.name, 32, 128, 1)
+
+    # data = np.random.rand(1500, 128).astype('float32')
+    # index.train(data)
+
+    # del index
+
+    s = '/tmp/py_index_bench'
+    index = pylintdb.IndexIVF(s)
+    search = np.random.rand(10, 128).astype('float32')
+    index.search(search, 10, 10)

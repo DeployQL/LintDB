@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include "lintdb/api.h"
 
 namespace lintdb {
 using std::string;

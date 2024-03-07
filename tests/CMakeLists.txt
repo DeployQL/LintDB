@@ -19,6 +19,9 @@ target_link_libraries(lintdb-tests PRIVATE OpenBLAS::OpenBLAS)
 find_package(LAPACK REQUIRED)
 target_link_libraries(lintdb-tests PRIVATE ${LAPACK_LIBRARIES})
 
+find_package(Microsoft.GSL CONFIG REQUIRED)
+target_link_libraries(lintdb-tests PRIVATE Microsoft.GSL::GSL)
+
 enable_testing()
 
 find_package(GTest CONFIG REQUIRED)

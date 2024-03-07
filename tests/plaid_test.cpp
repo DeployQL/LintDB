@@ -19,15 +19,13 @@ TEST(PlaidTests, ReadsCodesCorrectly) {
     // now let's score documents.
     auto score = lintdb::score_documents_by_codes(
         query_scores, 
-        doc_codes.data(), 
-        4, // num tokens. we'er saying there are 4 tokens.
+        doc_codes, 
         0.0
     );
     // the score is 3, because we're summing the max scores for each centroid.
     // because each token represents centroid 2, we take the score of 3.0 once.
     // we shouldn't duplicate the score for a given centroid.
     EXPECT_FLOAT_EQ(score, 3.0);
-
 }
 
 TEST(PlaidTests, MaxCentroidScoresIsCorrect) {

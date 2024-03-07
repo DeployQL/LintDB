@@ -11,15 +11,13 @@ float score_documents_by_codes(
         const gsl::span<float>
                 max_scores_by_centroid, // the max score per centroid across the
                                         // query tokens.
-        const code_t* doc_codes,
-        size_t num_tokens,
+        const std::vector<code_t>& doc_codes,
         const float centroid_score_threshold) {
     // Initialize a vector to store the approximate scores for each document
     float doc_score = 0;
     std::unordered_set<code_t> unique_codes;
     // Iterate over each token code.
-    for (size_t i = 0; i < num_tokens; i++) {
-        auto index = doc_codes[i];
+    for (auto index : doc_codes) {
         if (unique_codes.find(index) != unique_codes.end()) {
             continue;
         }

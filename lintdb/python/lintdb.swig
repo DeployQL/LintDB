@@ -45,6 +45,7 @@ namespace std {
     %template(RawPassageVector) vector<lintdb::RawPassage>;
     %template(RawPassagePtrVector) vector<lintdb::RawPassage *>;
     %template(RawPassageConstPtrVector) vector<lintdb::RawPassage const *>;
+    %template(SearchResultVector) vector<lintdb::SearchResult>;
 }
 // these do not work fo rappending.
 // %template(RawPassageVector) std::vector<RawPassage>;
@@ -58,8 +59,10 @@ namespace std {
 // arguments have to be exact to the C++ function signature. e.g. embeddings, n, dim.
 %apply (float* IN_ARRAY2, int DIM1, int DIM2) {(float* embeddings, int n, int dim)}
 %apply (float* IN_ARRAY2, int DIM1, int DIM2) {(const float* embeddings, size_t num_tokens, size_t dimensions)}
+// apply it to search.
+%apply (float* IN_ARRAY2, int DIM1, int DIM2) {(float* data, int n, int dim)}
 
-
+%ignore search(EmbeddingBlock&, size_t, size_t ) const;
 %ignore train(float*, size_t, size_t);
 %ignore train(size_t n,std::vector<float>& embeddings);
 %ignore RawPassage::RawPassage();
@@ -67,7 +70,8 @@ namespace std {
 %ignore IndexIVF::invlists;
 %ignore IndexIVF::decode_vectors;
 %ignore IndexIVF::get_pids;
-%ignore IndexIVF::IndexIVF(std::string,faiss::Index *,faiss::Index *);
+%ignore IndexIVF::IndexIVF(std::string,faiss::Index *&,faiss::Index *&);
+%ignore IndexIVF(std::string, size_t, size_t, size_t, size_t, bool);
 
 %ignore EmbeddingBlock::EmbeddingBlock(const float* embeddings, size_t num_tokens, size_t dimensions);
 

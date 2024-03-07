@@ -10,6 +10,7 @@
 #include <cblas.h>
 #include <filesystem>
 #include <glog/logging.h>
+#include <gsl/span>
 
 // Demonstrate some basic assertions.
 TEST(IndexTest, InitializesCorrectly) {
@@ -44,12 +45,6 @@ TEST(IndexTest, TrainsCorrectly) {
 
     index.train(num_docs * num_tokens, buf);
     EXPECT_EQ(index.nlist, 250);
-    // EXPECT_EQ(index.quantizer.is_trained, true);
-    // // prove to ourselves that we have centroids in the form of (kclusters x dim)
-    // EXPECT_EQ(index.quantizer.d, dim);
-    // TODO (mbarta): quantizer resizes centroids to be ntotal that was trained on.
-    // therefore, it isn't the size of the centroids, IMO.
-    // EXPECT_EQ(index.quantizer.codes.size(), kclusters* dim);
 
 
     std::vector<float> fake_doc(dim * num_tokens);
@@ -77,6 +72,52 @@ TEST(IndexTest, TrainsCorrectly) {
         }
     }
 
+}
+
+TEST(IndexTest, ResidualsAreEncodedCorrectly) {
+    size_t dim = 128;
+    // we'll generate num_docs * num_tokens random vectors for training.
+    // keep in mind this needs to be larger than the number of dimensions.
+    size_t num_docs = 100;
+    size_t num_tokens = 100;
+
+    size_t kclusters = 250; // number of centroids to calculate.
+
+    size_t binarize_bits = 2;
+    std::filesystem::path path = std::filesystem::temp_directory_path();
+    auto temp_db = path.append("test_index");
+    // buffer for the randomly created vectors.
+    // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
+     // buffer for the randomly created vectors.
+    // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
+    std::vector<float> buf(dim * (num_docs * num_tokens));
+    // fake data where every vector is either all 1s,2s...9s. 
+    for(size_t i=0; i<num_docs * num_tokens; i++) {
+        for(size_t j=0; j<dim; j++) {
+            buf[i*dim + j] = i%11 + 1;
+        }
+    }
+
+    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, binarize_bits);
+
+    index.train(num_docs * num_tokens, buf);
+
+    std::vector<float> fake_doc(dim * num_tokens, 2);
+
+    auto pass = lintdb::RawPassage(fake_doc.data(), num_tokens, dim, 1, "something" );
+
+    auto doc = index.encode_vectors(pass);
+    EXPECT_EQ(doc->residuals.size(), num_tokens * binarize_bits); // 100 tokens * 2 bits == 200 bytes.
+
+    auto code_span = gsl::span(doc->codes.data(), doc->codes.size());
+    auto residual_span = gsl::span(doc->residuals.data(), doc->residuals.size());
+    auto decoded = index.decode_vectors(code_span, residual_span, num_tokens, dim);
+
+    // for(size_t i=0; i<num_tokens; i++) {
+    //     for(size_t j=0; j<dim; j++) {
+    //         EXPECT_EQ(decoded[i*dim + j], fake_doc[i*dim + j]);
+    //     }
+    // }
 }
 
 // EmbeddingBlocks store data in column major format, so contiguous memory is
@@ -109,7 +150,7 @@ TEST(IndexTest, SearchCorrectly) {
 
     size_t kclusters = 250; // number of centroids to calculate.
 
-    size_t centroid_bits = 1;
+    size_t centroid_bits = 2;
     std::filesystem::path path = std::filesystem::temp_directory_path();
     auto temp_db = path.append("test_index");
     // buffer for the randomly created vectors.
@@ -144,6 +185,40 @@ TEST(IndexTest, SearchCorrectly) {
         auto actual = results[0].id;
         EXPECT_EQ(actual, i+1);
     }
+}
+
+TEST(IndexTest, LoadsCorrectly) {
+    size_t dim = 128;
+    // we'll generate num_docs * num_tokens random vectors for training.
+    // keep in mind this needs to be larger than the number of dimensions.
+    size_t num_docs = 100;
+    size_t num_tokens = 100;
+
+    size_t kclusters = 250; // number of centroids to calculate.
+
+    size_t centroid_bits = 1;
+    std::filesystem::path path = std::filesystem::temp_directory_path();
+    auto temp_db = path.append("test_index");
+    // buffer for the randomly created vectors.
+    // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
+    std::vector<float> buf(dim * (num_docs * num_tokens));
+    // fake data where every vector is either all 1s,2s...9s. 
+    for(size_t i=0; i<num_docs * num_tokens; i++) {
+        for(size_t j=0; j<dim; j++) {
+            buf[i*dim + j] = i%11 + 1;
+        }
+    }
+
+    lintdb::IndexIVF* index = new lintdb::IndexIVF(temp_db.string(), kclusters, dim, centroid_bits);
+
+    index->train(num_docs * num_tokens, buf);
+
+    delete index;
+
+    auto loaded_index = lintdb::IndexIVF(temp_db.string());
+
+    std::vector<float> query(dim * num_tokens, 1);
+    loaded_index.search(query.data(), num_tokens, dim, 10, 5);
 }
 
 

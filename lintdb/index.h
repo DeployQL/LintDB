@@ -24,10 +24,18 @@
 namespace lintdb {
 static const std::string QUANTIZER_FILENAME = "_quantizer.bin";
 static const std::string BINARIZER_FILENAME = "_binarizer.bin";
+static const std::string METADATA_FILENAME = "_lintdb_metadata.json";
 
 struct SearchResult {
     idx_t id;
     float distance;
+};
+
+struct Configuration {
+    size_t nlist = 256;
+    size_t nbits = 2;
+    size_t niter = 4;
+    bool use_ivf = true;
 };
 
 /**
@@ -37,22 +45,30 @@ struct SearchResult {
  * faiss.
  */
 struct IndexIVF {
-    // number of clusters.
     size_t nlist; // number of centroids to use in L1 quantizing.
     size_t nbits; // number of bits used in binarizing the residuals.
+    size_t niter; // number of iterations to use in k-means clustering.
+    bool use_ivf; // whether to use the inverted file structure.
+
+    // load an existing index.
+    IndexIVF(std::string path);
+
+    IndexIVF(std::string path, size_t dim, Configuration& config);
 
     IndexIVF(
             std::string path, // path to the database.
             size_t nlist,     // number of centroids to use in L1 quantizing.
             size_t dim,       // number of dimensions per embedding.
-            size_t binarize_nbits // nbits used in the LSH encoding for
-                                  // residuals.
+            size_t binarize_nbits, // nbits used in the LSH encoding for esiduals.
+            size_t niter = 4,
+            bool use_ivf = true
     );
 
     IndexIVF(
             std::string path,
             faiss::Index* quantizer,
-            faiss::Index* binarizer);
+            faiss::Index* binarizer
+    );
 
     // train will learn a k-means clustering for document assignment.
     // train operators directly on individual embeddings.
@@ -70,9 +86,17 @@ struct IndexIVF {
      * @param k the top k results to return.
      */
     std::vector<SearchResult> search(
-            EmbeddingBlock& block,
-            size_t n_probe,
-            size_t k) const;
+        EmbeddingBlock& block,
+        size_t n_probe,
+        size_t k) const;
+
+    // search method to accept a numpy array from python.
+    std::vector<SearchResult> search(
+        float* data,
+        int n,
+        int dim,
+        size_t n_probe,
+        size_t k) const;
 
     /**
      * add will add a block of embeddings to the index.
@@ -101,8 +125,7 @@ struct IndexIVF {
      *
      * Inverted lists are persisted to the database.
      */
-    void save(std::string dir);
-    static IndexIVF load(std::string path);
+    void save();
 
     ~IndexIVF() {
         delete invlists;
@@ -115,6 +138,7 @@ struct IndexIVF {
     }
 
    private:
+    std::string path;
     rocksdb::DB* db;
     std::vector<rocksdb::ColumnFamilyHandle*> column_families;
     // quantizer encodes and decodes the blocks of embeddings. L2 of
@@ -145,10 +169,13 @@ struct IndexIVF {
      * structures we use to retrieve the data, which is still in flux.
      */
     std::vector<float> decode_vectors(
-            gsl::span<code_t> codes,
-            gsl::span<residual_t> residuals,
+            gsl::span<const code_t> codes,
+            gsl::span<const residual_t> residuals,
             size_t num_tokens,
             size_t dim) const;
+
+    void write_metadata();
+    void read_metadata(std::string path);
 };
 
 } // namespace lintdb

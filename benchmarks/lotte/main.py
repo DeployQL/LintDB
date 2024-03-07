@@ -12,11 +12,13 @@ from tqdm import tqdm
 import time
 import numpy as np
 
-LoTTeDataset = namedtuple('LoTTeDataset', ['collection', 'queries', 'qids'])
+LoTTeDataset = namedtuple('LoTTeDataset', ['collection', 'queries', 'qids', 'dids'])
 
 def load_lotte(dataset, split, max_id=500000):
     collection_dataset = load_dataset("colbertv2/lotte_passages", dataset)
+    print(collection_dataset[split + '_collection'][0])
     collection = [x['text'] for x in collection_dataset[split + '_collection']]
+    dids = [x['doc_id'] for x in collection_dataset[split + '_collection']]
 
     queries_dataset = load_dataset("colbertv2/lotte", dataset)
     queries = [x['query'] for x in queries_dataset['search_' + split]]
@@ -27,9 +29,10 @@ def load_lotte(dataset, split, max_id=500000):
     answer_pids = [x['answers']['answer_pids'] for x in queries_dataset['search_' + split]]
     filtered_queries = [q for q, apids in zip(queries, answer_pids) if any(x < max_id for x in apids)]
     filtered_qids = [i for i,(q, apids) in enumerate(zip(queries, answer_pids)) if any(x < max_id for x in apids)]
+    filtered_dids = [x for x in dids if x < max_id]
     f'Filtered down to {len(filtered_queries)} queries'
 
-    return LoTTeDataset(collection[:max_id], filtered_queries, filtered_qids)
+    return LoTTeDataset(collection[:max_id], filtered_queries, filtered_qids, filtered_dids)
 
 
 def colbert_indexing(experiment: str, exp_path: str, dataset: LoTTeDataset, nbits=2, checkpoint: str = "colbert-ir/colbertv2.0"):
@@ -60,52 +63,68 @@ def lintdb_indexing(experiment: str, exp_path: str, dataset:LoTTeDataset, k, nbi
     from colbert.modeling.checkpoint import Checkpoint
     checkpoint = Checkpoint(checkpoint, config)
 
-    # checkpoint doesn't have .to_gpu() as a method. need to pass this in elsewhere.
-    # if gpu:
-    #     checkpoint = checkpoint.to_gpu()
-    start = time.perf_counter()
-    # sample and train the index.
-    training_data = []
-    for doc in tqdm(dataset.collection, desc="embedding training data"):
-        embeddings = checkpoint.docFromText([doc])
-        training_data.extend(np.squeeze(embeddings.numpy()))
+    if not os.path.exists("/tmp/py_index_raw_embeddings.npz"):
+        # sample and train the index.
+        training_data = []
+        for doc in tqdm(dataset.collection, desc="embedding training data"):
+            embeddings = checkpoint.docFromText([doc])
+            training_data.append(np.squeeze(embeddings.numpy().astype('float32')))
 
-    index = pylintdb.IndexIVF("/tmp/py_index_bench", 16384, 128, nbits)
-    dd = np.stack(training_data)
-    index.train(dd)
+        np.savez_compressed("/tmp/py_index_raw_embeddings.npz", *training_data)
+        dd = np.concatenate(training_data)
+    else:
+        with open("/tmp/py_index_raw_embeddings.npz", "rb") as f:
+            arr_maps = np.load(f)
+            training_data = [arr for _, arr in arr_maps.items()]
+            dd = np.vstack(training_data)
 
-    train_duration = time.perf_counter() - start
-    print(f"Training duration: {train_duration:.2f}s")
-    # add all the documents.
-    start = time.perf_counter()
-    for i, passage in tqdm(enumerate(dataset.collection), desc="adding documents"):
-        embeddings = checkpoint.docFromText([passage])
-        converted = np.squeeze(embeddings[0].numpy().astype('float32'))
-        doc = pylintdb.RawPassage(
-            converted,
-            i,
-            "doc id",
-        )
-        index.add([doc])
+    if not os.path.exists("/tmp/py_index_bench"):
+        index = pylintdb.IndexIVF("/tmp/py_index_bench", 16384, 128, nbits)
+        
+        start = time.perf_counter()
+        index.train(dd.astype('float32'))
+        train_duration = time.perf_counter() - start
+        print(f"Training duration: {train_duration:.2f}s")
+        
+        # add all the documents.
+        start = time.perf_counter()
+        for i, embedding in tqdm(enumerate(training_data), desc="adding documents"):
+            doc = pylintdb.RawPassage(
+                embedding,
+                i,
+                "doc id",
+            )
+            index.add([doc])
 
-    index_duration = time.perf_counter() - start
-    print(f"Indexing duration: {index_duration:.2f}s")
-
+        index_duration = time.perf_counter() - start
+        print(f"Indexing duration: {index_duration:.2f}s")
+    else:
+        print("Loading index")
+        index = pylintdb.IndexIVF("/tmp/py_index_bench")
+    
+    print("Running search")
     with open(f"{exp_path}/{experiment}.ranking.tsv", "w") as f:
         for id, query in zip(dataset.qids, dataset.queries):
-            results = index.search(query, 100)
-            for result in results:
-                f.write(f"{query}\t{result}\n")
+            embeddings = checkpoint.docFromText([query])
+            converted = np.squeeze(embeddings[0].numpy().astype('float32'))
+            # embed = pylintdb.EmbeddingBlock(converted)
+            results = index.search(
+                converted, 
+                2, # nprobe
+                100 # k to return
+            )
+            for rank, result in enumerate(results):
+                # qid, pid, rank
+                f.write(f"{id}\t{result.id}\t{rank+1}\t{result.distance}\n")
+            
+
 
 # copied from colbert/util/evaluate
 def evaluate_dataset(query_type, dataset, split, k, data_rootdir, rankings_path):
     data_path = os.path.join(data_rootdir, dataset, split)
-    # rankings_path = os.path.join(
-    #     rankings_rootdir, split, f"{dataset}.{query_type}.ranking.tsv"
-    # )
     
     if not os.path.exists(rankings_path):
-        print(f"[query_type={query_type}, dataset={dataset}] Success@{k}: ???")
+        print("Rankings file not found! Skipping evaluation.")
         return
     rankings = defaultdict(list)
     with open(rankings_path, "r") as f:
@@ -153,8 +172,8 @@ def main():
         colbert_indexing('colbert', '/tmp', d)
         rankings_path = "/home/matt/deployql/LintDB/experiments/colbert/benchmarks.lotte.main/2024-03/04/17.37.19/colbert.ranking.tsv"
     elif runtime == 'lintdb':
-        lintdb_indexing('colbert', '/tmp', d, 5, nbits=2)
-        rankings_path = '/tmp/colbert.ranking.tsv'
+        lintdb_indexing('colbert', 'experiments', d, 5, nbits=2)
+        rankings_path = 'experiments/colbert.ranking.tsv'
 
     evaluate_dataset(
         'search', 

@@ -60,6 +60,9 @@ target_link_libraries(lintdb PRIVATE glog::glog)
 find_package(Microsoft.GSL CONFIG REQUIRED)
 target_link_libraries(lintdb PRIVATE Microsoft.GSL::GSL)
 
+find_package(jsoncpp CONFIG REQUIRED)
+target_link_libraries(lintdb PRIVATE JsonCpp::JsonCpp)
+
 include(CTest)
 add_subdirectory(tests)
 

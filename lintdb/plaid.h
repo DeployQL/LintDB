@@ -19,8 +19,7 @@ float score_documents_by_codes(
         const gsl::span<float>
                 max_scores_by_centroid, // the max score per centroid across the
                                         // query tokens.
-        const code_t* doc_codes,
-        size_t num_tokens,
+        const std::vector<code_t>& doc_codes,
         const float centroid_score_threshold);
 
 std::vector<float> max_score_by_centroid(
@@ -37,6 +36,12 @@ float score_document_by_residuals(
         const float* doc_residuals, // size: (num_doc_tokens, num_dim)
         const size_t num_doc_tokens,
         const size_t dim);
+
+struct PlaidRetriever {
+        PlaidRetriever(
+            bool
+        )
+}
 } // namespace lintdb
 
 #endif
