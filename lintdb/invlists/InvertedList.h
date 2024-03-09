@@ -26,17 +26,26 @@ struct InvertedList {
             const std::string& start,
             const std::string& end) const = 0;
 
+    
+
+    virtual ~InvertedList() = default;
+};
+
+struct ForwardIndex {
     /**
-     * get retrieves from the forward index only. The inverted index should only
-     * be iterated on.
+     * get retrieves from the forward index. This could be any data that is mapped
+     * by a document id.
      */
-    virtual std::vector<std::unique_ptr<EncodedDocument>> get_codes(
+    virtual std::vector<std::unique_ptr<DocumentCodes>> get_codes(
             std::vector<idx_t> ids) const = 0;
-    virtual std::vector<std::unique_ptr<EncodedDocument>> get_residuals(
+    virtual std::vector<std::unique_ptr<DocumentResiduals>> get_residuals(
             std::vector<idx_t> ids) const = 0;
     virtual std::vector<idx_t> get_mapping(idx_t id) const = 0;
 
-    virtual ~InvertedList() = default;
+    virtual void add(std::unique_ptr<EncodedDocument> docs) = 0;
+    virtual void remove(std::vector<idx_t> ids) = 0;
+
+    virtual ~ForwardIndex() = default;
 };
 } // namespace lintdb
 

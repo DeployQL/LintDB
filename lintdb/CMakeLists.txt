@@ -3,6 +3,8 @@ set(
     LINT_DB_SRC
     index.cpp
     plaid.cpp
+    Encoder.cpp
+    util.cpp
     invlists/RocksdbList.cpp
     invlists/util.cpp
     invlists/EncodedDocument.cpp
@@ -22,6 +24,8 @@ set(
     cf.h
     RawPassage.h
     EmbeddingBlock.h
+    Encoder.h
+    util.h
     invlists/InvertedList.h
     invlists/Iterator.h
     invlists/EncodedDocument.h

@@ -6,15 +6,26 @@
 #include "lintdb/api.h"
 #include "lintdb/invlists/EncodedDocument.h"
 #include <string>
+#include <memory>
+#include <faiss/Index.h>
 
 namespace lintdb {
     static const std::string QUANTIZER_FILENAME = "_quantizer.bin";
     static const std::string BINARIZER_FILENAME = "_binarizer.bin";
 
+    struct EncoderConfig {
+        size_t nlist;
+        size_t nbits;
+        size_t niter;
+        size_t dim;
+    };
+
     struct Encoder {
     public:
         Encoder() = default;
         virtual ~Encoder() = default;
+
+        bool is_trained = false;
             /**
          * Encode vectors translates the embeddings given to us in RawPassage to
          * the internal representation that we expect to see in the inverted lists.
@@ -34,8 +45,30 @@ namespace lintdb {
                 size_t num_tokens,
                 size_t dim) const = 0;
 
-        virtual void save() = 0;
+        /**
+         * Given a query, search for the nearest centroids.
+         * 
+         * This has a dual purpose in the index.
+         * First, it's used to get the top centroids to search.
+         * Second, we use the centroid scores to calculate the first stage of
+         * plaid scoring.
+         * 
+         * Because of this dual purpose, the return format is a dense matrix.
+         * The caller is responsible for converting it for its purpose.
+        */
+        virtual void search(
+            float* data,
+            int n,
+            std::vector<idx_t>& coarse_idx,
+            std::vector<float>& distances,
+            size_t k_top_centroids=1,
+            float centroid_threshold=0.45
+        ) = 0;
+
+        virtual void save(std::string path) = 0;
         virtual void train(float* embeddings, size_t n, size_t dim) = 0;
+
+        virtual void set_centroids(float* data, int n, int dim) = 0;
     };
 
     /**
@@ -48,12 +81,9 @@ namespace lintdb {
         size_t nbits; // number of bits used in binarizing the residuals.
         size_t niter; // number of iterations to use in k-means clustering.
         size_t dim; // number of dimensions per embedding.
-
-        // load an encoder from a database path
-        DefaultEncoder(std::string path);
-
+        std::string path;
         // create a new encoder
-        DefaultEncoder(size_t nlist, size_t nbits, size_t niter, size_t dim);
+        DefaultEncoder(std::string path, size_t nlist, size_t nbits, size_t niter, size_t dim);
 
         std::unique_ptr<EncodedDocument> encode_vectors(
                 const RawPassage& doc) const override;
@@ -64,9 +94,29 @@ namespace lintdb {
                 size_t num_tokens,
                 size_t dim) const override;
 
-        void save() override;
+        void search(
+            float* data,
+            int n,
+            std::vector<idx_t>& coarse_idx,
+            std::vector<float>& distances,
+            size_t k_top_centroids=1,
+            float centroid_threshold=0.45
+        ) override;
+        
+        static std::unique_ptr<Encoder> load(std::string path, EncoderConfig& config);
         void train(float* embeddings, size_t n, size_t dim) override;
-    }
+
+        /**
+         * set_centroids overwrites the centroids in the encoder.
+         * 
+         * This is useful if you want to parallelize index writing and merge indices later.
+        */
+        void set_centroids(float* data, int n, int dim) override;
+
+        private:
+        std::unique_ptr<faiss::Index> quantizer;
+        void save(std::string path) override;
+    };
 }
 
 #endif

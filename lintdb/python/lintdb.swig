@@ -70,8 +70,8 @@ namespace std {
 %ignore IndexIVF::invlists;
 %ignore IndexIVF::decode_vectors;
 %ignore IndexIVF::get_pids;
-%ignore IndexIVF::IndexIVF(std::string,faiss::Index *&,faiss::Index *&);
-%ignore IndexIVF(std::string, size_t, size_t, size_t, size_t, bool);
+%ignore IndexIVF(std::string path, size_t dim, Configuration& config);
+// %ignore IndexIVF(std::string, size_t, size_t, size_t, size_t, bool);
 
 %ignore EmbeddingBlock::EmbeddingBlock(const float* embeddings, size_t num_tokens, size_t dimensions);
 

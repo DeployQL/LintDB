@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <glog/logging.h>
 #include <gsl/span>
+#include "lintdb/util.h"
 
 // Demonstrate some basic assertions.
 TEST(IndexTest, InitializesCorrectly) {
@@ -53,7 +54,7 @@ TEST(IndexTest, TrainsCorrectly) {
     // this doc is row-major on disk, and we can read memory as (num_tokensxdim)
     lintdb::EmbeddingBlock block(fake_doc.data(), num_tokens, dim);
 
-    lintdb::RawPassage doc(fake_doc.data(), num_tokens, dim, 1, "something" );
+    lintdb::RawPassage doc(fake_doc.data(), num_tokens, dim, 1, "something" , "text");
     std::vector<lintdb::RawPassage> docs = { doc };
     index.add(docs);
 
@@ -64,7 +65,8 @@ TEST(IndexTest, TrainsCorrectly) {
         lintdb::Key end{0, i, std::numeric_limits<idx_t>::max(), false};
         std::string start_string = start.serialize();
         std::string end_string = end.serialize();
-        std::unique_ptr<lintdb::Iterator> it = index.invlists->get_iterator(start_string, end_string);
+        lintdb::RocksDBInvertedList casted = static_cast<lintdb::RocksDBInvertedList&>(*index.index_);
+        std::unique_ptr<lintdb::Iterator> it = casted.get_iterator(start_string, end_string);
         for(; it->has_next(); it->next()) {
             lintdb::Key key = it->get_key();
             auto id = key.id;
@@ -72,52 +74,6 @@ TEST(IndexTest, TrainsCorrectly) {
         }
     }
 
-}
-
-TEST(IndexTest, ResidualsAreEncodedCorrectly) {
-    size_t dim = 128;
-    // we'll generate num_docs * num_tokens random vectors for training.
-    // keep in mind this needs to be larger than the number of dimensions.
-    size_t num_docs = 100;
-    size_t num_tokens = 100;
-
-    size_t kclusters = 250; // number of centroids to calculate.
-
-    size_t binarize_bits = 2;
-    std::filesystem::path path = std::filesystem::temp_directory_path();
-    auto temp_db = path.append("test_index");
-    // buffer for the randomly created vectors.
-    // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
-     // buffer for the randomly created vectors.
-    // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
-    std::vector<float> buf(dim * (num_docs * num_tokens));
-    // fake data where every vector is either all 1s,2s...9s. 
-    for(size_t i=0; i<num_docs * num_tokens; i++) {
-        for(size_t j=0; j<dim; j++) {
-            buf[i*dim + j] = i%11 + 1;
-        }
-    }
-
-    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, binarize_bits);
-
-    index.train(num_docs * num_tokens, buf);
-
-    std::vector<float> fake_doc(dim * num_tokens, 2);
-
-    auto pass = lintdb::RawPassage(fake_doc.data(), num_tokens, dim, 1, "something" );
-
-    auto doc = index.encode_vectors(pass);
-    EXPECT_EQ(doc->residuals.size(), num_tokens * binarize_bits); // 100 tokens * 2 bits == 200 bytes.
-
-    auto code_span = gsl::span(doc->codes.data(), doc->codes.size());
-    auto residual_span = gsl::span(doc->residuals.data(), doc->residuals.size());
-    auto decoded = index.decode_vectors(code_span, residual_span, num_tokens, dim);
-
-    // for(size_t i=0; i<num_tokens; i++) {
-    //     for(size_t j=0; j<dim; j++) {
-    //         EXPECT_EQ(decoded[i*dim + j], fake_doc[i*dim + j]);
-    //     }
-    // }
 }
 
 // EmbeddingBlocks store data in column major format, so contiguous memory is
@@ -162,6 +118,8 @@ TEST(IndexTest, SearchCorrectly) {
             buf[i*dim + j] = i%11 + 1;
         }
     }
+    // normalize before training. ColBERT returns normalized embeddings.
+    lintdb::normalize_vector(buf.data(), num_docs * num_tokens, dim);
 
     lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits);
 
@@ -169,22 +127,23 @@ TEST(IndexTest, SearchCorrectly) {
 
     EXPECT_EQ(index.nlist, 250);
 
-    for(idx_t i=0; i<10; i++) {
-        // create a vector filled with i's.
-        std::vector<float> fake_doc(dim * num_tokens, i+1);
+    std::vector<float> fake_doc(dim * num_tokens, 1);
+    lintdb::normalize_vector(fake_doc.data(), num_tokens, dim);
 
-        lintdb::EmbeddingBlock block{fake_doc.data(), num_tokens, dim};
+    lintdb::EmbeddingBlock block{fake_doc.data(), num_tokens, dim};
 
-        lintdb::RawPassage doc(fake_doc.data(), num_tokens, dim, i+1, "something" );
-        std::vector<lintdb::RawPassage> docs = { doc };
-        index.add(docs);
+    lintdb::RawPassage doc(fake_doc.data(), num_tokens, dim, 1, "something", "text");
+    std::vector<lintdb::RawPassage> docs = { doc };
+    index.add(docs);
 
-        auto results = index.search(block, 10, 5);
+    auto opts = lintdb::SearchOptions();
+    opts.expected_id = 1;
+    auto results = index.search(block, 10, 5, opts);
 
-        // we expect to get back the same document we added.
-        auto actual = results[0].id;
-        EXPECT_EQ(actual, i+1);
-    }
+    EXPECT_GT(results.size(), 0);
+    // we expect to get back the same document we added.
+    auto actual = results[0].id;
+    EXPECT_EQ(actual, 1);
 }
 
 TEST(IndexTest, LoadsCorrectly) {

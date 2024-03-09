@@ -33,21 +33,12 @@ IndexIVF::IndexIVF(std::string path) {
 
     LOG(INFO) << "loading LintDB from path: " << path;
 
-    if (FILE *file = fopen((path + "/" + QUANTIZER_FILENAME).c_str(), "r")) {
-        fclose(file);
-        quantizer = faiss::read_index((path + "/" + QUANTIZER_FILENAME).c_str());
-    } else {
-        throw LintDBException("Index not found at path: " + path);
-    }
-
-    if (FILE *file = fopen((path + "/" + BINARIZER_FILENAME).c_str(), "r")) {
-        fclose(file);
-        binarizer = faiss::read_index((path + "/" + BINARIZER_FILENAME).c_str());
-    } else {
-        throw LintDBException("Index not found at path: " + path);
-    }
     // set all of our individual attributes.
     this->read_metadata(path);
+    auto config = EncoderConfig{
+        nlist, nbits, niter, dim
+    };
+    this->encoder = DefaultEncoder::load(path, config);
 
     rocksdb::Options options;
     options.create_if_missing = true;
@@ -58,18 +49,11 @@ IndexIVF::IndexIVF(std::string path) {
             options, path, cfs, &(this->column_families), &(this->db));
     assert(s.ok());
 
-    this->invlists = new RocksDBInvertedList(*this->db, this->column_families);
-    this->quantizer = quantizer;
-    VLOG(100) << "Quantizer loaded with " << quantizer->ntotal << " centroids.";
-    this->binarizer = binarizer;
-
-
-    this->is_trained = true;
+    this->index_ = new RocksDBInvertedList(*this->db, this->column_families);
 }
 
 IndexIVF::IndexIVF(std::string path, size_t dim, Configuration& config)
         : nlist(config.nlist), nbits(config.nbits), path(path) {
-    this->is_trained = config.use_ivf;
     IndexIVF(
         path,
         config.nlist,
@@ -91,8 +75,9 @@ IndexIVF::IndexIVF(
     // for now, we can only handle 32 bit coarse codes.
     LINTDB_THROW_IF_NOT(nlist <= std::numeric_limits<code_t>::max());
 
-    this->quantizer = new faiss::IndexFlatIP(dim);
-    this->binarizer = new faiss::IndexLSH(dim, binarize_nbits);
+    this->encoder = std::make_unique<DefaultEncoder>(
+        path, nlist, nbits, niter, dim
+    );
 
     rocksdb::Options options;
     options.create_if_missing = true;
@@ -103,33 +88,7 @@ IndexIVF::IndexIVF(
             options, path, cfs, &(this->column_families), &(this->db));
     assert(s.ok());
 
-    this->invlists = new RocksDBInvertedList(*this->db, this->column_families);
-}
-
-IndexIVF::IndexIVF(
-        std::string path,
-        faiss::Index* quantizer,
-        faiss::Index* binarizer) {
-    rocksdb::Options options;
-    options.create_if_missing = true;
-    options.create_missing_column_families = true;
-
-    auto cfs = create_column_families();
-    rocksdb::Status s = rocksdb::DB::Open(
-            options, path, cfs, &(this->column_families), &(this->db));
-    assert(s.ok());
-
-    this->invlists = new RocksDBInvertedList(*this->db, this->column_families);
-    this->quantizer = quantizer;
-    this->binarizer = binarizer;
-
-    // TODO (mbarta): It would be great to not have to cast here.
-    auto lsh = dynamic_cast<faiss::IndexLSH*>(this->binarizer);
-    this->nbits = lsh->nbits;
-
-    this->dim = this->quantizer->d;
-    this->nlist = this->quantizer->ntotal;
-    this->is_trained = true;
+    this->index_ = new RocksDBInvertedList(*this->db, this->column_families);
 }
 
 void IndexIVF::train(size_t n, std::vector<float>& embeddings) {
@@ -137,74 +96,45 @@ void IndexIVF::train(size_t n, std::vector<float>& embeddings) {
 }
 
 void IndexIVF::train(float* embeddings, size_t n, size_t dim) {
-    // TODO(mbarta): this can follow faiss' example and be stored inside its own
-    // index.
-    try {
-        faiss::ClusteringParameters cp;
-        cp.niter = this->niter;
-        cp.nredo = 1;
-        cp.seed = 1234;
-        faiss::Clustering clus(dim, nlist, cp);
+    encoder->train(embeddings, n, dim);
 
-        LOG(INFO) << "Training index with " << n << " embeddings.";
-        LOG(INFO) << "niter: " << cp.niter;
-        LOG(INFO) << "nredo: " << cp.nredo;
-        LOG(INFO) << "seed: " << cp.seed;
-
-        faiss::IndexFlatIP assigner(dim);
-        clus.train(n, embeddings, assigner);
-        quantizer->add(nlist, clus.centroids.data());
-        LOG(INFO) << "Quantizer has " << quantizer->ntotal << " centroids.";
-
-        LOG(INFO) << "Training binarizer with " << n << " embeddings.";
-        // train binarizer on residuals.
-        std::vector<idx_t> assign(n);
-        quantizer->assign(n, embeddings, assign.data());
-
-        std::vector<float> residuals(n * dim);
-        quantizer->compute_residual_n(
-                n, embeddings, residuals.data(), assign.data());
-
-        binarizer->train(n, residuals.data());
-
-        this->save();
-        LOG(INFO) << "Training complete.";
-        this->is_trained = true;
-    } catch (const faiss::FaissException& e) {
-        LOG(ERROR) << "Faiss exception: " << e.what();
-        throw LintDBException(e.what());
-    }
+    this->save();
 }
 
 void IndexIVF::train(float* embeddings, int n, int dim) {
+    assert(nlist <= std::numeric_limits<code_t>::max() && "nlist must be less than 32 bits.");
     train(embeddings, static_cast<size_t>(n), static_cast<size_t>(dim));
 }
 
 void IndexIVF::save() {
-    auto quantizer_path = path + "/"+ QUANTIZER_FILENAME;
-    faiss::write_index(quantizer, quantizer_path.c_str());
-
-    auto binarizer_path = path + "/" + BINARIZER_FILENAME;
-    faiss::write_index(binarizer, binarizer_path.c_str());
-
+    this->encoder->save(this->path);
     this->write_metadata();
 }
 
 std::vector<SearchResult> IndexIVF::search(
         EmbeddingBlock& block,
         size_t n_probe,
-        size_t k) const {
+        size_t k,
+        SearchOptions opts) const {
     return search(block.embeddings.data(), block.num_tokens, block.dimensions, n_probe, k);
 }
 
+/**
+ * Implementation note: 
+ * 
+ * when we look at what IVF lists to search, we have several parameters that will influence this.
+ * 1. k_top_centroids: responsible for how many centroids per token we include in our search before sorting.
+ * 2. n_probe: the number of lists we search on after sorting.
+*/
 std::vector<SearchResult> IndexIVF::search(
     float* data,
     int n,
     int dim,
     size_t n_probe,
-    size_t k) const {
+    size_t k,
+    SearchOptions opts) const {
     if (this->use_ivf) {
-        LINTDB_THROW_IF_NOT(this->is_trained);
+        LINTDB_THROW_IF_NOT(this->encoder->is_trained);
     }
 
 
@@ -212,28 +142,34 @@ std::vector<SearchResult> IndexIVF::search(
     // block: (num_tokens x dimensions)
     // centroids: (nlist x dimensions)
     // result: (num_tokens x nlist)
-    const float centroid_score_threshold = 0.5;
-    const size_t num_tokens = n;
-    const size_t k_top_centroids = 1; // this can dictate whether we pass our tests or not!
+    const float centroid_score_threshold = 0.45;
+    const size_t total_centroids_to_calculate = nlist;
+    const size_t k_top_centroids = 2;
+    const size_t num_second_pass = 1024;
 
+    std::vector<idx_t> coarse_idx(n*total_centroids_to_calculate);
+    std::vector<float> distances(n*total_centroids_to_calculate);
+    encoder->search(
+        data,
+        n,
+        coarse_idx,
+        distances,
+        total_centroids_to_calculate,
+        centroid_score_threshold
+    );
     // get the centroids closest to each token.
-    std::vector<idx_t> coarse_idx(n*k_top_centroids);
-    std::vector<float> distances(n*k_top_centroids);
-    // we get back the k top centroid matches per token.
-    quantizer->search(
-            n,
-            data,
-            k_top_centroids, // it will already give us the highest matching centroids per word.
-            distances.data(),
-            coarse_idx.data());
-
+    // std::vector<idx_t> coarse_idx(n*k_top_centroids);
+    // std::vector<float> distances(n*k_top_centroids);
     std::vector<std::pair<float, idx_t>> centroid_scores;
-    for(size_t i = 0; i < num_tokens; i++) {
+    for(size_t i = 0; i < n; i++) {
         for (size_t j = 0; j < k_top_centroids; j++) {
             centroid_scores.push_back(
                 std::pair<float, idx_t>(
-                    distances[i*k_top_centroids+j], 
-                    coarse_idx[i*k_top_centroids+j]
+                    // the index here is that we've calculated
+                    // the distance across a total number of centroids,
+                    // but we only want to take the k_top_centroids.
+                    distances[i*total_centroids_to_calculate+j], 
+                    coarse_idx[i*total_centroids_to_calculate+j]
                 )
             );
         }
@@ -243,7 +179,29 @@ std::vector<SearchResult> IndexIVF::search(
             centroid_scores.end(),
             std::greater<std::pair<float, idx_t>>()
     );
-    
+    //define lambda to get unique pairs
+    auto unique_pair = [](std::pair<float, idx_t> p1, std::pair<float, idx_t> p2) {
+        return p1.second == p2.second;
+    };
+    centroid_scores.erase(
+            std::unique(centroid_scores.begin(), centroid_scores.end(), unique_pair),
+            centroid_scores.end()
+    );
+    auto num_centroids_to_eval = std::min<size_t>(n_probe, centroid_scores.size());
+
+    if (opts.expected_id != -1) {
+        auto mapping = index_->get_mapping(opts.expected_id);
+        std::unordered_set<idx_t> mapping_set(mapping.begin(), mapping.end());
+        for(int i = 0; i < centroid_scores.size(); i++) {
+            if (mapping_set.find(centroid_scores[i].second) != mapping_set.end()) {
+                LOG(INFO) << "expected id found in centroid: " << i;
+                if (i > num_centroids_to_eval) {
+                    LOG(INFO) << "expected id has been dropped from search.";
+                };
+            };
+        }
+    }
+
     /**
      * Get passage ids
      */
@@ -253,14 +211,16 @@ std::vector<SearchResult> IndexIVF::search(
     {
         std::vector<idx_t> local_pids;
 #pragma omp for nowait
-        for (size_t i = 0; i < n_probe; i++) {
+        for (size_t i = 0; i < num_centroids_to_eval; i++) {
             auto idx = centroid_scores[i].second;
             VLOG(10) << "Including centroid: " << idx << " in search.";
             if (idx == -1) {
                 continue;
             }
             Key start_key{kDefaultTenant, idx, 0, true};
-            Key end_key{kDefaultTenant, idx, std::numeric_limits<idx_t>::max()};
+            // instead of using the max key value, we use the next centroid idx so that we include all
+            // document ids.
+            Key end_key{kDefaultTenant, idx+1, 0, true};
             const std::string start_string = start_key.serialize();
             const std::string end_string = end_key.serialize();
 
@@ -277,8 +237,10 @@ std::vector<SearchResult> IndexIVF::search(
             for (; it->Valid(); it->Next()) {
                 auto k = it->key().ToString();
                 auto key = Key::from_slice(k);
-
-                VLOG(100) << "found document: " << key.id << "in list: " << idx;
+                VLOG(100) << "in centroid: " << key.inverted_list_id << " with id: " << key.id;
+                if (opts.expected_id != -1 && key.id == opts.expected_id) {
+                    LOG(INFO) << "found expected id in centroid: " << key.inverted_list_id;
+                }
                 local_pids.push_back(key.id);
             }
         }
@@ -286,7 +248,7 @@ std::vector<SearchResult> IndexIVF::search(
         global_pids.insert(local_pids.begin(), local_pids.end());
     } // end parallel
 
-    VLOG(100) << "got global pids: " << global_pids.size();
+    VLOG(100) << "found total num pids: " << global_pids.size();
     if (global_pids.size() == 0) {
         return std::vector<SearchResult>();
     }
@@ -295,10 +257,9 @@ std::vector<SearchResult> IndexIVF::search(
      * score by passage codes
      */
     std::vector<idx_t> pid_list(global_pids.begin(), global_pids.end());
-    auto doc_codes = invlists->get_codes(pid_list);
+    auto doc_codes = index_->get_codes(pid_list);
     std::vector<float> max_scores_per_centroid = max_score_by_centroid(
-            coarse_idx, distances, k_top_centroids, n, nlist);
-    std::vector<std::pair<float, idx_t>> pid_scores(pid_list.size());
+            coarse_idx, distances, total_centroids_to_calculate, n, nlist);
     // create a mapping from pid to the index. we'll need this to hydrate
     // residuals.
     std::unordered_map<idx_t, size_t> pid_to_index;
@@ -306,6 +267,7 @@ std::vector<SearchResult> IndexIVF::search(
         pid_to_index[doc_codes[i]->id] = i;
     }
 
+    std::vector<std::pair<float, idx_t>> pid_scores(pid_list.size());
 
     #pragma omp for
     for (int i = 0; i < pid_list.size(); i++) {
@@ -315,9 +277,7 @@ std::vector<SearchResult> IndexIVF::search(
                 max_scores_per_centroid,
                 codes, // we'll have num_token codes
                 centroid_score_threshold);
-        // VLOG(100) << "approximate score for pid: " << pid_list[i]
-        //           << " is: " << score;
-        pid_scores[i] = std::pair<float, idx_t>(score, pid_list[i]);
+        pid_scores[i] = std::pair<float, idx_t>(score, doc_codes[i]->id);
     }
 
 
@@ -328,11 +288,34 @@ std::vector<SearchResult> IndexIVF::search(
             pid_scores.begin(),
             pid_scores.end(),
             std::greater<std::pair<float, idx_t>>());
-    auto top_25 = std::max(size_t(1), pid_scores.size() / 4);
 
-    VLOG(100) << "top 25%: " << top_25;
+    // colBERT has a ndocs param which limits the number of documents to score.
+    size_t cutoff = pid_scores.size();
+    if (num_second_pass != 0 ) {
+        cutoff = num_second_pass;
+    }
+    auto num_rerank = std::max(size_t(1), cutoff / 4);
+    num_rerank = std::min(num_rerank, pid_scores.size());
+
+    if (opts.expected_id != -1) {
+        auto it = std::find_if(
+                pid_scores.begin(),
+                pid_scores.end(),
+                [opts](std::pair<float, idx_t> p) {
+                    return p.second == opts.expected_id;
+                });
+        if (it != pid_scores.end()) {
+            auto pos = it - pid_scores.begin();
+            LOG(INFO) << "found expected id in pid code scores at position: " << pos;
+            if (pos > num_rerank) {
+                LOG(INFO) << "top 25 cutoff: " << num_rerank << ". expected id has been dropped";
+            }
+        }
+    }
+
+    VLOG(10) << "num to rerank: " << num_rerank;
     std::vector<std::pair<float, idx_t>> top_25_scores(
-            pid_scores.begin(), pid_scores.begin() + top_25);
+            pid_scores.begin(), pid_scores.begin() + num_rerank);
 
     /**
      * score by passage residuals
@@ -343,16 +326,15 @@ std::vector<SearchResult> IndexIVF::search(
             top_25_scores.end(),
             std::back_inserter(top_25_ids),
             [](std::pair<float, idx_t> p) { return p.second; });
-    auto doc_residuals = invlists->get_residuals(top_25_ids);
+    auto doc_residuals = index_->get_residuals(top_25_ids);
 
     std::vector<std::pair<float, idx_t>> actual_scores(top_25_ids.size());
 #pragma omp for
     for (int i = 0; i < top_25_ids.size(); i++) {
         auto residuals = doc_residuals[i]->residuals;
-        VLOG(100) << "got residuals: " << residuals.size();
 
         auto codes = doc_codes[pid_to_index[doc_residuals[i]->id]]->codes;
-        std::vector<float> decompressed = decode_vectors(
+        std::vector<float> decompressed = encoder->decode_vectors(
             gsl::span<code_t>(codes),
             gsl::span<residual_t>(residuals),
             doc_residuals[i]->num_tokens,
@@ -365,17 +347,31 @@ std::vector<SearchResult> IndexIVF::search(
             decompressed.data(),
             doc_residuals[i]->num_tokens,
             dim);
-        VLOG(100) << "actual score for pid: " << top_25_ids[i]
-                  << " is: " << score;
+
         actual_scores[i] = std::pair<float, idx_t>(score, top_25_ids[i]);
     }
-    VLOG(100) << "got actual scores: " << actual_scores.size();
     // according to the paper, we take the top 25%.
     std::sort(
         actual_scores.begin(),
         actual_scores.end(),
         std::greater<std::pair<float, idx_t>>()
     );
+
+    if (opts.expected_id != -1) {
+        auto it = std::find_if(
+                pid_scores.begin(),
+                pid_scores.end(),
+                [opts](std::pair<float, idx_t> p) {
+                    return p.second == opts.expected_id;
+                });
+        if (it != pid_scores.end()) {
+            auto pos = it - pid_scores.begin();
+            LOG(INFO) << "expected id found in residual scores: " << pos;
+            if (pos > num_rerank) {
+                LOG(INFO) << "top 25 cutoff: " << num_rerank << ". expected id has been dropped";
+            }
+        }
+    }
 
     size_t num_to_return = std::min<size_t>(actual_scores.size(), k);
     std::vector<std::pair<float, idx_t>> top_k_scores(
@@ -393,8 +389,12 @@ std::vector<SearchResult> IndexIVF::search(
     return results;
 }
 
+void IndexIVF::set_centroids(float* data, int n, int dim) {
+    encoder->set_centroids(data, n, dim);
+}
+
 void IndexIVF::add(const std::vector<RawPassage>& docs) {
-    LINTDB_THROW_IF_NOT(is_trained);
+    LINTDB_THROW_IF_NOT(this->encoder->is_trained);
 
     for (auto doc : docs) {
         add_single(doc);
@@ -402,12 +402,14 @@ void IndexIVF::add(const std::vector<RawPassage>& docs) {
 }
 
 void IndexIVF::add_single(const RawPassage& doc) {
-    auto encoded = encode_vectors(doc);
-    invlists->add(std::move(encoded));
+    auto encoded = encoder->encode_vectors(doc);
+    int i = 0;
+
+    index_->add(std::move(encoded));
 }
 
 void IndexIVF::remove(const std::vector<idx_t>& ids) {
-    invlists->remove(ids);
+    index_->remove(ids);
 }
 
 void IndexIVF::update(const std::vector<RawPassage>& docs) {
@@ -417,73 +419,6 @@ void IndexIVF::update(const std::vector<RawPassage>& docs) {
     }
     remove(ids);
     add(docs);
-}
-
-// we need to encode the vectors into their code representations.
-// coarse_idx is the inverse list we should assign to.
-// NOTE: EmbeddingBlocks are column major and the quantizer expects row major.
-std::unique_ptr<EncodedDocument> IndexIVF::encode_vectors(
-        const RawPassage& doc) const {
-    LINTDB_THROW_IF_NOT(nlist <= std::numeric_limits<code_t>::max());
-    auto num_tokens = doc.embedding_block.num_tokens;
-
-    const float* data_ptr = doc.embedding_block.embeddings.data();
-
-    // get the centroids closest to each token.
-    std::vector<idx_t> coarse_idx(num_tokens);
-    quantizer->assign(num_tokens, data_ptr, coarse_idx.data());
-    assert(coarse_idx.size() == num_tokens);
-
-    // compute residual
-    std::vector<float> raw_residuals(num_tokens * dim);
-    std::vector<residual_t> residual_codes(num_tokens * nbits);
-    for (size_t i = 0; i < num_tokens; i++) {
-        quantizer->compute_residual(
-                data_ptr + i * dim,
-                raw_residuals.data() + i * dim,
-                coarse_idx[i]);
-        binarizer->sa_encode(
-                1,
-                raw_residuals.data() + i * dim,
-                residual_codes.data() + i * nbits);
-    }
-    std::vector<code_t> token_coarse_idx;
-    std::transform(
-            coarse_idx.begin(),
-            coarse_idx.end(),
-            std::back_inserter(token_coarse_idx),
-            [](idx_t idx) { return static_cast<code_t>(idx); });
-    
-    return std::make_unique<EncodedDocument>(EncodedDocument(
-            token_coarse_idx, residual_codes, num_tokens, doc.id, doc.doc_id));
-}
-
-std::vector<float> IndexIVF::decode_vectors(
-        gsl::span<const code_t> codes,
-        gsl::span<const residual_t> residuals,
-        size_t num_tokens,
-        size_t dim) const {
-    std::vector<float> decoded_embeddings(dim * num_tokens);
-    for (size_t i = 0; i < num_tokens; i++) {
-        auto centroid_id = codes[i];
-
-        // add the centroid to the decoded embedding.
-        quantizer->reconstruct(
-                centroid_id, decoded_embeddings.data() + i * dim);
-
-        // decode the residual code from the binary code.
-        std::vector<float> decoded_residuals(dim);
-        binarizer->sa_decode(
-                1,
-                residuals.data() + i * binarizer->sa_code_size(),
-                decoded_residuals.data());
-
-        // add the residual to the decoded embedding.
-        for (size_t j = 0; j < dim; j++) {
-            decoded_embeddings[i * dim + j] += decoded_residuals[j];
-        }
-    }
-    return decoded_embeddings;
 }
 
 void IndexIVF::write_metadata() {

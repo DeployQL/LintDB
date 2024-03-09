@@ -24,7 +24,8 @@ struct EncodedDocument {
                                // vector.
             size_t num_tokens,
             idx_t id,
-            std::string doc_id);
+            std::string doc_id,
+            std::string text);
 
     EncodedDocument(
             const code_t*
@@ -35,14 +36,52 @@ struct EncodedDocument {
             const size_t residuals_size,
             size_t num_tokens,
             idx_t id,
-            std::string doc_id);
+            std::string doc_id,
+            std::string text);
 
     const std::vector<code_t> codes;
     const std::vector<residual_t> residuals;
     const size_t num_tokens; // num_tokens
     idx_t id;
     std::string doc_id;
+    std::string text;
 };
+
+struct InvertedDocument {
+    idx_t id;
+};
+
+struct DocumentCodes {
+    const idx_t id;
+    const std::vector<code_t> codes;
+    const size_t num_tokens;
+
+    DocumentCodes(idx_t id, std::vector<code_t> codes, size_t num_tokens)
+            : id(id), codes(codes), num_tokens(num_tokens) {}
+    
+    DocumentCodes(idx_t id, const code_t* codes, size_t codes_size, size_t num_tokens)
+            : id(id), codes(codes, codes + codes_size), num_tokens(num_tokens) {}
+};
+
+struct DocumentResiduals {
+    const idx_t id;
+    const std::vector<residual_t> residuals;
+    const size_t num_tokens;
+
+    DocumentResiduals(idx_t id, std::vector<residual_t> residuals, size_t num_tokens)
+            : id(id), residuals(residuals), num_tokens(num_tokens) {}
+
+    DocumentResiduals(idx_t id, const residual_t* residuals, size_t residuals_size, size_t num_tokens)
+            : id(id), residuals(residuals, residuals + residuals_size), num_tokens(num_tokens) {}
+};
+
+struct DocumentMetadata {
+    idx_t id;
+    std::string doc_id;
+    std::string text;
+};
+
+
 } // namespace lintdb
 
 #endif

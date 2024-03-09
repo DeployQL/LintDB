@@ -20,10 +20,11 @@
 #include "lintdb/api.h"
 #include "lintdb/exception.h"
 #include "lintdb/invlists/InvertedList.h"
+#include "lintdb/Encoder.h"
 
 namespace lintdb {
-static const std::string QUANTIZER_FILENAME = "_quantizer.bin";
-static const std::string BINARIZER_FILENAME = "_binarizer.bin";
+// static const std::string QUANTIZER_FILENAME = "_quantizer.bin";
+// static const std::string BINARIZER_FILENAME = "_binarizer.bin";
 static const std::string METADATA_FILENAME = "_lintdb_metadata.json";
 
 struct SearchResult {
@@ -34,8 +35,14 @@ struct SearchResult {
 struct Configuration {
     size_t nlist = 256;
     size_t nbits = 2;
-    size_t niter = 4;
+    size_t niter = 10;
     bool use_ivf = true;
+};
+
+struct SearchOptions {
+    idx_t expected_id = -1;
+
+    SearchOptions(): expected_id(-1) {};
 };
 
 /**
@@ -59,15 +66,9 @@ struct IndexIVF {
             std::string path, // path to the database.
             size_t nlist,     // number of centroids to use in L1 quantizing.
             size_t dim,       // number of dimensions per embedding.
-            size_t binarize_nbits, // nbits used in the LSH encoding for esiduals.
-            size_t niter = 4,
+            size_t binarize_nbits=2, // nbits used in the LSH encoding for esiduals.
+            size_t niter = 10,
             bool use_ivf = true
-    );
-
-    IndexIVF(
-            std::string path,
-            faiss::Index* quantizer,
-            faiss::Index* binarizer
     );
 
     // train will learn a k-means clustering for document assignment.
@@ -79,6 +80,13 @@ struct IndexIVF {
     void train(float* embeddings, int n, int dim);
 
     /**
+     * set_centroids overwrites the centroids in the encoder.
+     * 
+     * This is useful if you want to parallelize index writing and merge indices later.
+    */
+    void set_centroids(float* data, int n, int dim);
+
+    /**
      * search will find the nearest neighbors for a vector block.
      *
      * @param block the block of embeddings to search.
@@ -88,7 +96,8 @@ struct IndexIVF {
     std::vector<SearchResult> search(
         EmbeddingBlock& block,
         size_t n_probe,
-        size_t k) const;
+        size_t k,
+        SearchOptions opts=SearchOptions()) const;
 
     // search method to accept a numpy array from python.
     std::vector<SearchResult> search(
@@ -96,7 +105,8 @@ struct IndexIVF {
         int n,
         int dim,
         size_t n_probe,
-        size_t k) const;
+        size_t k,
+        SearchOptions opts=SearchOptions()) const;
 
     /**
      * add will add a block of embeddings to the index.
@@ -128,51 +138,46 @@ struct IndexIVF {
     void save();
 
     ~IndexIVF() {
-        delete invlists;
+        delete index_;
         for (auto cf : column_families) {
             db->DestroyColumnFamilyHandle(cf);
         }
         delete db;
-        delete quantizer;
-        delete binarizer;
+        // delete quantizer;
+        // delete binarizer;
     }
 
    private:
     std::string path;
     rocksdb::DB* db;
     std::vector<rocksdb::ColumnFamilyHandle*> column_families;
-    // quantizer encodes and decodes the blocks of embeddings. L2 of
-    // quantization.
-    faiss::Index* quantizer;
-    // binarizer encodes the residuals. End stage of quantization.
-    faiss::Index* binarizer;
+
+    std::unique_ptr<Encoder> encoder;
 
     size_t dim; // number of dimensions per embedding.
 
-    bool is_trained = false;
-
     // the inverted list data structure.
-    InvertedList* invlists;
+    ForwardIndex* index_;
     std::unordered_set<idx_t> get_pids(idx_t ivf_id) const;
 
-    /**
-     * Encode vectors translates the embeddings given to us in RawPassage to
-     * the internal representation that we expect to see in the inverted lists.
-     */
-    std::unique_ptr<EncodedDocument> encode_vectors(
-            const RawPassage& doc) const;
+    // /**
+    //  * Encode vectors translates the embeddings given to us in RawPassage to
+    //  * the internal representation that we expect to see in the inverted lists.
+    //  */
+    // std::unique_ptr<EncodedDocument> encode_vectors(
+    //         const RawPassage& doc) const;
 
-    /**
-     * Decode vectors translates out of our internal representation.
-     *
-     * Note: The interface to this has been changing -- it depends on the
-     * structures we use to retrieve the data, which is still in flux.
-     */
-    std::vector<float> decode_vectors(
-            gsl::span<const code_t> codes,
-            gsl::span<const residual_t> residuals,
-            size_t num_tokens,
-            size_t dim) const;
+    // /**
+    //  * Decode vectors translates out of our internal representation.
+    //  *
+    //  * Note: The interface to this has been changing -- it depends on the
+    //  * structures we use to retrieve the data, which is still in flux.
+    //  */
+    // std::vector<float> decode_vectors(
+    //         gsl::span<const code_t> codes,
+    //         gsl::span<const residual_t> residuals,
+    //         size_t num_tokens,
+    //         size_t dim) const;
 
     void write_metadata();
     void read_metadata(std::string path);

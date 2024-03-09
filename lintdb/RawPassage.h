@@ -17,6 +17,7 @@ struct RawPassage {
     idx_t id;
     // document id is a string uuid for the passage.
     std::string doc_id;
+    std::string text;
 
     RawPassage() = default;
 
@@ -25,8 +26,9 @@ struct RawPassage {
             int num_tokens,
             int dim,
             int64_t id,
-            std::string doc_id)
-            : id(id), doc_id(doc_id), embedding_block(block, num_tokens, dim) {}
+            std::string doc_id,
+            std::string text)
+            : id(id), doc_id(doc_id), embedding_block(block, num_tokens, dim), text(text) {}
 };
 } // namespace lintdb
 

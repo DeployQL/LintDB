@@ -4,9 +4,11 @@
 #include <iostream>
 #include <unordered_set>
 #include "lintdb/api.h"
+#include "lintdb/util.h"
+#include <numeric>
 
 namespace lintdb {
-// returns a list of scores for each centroid.
+
 float score_documents_by_codes(
         const gsl::span<float>
                 max_scores_by_centroid, // the max score per centroid across the
@@ -18,7 +20,9 @@ float score_documents_by_codes(
     std::unordered_set<code_t> unique_codes;
     // Iterate over each token code.
     for (auto index : doc_codes) {
-        if (unique_codes.find(index) != unique_codes.end()) {
+        assert(index < max_scores_by_centroid.size() && "index out of bounds");
+        if ((unique_codes.find(index) != unique_codes.end()) ||
+            (max_scores_by_centroid[index] < centroid_score_threshold)) {
             continue;
         }
 
@@ -32,6 +36,7 @@ float score_documents_by_codes(
     return doc_score;
 }
 
+// below, we are summing up for every centroid. this ignores per word
 std::vector<float> max_score_by_centroid(
         gsl::span<idx_t> coarse_idx,
         gsl::span<float> distances,
@@ -57,29 +62,34 @@ float score_document_by_residuals(
         const gsl::span<float>
                 query_vectors, // size: (num_query_tokens, num_dim)
         const size_t num_query_tokens,
-        const float* doc_residuals, // size: (num_doc_tokens, num_dim)
+        float* doc_residuals, // size: (num_doc_tokens, num_dim)
         const size_t num_doc_tokens,
-        const size_t dim) {
+        const size_t dim,
+        bool normalize) {
     // use BLAS functions to matmul doc residuals with the transposed query
     // vectors. we'll use the sum of the max scores for each centroid.
-    int m = num_query_tokens; // rows of op(A) and of matrix C.
-    int n = num_doc_tokens;   // columns of matrix op(B) and of matrix C.
+    int m = num_doc_tokens; // rows of op(A) and of matrix C.
+    int n = num_query_tokens;   // columns of matrix op(B) and of matrix C.
     int k = dim; // the number of columns of op(A) and rows of op(B).
 
+    if (normalize) {
+        normalize_vector(doc_residuals, num_doc_tokens, dim);
+    }
+
     std::vector<float> output(m * n, 0);
-    // gives us a num_query_tokens x num_doc_tokens matrix.
+    // gives us a num_doc_tokens x num_query_tokens matrix.
     cblas_sgemm(
             CblasRowMajor,
             CblasNoTrans,
             CblasTrans,
-            m, // 3
-            n, // 3
-            k, // 2
+            m, // 8
+            n, // 4
+            k, // 128
             1.0,
-            query_vectors.data(), // m x k
+            doc_residuals, // m x k
             k, // leading dimension is the length of the first dimension
                // (columns)
-            doc_residuals, // should be k x n after transpose
+            query_vectors.data(), // should be k x n after transpose
             k,             // this is the leading dimension of B, not op(b)
             0.000,
             output.data(), // m x n
@@ -100,7 +110,7 @@ float score_document_by_residuals(
     for (size_t i = 0; i < n; i++) {
         maxsim += max_scores[i];
     }
-
     return maxsim;
 }
+
 } // namespace lintdb

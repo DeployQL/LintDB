@@ -9,7 +9,7 @@ build-debug:
 test: build
 	export AF_PRINT_ERRORS=1
 	export AF_TRACE=all
-	cd build && cmake -E env GLOG_v=100 GLOG_logtostderr=1 ctest --output-on-failure
+	cd build && cmake -E env GLOG_v=10 GLOG_logtostderr=1 ctest --output-on-failure
 
 test-python:
 # had to fix up conda to make this work--
@@ -17,7 +17,7 @@ test-python:
 # https://stackoverflow.com/questions/72540359/glibcxx-3-4-30-not-found-for-librosa-in-conda-virtual-environment-after-tryin
 	cmake --build build -j12
 	cd build/lintdb/python && python setup.py build
-	PYTHONPATH="build/lintdb/python/build/lib" pytest tests/test_*.py
+	GLOG_v=100 PYTHONPATH="build/lintdb/python/build/lib" pytest tests/test_*.py
 
 run-python:
 	cmake --build build -j12
@@ -33,3 +33,7 @@ prepare:
 
 format:
 	find ./lintdb -iname '*.h' -o -iname '*.cpp' | xargs clang-format -i
+
+valgrind:
+# we need valgrind?-3.20 to process dwarf5
+	 valgrind --trace-children=yes --suppressions=debug/valgrind-python.supp env PYTHONPATH="build/lintdb/python" python ./benchmarks/lotte/main.py

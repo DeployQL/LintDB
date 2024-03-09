@@ -158,7 +158,7 @@ std::vector<idx_t> RocksDBInvertedList::get_mapping(idx_t id) const {
     }
 }
 
-std::vector<std::unique_ptr<EncodedDocument>> RocksDBInvertedList::
+std::vector<std::unique_ptr<DocumentResiduals>> RocksDBInvertedList::
         get_residuals(std::vector<idx_t> ids) const {
     std::vector<rocksdb::Slice> keys;
     // rocksdb slices don't take ownership of the underlying data, so we need to
@@ -178,7 +178,7 @@ std::vector<std::unique_ptr<EncodedDocument>> RocksDBInvertedList::
     VLOG(100) << "Getting num docs: " << keys.size()
               << " from the forward index.";
 
-    std::vector<std::unique_ptr<EncodedDocument>> docs;
+    std::vector<std::unique_ptr<DocumentResiduals>> docs;
     rocksdb::ReadOptions ro;
     std::vector<rocksdb::PinnableSlice> values(keys.size());
     std::vector<rocksdb::Status> statuses(keys.size());
@@ -196,14 +196,11 @@ std::vector<std::unique_ptr<EncodedDocument>> RocksDBInvertedList::
     for (size_t i = 0; i < ids.size(); i++) {
         if (statuses[i].ok()) {
             auto doc = GetForwardIndexDocument(values[i].data());
-            auto ptr = std::make_unique<EncodedDocument>(EncodedDocument(
-                    empty_codes,
-                    0,
-                    doc->residuals()->data(),
-                    doc->residuals()->size(),
-                    doc->num_tokens(),
-                    ids[i],
-                    doc->doc_id()->str()));
+            auto ptr = std::make_unique<DocumentResiduals>(DocumentResiduals(
+                ids[i],
+                doc->residuals()->data(),
+                doc->residuals()->size(),
+                doc->num_tokens()));
             docs.push_back(std::move(ptr));
             // release the memory used by rocksdb for this value.
             values[i].Reset();
@@ -217,7 +214,7 @@ std::vector<std::unique_ptr<EncodedDocument>> RocksDBInvertedList::
     return docs;
 }
 
-std::vector<std::unique_ptr<EncodedDocument>> RocksDBInvertedList::get_codes(
+std::vector<std::unique_ptr<DocumentCodes>> RocksDBInvertedList::get_codes(
         std::vector<idx_t> ids) const {
     std::vector<rocksdb::Slice> keys;
     // rocksdb slices don't take ownership of the underlying data, so we need to
@@ -237,7 +234,7 @@ std::vector<std::unique_ptr<EncodedDocument>> RocksDBInvertedList::get_codes(
     VLOG(100) << "Getting num docs: " << keys.size()
               << " from the forward index.";
 
-    std::vector<std::unique_ptr<EncodedDocument>> docs;
+    std::vector<std::unique_ptr<DocumentCodes>> docs;
     rocksdb::ReadOptions ro;
     std::vector<rocksdb::PinnableSlice> values(ids.size());
     std::vector<rocksdb::Status> statuses(ids.size());
@@ -257,14 +254,9 @@ std::vector<std::unique_ptr<EncodedDocument>> RocksDBInvertedList::get_codes(
                   << " is: " << statuses[i].ToString();
         if (statuses[i].ok()) {
             auto doc = GetInvertedIndexDocument(values[i].data());
-            auto ptr = std::make_unique<EncodedDocument>(EncodedDocument(
-                    doc->codes()->data(),
-                    doc->codes()->size(),
-                    empty_res,
-                    0,
-                    0,
-                    ids[i],
-                    ""));
+            auto ptr = std::make_unique<DocumentCodes>(DocumentCodes(
+                    ids[i], doc->codes()->data(), doc->codes()->size(), doc->codes()->size()
+            ));
             docs.push_back(std::move(ptr));
             // release the memory used by rocksdb for this value.
             values[i].Reset();

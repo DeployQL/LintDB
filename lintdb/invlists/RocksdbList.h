@@ -50,7 +50,7 @@ struct RocksDBIterator : public Iterator {
     rocksdb::Slice end_slice;
 };
 
-struct RocksDBInvertedList : public InvertedList {
+struct RocksDBInvertedList : public InvertedList, public ForwardIndex {
     RocksDBInvertedList(
             rocksdb::DB& db,
             std::vector<rocksdb::ColumnFamilyHandle*>& column_families);
@@ -63,9 +63,10 @@ struct RocksDBInvertedList : public InvertedList {
     std::unique_ptr<Iterator> get_iterator(
             const std::string& start,
             const std::string& end) const override;
-    std::vector<std::unique_ptr<EncodedDocument>> get_codes(
+            
+    std::vector<std::unique_ptr<DocumentCodes>> get_codes(
             std::vector<idx_t> ids) const override;
-    std::vector<std::unique_ptr<EncodedDocument>> get_residuals(
+    std::vector<std::unique_ptr<DocumentResiduals>> get_residuals(
             std::vector<idx_t> ids) const override;
     std::vector<idx_t> get_mapping(idx_t id) const override;
 

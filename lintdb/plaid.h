@@ -33,15 +33,11 @@ float score_document_by_residuals(
         const gsl::span<float>
                 query_vectors, // size: (num_query_tokens, num_dim)
         const size_t num_query_tokens,
-        const float* doc_residuals, // size: (num_doc_tokens, num_dim)
+        float* doc_residuals, // size: (num_doc_tokens, num_dim)
         const size_t num_doc_tokens,
-        const size_t dim);
+        const size_t dim,
+        bool normalize=true);
 
-struct PlaidRetriever {
-        PlaidRetriever(
-            bool
-        )
-}
 } // namespace lintdb
 
 #endif
