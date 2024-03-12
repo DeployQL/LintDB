@@ -15,9 +15,6 @@ struct RawPassage {
     // it must be an integer. we enable document ids to be strings that we can
     // lookup after retrieval.
     idx_t id;
-    // document id is a string uuid for the passage.
-    std::string doc_id;
-    std::string text;
 
     RawPassage() = default;
 
@@ -25,10 +22,8 @@ struct RawPassage {
             const float* block,
             int num_tokens,
             int dim,
-            int64_t id,
-            std::string doc_id,
-            std::string text)
-            : id(id), doc_id(doc_id), embedding_block(block, num_tokens, dim), text(text) {}
+            int64_t id)
+            : id(id), embedding_block(block, num_tokens, dim){}
 };
 } // namespace lintdb
 

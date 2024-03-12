@@ -2,7 +2,6 @@ namespace lintdb;
 
 // flatbuffers use uint32 internally and are limited to 2gb in size.
 table ForwardIndexDocument {
-    doc_id:string;
     num_tokens:uint32;
     residuals:[uint8]; // will have num_tokens * dim of residuals.
 }

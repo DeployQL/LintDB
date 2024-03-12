@@ -23,9 +23,7 @@ struct EncodedDocument {
                     residuals, // reflects the residual vector for each token
                                // vector.
             size_t num_tokens,
-            idx_t id,
-            std::string doc_id,
-            std::string text);
+            idx_t id);
 
     EncodedDocument(
             const code_t*
@@ -35,16 +33,13 @@ struct EncodedDocument {
                                       // token vector.
             const size_t residuals_size,
             size_t num_tokens,
-            idx_t id,
-            std::string doc_id,
-            std::string text);
+            idx_t id
+        );
 
     const std::vector<code_t> codes;
     const std::vector<residual_t> residuals;
     const size_t num_tokens; // num_tokens
     idx_t id;
-    std::string doc_id;
-    std::string text;
 };
 
 struct InvertedDocument {
@@ -75,11 +70,6 @@ struct DocumentResiduals {
             : id(id), residuals(residuals, residuals + residuals_size), num_tokens(num_tokens) {}
 };
 
-struct DocumentMetadata {
-    idx_t id;
-    std::string doc_id;
-    std::string text;
-};
 
 
 } // namespace lintdb

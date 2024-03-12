@@ -36,7 +36,7 @@ IndexIVF::IndexIVF(std::string path) {
     // set all of our individual attributes.
     this->read_metadata(path);
     auto config = EncoderConfig{
-        nlist, nbits, niter, dim
+        nlist, nbits, niter, dim, use_compression
     };
     this->encoder = DefaultEncoder::load(path, config);
 
@@ -45,11 +45,13 @@ IndexIVF::IndexIVF(std::string path) {
     options.create_missing_column_families = true;
 
     auto cfs = create_column_families();
+    rocksdb::DB* ptr;
     rocksdb::Status s = rocksdb::DB::Open(
-            options, path, cfs, &(this->column_families), &(this->db));
+            options, path, cfs, &(this->column_families), &ptr);
     assert(s.ok());
+    this->db = std::unique_ptr<rocksdb::DB>(ptr);
 
-    this->index_ = new RocksDBInvertedList(*this->db, this->column_families);
+    this->index_ = std::make_unique<RocksDBInvertedList>(RocksDBInvertedList(*this->db, this->column_families));
 }
 
 IndexIVF::IndexIVF(std::string path, size_t dim, Configuration& config)
@@ -70,13 +72,14 @@ IndexIVF::IndexIVF(
         size_t dim,
         size_t binarize_nbits,
         size_t niter,
+        bool use_compression,
         bool use_ivf
-        ) : path(path), nlist(nlist), dim(dim), nbits(binarize_nbits), niter(niter), use_ivf(use_ivf) {
+        ) : path(path), nlist(nlist), dim(dim), nbits(binarize_nbits), niter(niter), use_compression(use_compression), use_ivf(use_ivf) {
     // for now, we can only handle 32 bit coarse codes.
     LINTDB_THROW_IF_NOT(nlist <= std::numeric_limits<code_t>::max());
 
     this->encoder = std::make_unique<DefaultEncoder>(
-        path, nlist, nbits, niter, dim
+        path, nlist, nbits, niter, dim, use_compression // use compression
     );
 
     rocksdb::Options options;
@@ -84,11 +87,13 @@ IndexIVF::IndexIVF(
     options.create_missing_column_families = true;
 
     auto cfs = create_column_families();
+    rocksdb::DB* ptr;
     rocksdb::Status s = rocksdb::DB::Open(
-            options, path, cfs, &(this->column_families), &(this->db));
+            options, path, cfs, &(this->column_families), &ptr);
     assert(s.ok());
+    this->db = std::unique_ptr<rocksdb::DB>(ptr);
 
-    this->index_ = new RocksDBInvertedList(*this->db, this->column_families);
+    this->index_ = std::make_unique<RocksDBInvertedList>(RocksDBInvertedList(*this->db, this->column_families));
 }
 
 void IndexIVF::train(size_t n, std::vector<float>& embeddings) {
@@ -217,32 +222,7 @@ std::vector<SearchResult> IndexIVF::search(
             if (idx == -1) {
                 continue;
             }
-            Key start_key{kDefaultTenant, idx, 0, true};
-            // instead of using the max key value, we use the next centroid idx so that we include all
-            // document ids.
-            Key end_key{kDefaultTenant, idx+1, 0, true};
-            const std::string start_string = start_key.serialize();
-            const std::string end_string = end_key.serialize();
-
-            // our iterator abstraction was not working. The upper bound key was
-            // being destroyed during iteration, which causes rocksdb to throw
-            // an error. for now, we use a raw rocksdb iteration.
-            auto options = rocksdb::ReadOptions();
-            rocksdb::Slice end_slice(end_string);
-            options.iterate_upper_bound = &end_slice;
-            auto it = std::unique_ptr<rocksdb::Iterator>(db->NewIterator(
-                    options, column_families[kIndexColumnIndex]));
-            rocksdb::Slice prefix(start_string);
-            it->Seek(prefix);
-            for (; it->Valid(); it->Next()) {
-                auto k = it->key().ToString();
-                auto key = Key::from_slice(k);
-                VLOG(100) << "in centroid: " << key.inverted_list_id << " with id: " << key.id;
-                if (opts.expected_id != -1 && key.id == opts.expected_id) {
-                    LOG(INFO) << "found expected id in centroid: " << key.inverted_list_id;
-                }
-                local_pids.push_back(key.id);
-            }
+            local_pids = lookup_pids(idx);
         }
 #pragma omp critical
         global_pids.insert(local_pids.begin(), local_pids.end());
@@ -359,13 +339,13 @@ std::vector<SearchResult> IndexIVF::search(
 
     if (opts.expected_id != -1) {
         auto it = std::find_if(
-                pid_scores.begin(),
-                pid_scores.end(),
+                actual_scores.begin(),
+                actual_scores.end(),
                 [opts](std::pair<float, idx_t> p) {
                     return p.second == opts.expected_id;
                 });
-        if (it != pid_scores.end()) {
-            auto pos = it - pid_scores.begin();
+        if (it != actual_scores.end()) {
+            auto pos = it - actual_scores.begin();
             LOG(INFO) << "expected id found in residual scores: " << pos;
             if (pos > num_rerank) {
                 LOG(INFO) << "top 25 cutoff: " << num_rerank << ". expected id has been dropped";
@@ -421,6 +401,36 @@ void IndexIVF::update(const std::vector<RawPassage>& docs) {
     add(docs);
 }
 
+std::vector<idx_t> IndexIVF::lookup_pids(idx_t idx) const {
+    Key start_key{kDefaultTenant, idx, 0, true};
+    // instead of using the max key value, we use the next centroid idx so that we include all
+    // document ids.
+    Key end_key{kDefaultTenant, idx+1, 0, true};
+    const std::string start_string = start_key.serialize();
+    const std::string end_string = end_key.serialize();
+
+    // our iterator abstraction was not working. The upper bound key was
+    // being destroyed during iteration, which causes rocksdb to throw
+    // an error. for now, we use a raw rocksdb iteration.
+    auto options = rocksdb::ReadOptions();
+    rocksdb::Slice end_slice(end_string);
+    options.iterate_upper_bound = &end_slice;
+    auto it = std::unique_ptr<rocksdb::Iterator>(db->NewIterator(
+            options, column_families[kIndexColumnIndex]));
+
+    std::vector<idx_t> local_pids;
+    rocksdb::Slice prefix(start_string);
+    it->Seek(prefix);
+    for (; it->Valid(); it->Next()) {
+        auto k = it->key().ToString();
+        auto key = Key::from_slice(k);
+        
+        local_pids.push_back(key.id);
+    }
+
+    return local_pids;
+}
+
 void IndexIVF::write_metadata() {
     std::string out_path = path + "/" + METADATA_FILENAME;
     std::ofstream out(out_path);
@@ -431,6 +441,7 @@ void IndexIVF::write_metadata() {
     metadata["dim"] = dim;
     metadata["niter"] = niter;
     metadata["use_ivf"] = use_ivf;
+    metadata["use_compression"] = use_compression;
 
     Json::StyledWriter writer;
     out << writer.write(metadata);
@@ -454,5 +465,6 @@ void IndexIVF::read_metadata(std::string path) {
     dim = metadata["dim"].asUInt();
     niter = metadata["niter"].asUInt();
     use_ivf = metadata["use_ivf"].asBool();
+    use_compression = metadata["use_compression"].asBool();
 }
 } // namespace lintdb

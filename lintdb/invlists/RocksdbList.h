@@ -58,6 +58,8 @@ struct RocksDBInvertedList : public InvertedList, public ForwardIndex {
     void add(std::unique_ptr<EncodedDocument> docs) override;
     void remove(std::vector<idx_t> ids) override;
 
+    void merge(rocksdb::DB* db) override;
+
     void delete_entry(idx_t list_no, idx_t id) override;
 
     std::unique_ptr<Iterator> get_iterator(

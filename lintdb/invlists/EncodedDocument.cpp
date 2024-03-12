@@ -7,15 +7,11 @@ EncodedDocument::EncodedDocument(
         const std::vector<residual_t>
                 r, // reflects the residual vector for each token vector.
         size_t num_tokens,
-        idx_t id,
-        std::string doc_id,
-        std::string text)
+        idx_t id)
         : codes(c),
           residuals(r),
           num_tokens(num_tokens),
-          id(id),
-          doc_id(doc_id),
-          text(text) {}
+          id(id) {}
 
 EncodedDocument::EncodedDocument(
         const code_t* c, // reflects the centroid id for each token vector.
@@ -23,13 +19,9 @@ EncodedDocument::EncodedDocument(
         const uint8_t* r, // reflects the residual vector for each token vector.
         const size_t residuals_size,
         size_t num_tokens,
-        idx_t id,
-        std::string doc_id,
-        std::string text)
+        idx_t id)
         : codes(c, c + codes_size),
           residuals(r, r + residuals_size),
           num_tokens(num_tokens),
-          id(id),
-          doc_id(doc_id),
-          text(text) {}
+          id(id) {}
 } // namespace lintdb

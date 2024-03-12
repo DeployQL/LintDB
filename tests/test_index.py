@@ -18,9 +18,7 @@ def test_index_init():
         data = np.random.normal(i, 2, size=(100, 128)).astype('float32')
         obj = pylintdb.RawPassage(
             data,
-            i,
-            "doc id",
-            "text"
+            i
         )
         passages.append(obj)
 
@@ -32,14 +30,12 @@ def test_index_init():
     normed_dat = normalized(dat)
     obj = pylintdb.RawPassage(
             normed_dat,
-            1,
-            "doc id",
-            "text"
+            1
         )
     # I can append to our own vector type, but can't be added for some reason.
     td = pylintdb.RawPassageVector()
     for i in range(5):
-        td.append(pylintdb.RawPassage(normed_dat, 1, "doc id", "text"))
+        td.append(pylintdb.RawPassage(normed_dat, 1))
 
     # index.add_single(obj)
 
@@ -54,7 +50,7 @@ def test_index_init():
 
 def test_index_load():
     dir = tempfile.TemporaryDirectory(prefix="pylintdb_test")
-    index = pylintdb.IndexIVF(dir.name, 32, 128, 1)
+    index = pylintdb.IndexIVF(dir.name, 32, 128, 2, 4, False)
 
     data = np.random.rand(1500, 128).astype('float32')
     index.train(data)

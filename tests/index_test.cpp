@@ -54,7 +54,7 @@ TEST(IndexTest, TrainsCorrectly) {
     // this doc is row-major on disk, and we can read memory as (num_tokensxdim)
     lintdb::EmbeddingBlock block(fake_doc.data(), num_tokens, dim);
 
-    lintdb::RawPassage doc(fake_doc.data(), num_tokens, dim, 1, "something" , "text");
+    lintdb::RawPassage doc(fake_doc.data(), num_tokens, dim, 1);
     std::vector<lintdb::RawPassage> docs = { doc };
     index.add(docs);
 
@@ -132,7 +132,7 @@ TEST(IndexTest, SearchCorrectly) {
 
     lintdb::EmbeddingBlock block{fake_doc.data(), num_tokens, dim};
 
-    lintdb::RawPassage doc(fake_doc.data(), num_tokens, dim, 1, "something", "text");
+    lintdb::RawPassage doc(fake_doc.data(), num_tokens, dim, 1);
     std::vector<lintdb::RawPassage> docs = { doc };
     index.add(docs);
 

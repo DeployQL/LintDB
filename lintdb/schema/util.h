@@ -17,7 +17,6 @@ std::unique_ptr<flatbuffers::FlatBufferBuilder> create_inverted_index_document(
 
 std::unique_ptr<flatbuffers::FlatBufferBuilder> create_forward_index_document(
         const size_t num_tokens,
-        const std::string doc_id,
         const residual_t* residuals,
         const size_t residuals_size);
 

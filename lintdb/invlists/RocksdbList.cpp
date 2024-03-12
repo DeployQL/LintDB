@@ -81,7 +81,6 @@ void RocksDBInvertedList::add(std::unique_ptr<EncodedDocument> doc) {
     // store document data.
     auto forward_doc_ptr = create_forward_index_document(
             doc->num_tokens,
-            doc->doc_id,
             doc->residuals.data(),
             doc->residuals.size());
 
@@ -277,5 +276,25 @@ void RocksDBInvertedList::delete_entry(idx_t list_no, idx_t id) {
 
     assert(status.ok());
 };
+
+void RocksDBInvertedList::merge(rocksdb::DB* db) {
+        // merge the indices.
+#pragma omp for
+        for (size_t i = 1; i < column_families.size(); i++) {
+                // ignore the default cf at position 0 since we don't use it.
+                auto cf = column_families[i];
+                rocksdb::ReadOptions ro;
+                auto it = db->NewIterator(ro, cf);
+                it->SeekToFirst();
+                rocksdb::WriteOptions wo;
+                while (it->Valid()) {
+                    auto key = it->key();
+                    auto value = it->value();
+                    auto status = db_.Put(wo, cf, key, value);
+                    assert(status.ok());
+                    it->Next();
+                }
+        }
+}
 
 } // namespace lintdb

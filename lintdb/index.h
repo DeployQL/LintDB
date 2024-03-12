@@ -37,6 +37,7 @@ struct Configuration {
     size_t nbits = 2;
     size_t niter = 10;
     bool use_ivf = true;
+    bool use_compression = true;
 };
 
 struct SearchOptions {
@@ -56,6 +57,7 @@ struct IndexIVF {
     size_t nbits; // number of bits used in binarizing the residuals.
     size_t niter; // number of iterations to use in k-means clustering.
     bool use_ivf; // whether to use the inverted file structure.
+    bool use_compression; // whether to use the LSH encoding for residuals.
 
     // load an existing index.
     IndexIVF(std::string path);
@@ -68,6 +70,7 @@ struct IndexIVF {
             size_t dim,       // number of dimensions per embedding.
             size_t binarize_nbits=2, // nbits used in the LSH encoding for esiduals.
             size_t niter = 10,
+            bool use_compression = true,
             bool use_ivf = true
     );
 
@@ -108,6 +111,9 @@ struct IndexIVF {
         size_t k,
         SearchOptions opts=SearchOptions()) const;
 
+    // accesses the inverted list for a given ivf_id and returns the pids.
+    std::vector<idx_t> lookup_pids(idx_t ivf_id) const;
+
     /**
      * add will add a block of embeddings to the index.
      *
@@ -138,18 +144,14 @@ struct IndexIVF {
     void save();
 
     ~IndexIVF() {
-        delete index_;
         for (auto cf : column_families) {
             db->DestroyColumnFamilyHandle(cf);
         }
-        delete db;
-        // delete quantizer;
-        // delete binarizer;
     }
 
    private:
     std::string path;
-    rocksdb::DB* db;
+    std::unique_ptr<rocksdb::DB> db;
     std::vector<rocksdb::ColumnFamilyHandle*> column_families;
 
     std::unique_ptr<Encoder> encoder;
@@ -157,7 +159,7 @@ struct IndexIVF {
     size_t dim; // number of dimensions per embedding.
 
     // the inverted list data structure.
-    ForwardIndex* index_;
+    std::unique_ptr<ForwardIndex> index_;
     std::unordered_set<idx_t> get_pids(idx_t ivf_id) const;
 
     // /**

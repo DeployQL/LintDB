@@ -18,6 +18,7 @@ namespace lintdb {
         size_t nbits;
         size_t niter;
         size_t dim;
+        bool use_compression;
     };
 
     struct Encoder {
@@ -82,8 +83,15 @@ namespace lintdb {
         size_t niter; // number of iterations to use in k-means clustering.
         size_t dim; // number of dimensions per embedding.
         std::string path;
+        bool use_compression;
         // create a new encoder
-        DefaultEncoder(std::string path, size_t nlist, size_t nbits, size_t niter, size_t dim);
+        DefaultEncoder(
+            std::string path, 
+            size_t nlist, 
+            size_t nbits, 
+            size_t niter, 
+            size_t dim,
+            bool use_compression=false);
 
         std::unique_ptr<EncodedDocument> encode_vectors(
                 const RawPassage& doc) const override;
@@ -115,6 +123,7 @@ namespace lintdb {
 
         private:
         std::unique_ptr<faiss::Index> quantizer;
+        std::unique_ptr<faiss::Index> binarizer;
         void save(std::string path) override;
     };
 }
