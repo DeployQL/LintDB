@@ -19,7 +19,7 @@ namespace lintdb {
         // for normalized vectors, this should be the same as IP.
         this->quantizer = std::make_unique<faiss::IndexFlatIP>(dim);
         if(use_compression) {
-            this->binarizer = std::make_unique<faiss::IndexLSH>(dim, nbits);
+            this->binarizer = std::make_unique<Binarizer>(nbits, dim);
         }
     }
 
@@ -51,7 +51,7 @@ namespace lintdb {
                 std::back_inserter(token_coarse_idx),
                 [](idx_t idx) { return static_cast<code_t>(idx); });
         if (use_compression) {
-            std::vector<residual_t> residual_codes(num_tokens * nbits);
+            std::vector<residual_t> residual_codes(num_tokens * (dim / 8 * nbits));
             binarizer->sa_encode(num_tokens, raw_residuals.data(), residual_codes.data());
             
             return std::make_unique<EncodedDocument>(EncodedDocument(
@@ -122,10 +122,10 @@ namespace lintdb {
         auto quantizer_path = path + "/"+ QUANTIZER_FILENAME;
         faiss::write_index(quantizer.get(), quantizer_path.c_str());
 
-        if (use_compression) {
-            auto binarizer_path = path + "/"+ BINARIZER_FILENAME;
-            faiss::write_index(binarizer.get(), binarizer_path.c_str());
-        }
+        // if (use_compression) {
+        //     auto binarizer_path = path + "/"+ BINARIZER_FILENAME;
+        //     faiss::write_index(binarizer.get(), binarizer_path.c_str());
+        // }
     }
 
     std::unique_ptr<Encoder> DefaultEncoder::load(std::string path, EncoderConfig& config) {
@@ -143,17 +143,7 @@ namespace lintdb {
         encoder->quantizer = std::move(quantizer);
 
         if(config.use_compression) {
-            std::unique_ptr<faiss::Index> binarizer;
-            if (config.use_compression) {
-                if (FILE *file = fopen((path + "/" + BINARIZER_FILENAME).c_str(), "r")) {
-                    fclose(file);
-                    binarizer = std::unique_ptr<faiss::Index>(faiss::read_index((path + "/" + BINARIZER_FILENAME).c_str()));
-                } else {
-                    throw LintDBException("Binarizer not found at path: " + path);
-                }
-            }
-
-            encoder->binarizer = std::move(binarizer);
+            encoder->binarizer = Binarizer::load(path);
         }
         encoder->use_compression = config.use_compression;
         encoder->nlist = config.nlist;
@@ -190,7 +180,7 @@ namespace lintdb {
                 std::vector<float> residuals(n * dim);
                 quantizer->compute_residual_n(n, embeddings, residuals.data(), assign.data());
 
-                binarizer->train(n, residuals.data());
+                binarizer->train(n, residuals.data(), dim);
             }
 
             this->is_trained = true;

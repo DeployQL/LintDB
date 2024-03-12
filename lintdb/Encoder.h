@@ -8,10 +8,10 @@
 #include <string>
 #include <memory>
 #include <faiss/Index.h>
+#include "lintdb/Binarizer.h"
 
 namespace lintdb {
     static const std::string QUANTIZER_FILENAME = "_quantizer.bin";
-    static const std::string BINARIZER_FILENAME = "_binarizer.bin";
 
     struct EncoderConfig {
         size_t nlist;
@@ -123,7 +123,7 @@ namespace lintdb {
 
         private:
         std::unique_ptr<faiss::Index> quantizer;
-        std::unique_ptr<faiss::Index> binarizer;
+        std::unique_ptr<Binarizer> binarizer;
         void save(std::string path) override;
     };
 }
