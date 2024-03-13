@@ -7,10 +7,14 @@
 #include <json/json.h>
 #include <json/reader.h>
 #include <glog/logging.h>
+#include <cmath>
+#include "lintdb/util.h"
+#include <numeric>
 
 namespace lintdb {
     Binarizer::Binarizer(size_t nbits, size_t dim): nbits(nbits), dim(dim) {
-
+        LINTDB_THROW_IF_NOT(dim % 8 == 0);
+        LINTDB_THROW_IF_NOT(dim % (nbits * 8) == 0);
     }
 
     void Binarizer::train(size_t n, const float* x, size_t dim) {
@@ -149,15 +153,20 @@ namespace lintdb {
 
         // Calculate bucket cutoffs and weights
         std::vector<float> bucket_cutoffs_quantiles(quantiles.begin() + 1, quantiles.end());
+        assert(bucket_cutoffs_quantiles.size() == num_options - 1);
+
         std::vector<float> bucket_weights_quantiles;
         for (float quantile : quantiles) {
-            bucket_weights_quantiles.push_back(quantile + (0.5f / num_options));
+            bucket_weights_quantiles.push_back(quantile); // + (0.5f / num_options));
         }
 
+
+        std::vector<float> sorted_res(heldout_avg_residual);
+        std::sort(sorted_res.begin(), sorted_res.end());
         // Quantile function (assuming sorted data)
         auto quantile_func = [&](float quantile) {
             int index = quantile * heldout_avg_residual.size();
-            return heldout_avg_residual[index];
+            return sorted_res[index];
         };
 
         std::transform(bucket_cutoffs_quantiles.begin(), bucket_cutoffs_quantiles.end(), std::back_inserter(bucket_cutoffs),
@@ -171,7 +180,7 @@ namespace lintdb {
     // Function to pack bits into big-endian format
     std::vector<uint8_t> Binarizer::packbits(const std::vector<uint8_t>& binarized) {
         // binarized is sized (dim * nbits)
-        std::vector<uint8_t> packed((binarized.size() + 7) / 8, 0);
+        std::vector<uint8_t> packed((binarized.size()) / 8, 0);
 
         for (size_t i = 0; i < binarized.size(); ++i) {
             size_t byteIndex = i / 8;
@@ -206,12 +215,7 @@ namespace lintdb {
         return unpacked;
     }
 
-
-    std::vector<uint8_t> Binarizer::binarize(const std::vector<float>& residuals) {
-
-        LINTDB_THROW_IF_NOT(dim % 8 == 0);
-        LINTDB_THROW_IF_NOT(dim % (nbits * 8) == 0);
-
+    std::vector<uint8_t> Binarizer::bucketize(const std::vector<float>& residuals) {
         // residuals is a vector of size dim.
         std::vector<uint8_t> binarized(residuals.size() * nbits);
 
@@ -234,6 +238,13 @@ namespace lintdb {
                 binarized[i * nbits + j] = (bucket >> j) & 1;
             }
         }
+
+        return binarized;
+    }
+
+
+    std::vector<uint8_t> Binarizer::binarize(const std::vector<float>& residuals) {
+        std::vector<uint8_t> binarized = bucketize(residuals);
 
         return packbits(binarized);
     }
@@ -264,18 +275,14 @@ namespace lintdb {
     std::vector<uint8_t> Binarizer::create_decompression_lut() {
         size_t keys_per_byte = 8 / nbits;
         size_t num_keys = bucket_weights.size();
-        size_t num_entries = pow(num_keys, keys_per_byte);
-        std::vector<uint8_t> lookup_data(num_entries * keys_per_byte);
+        size_t num_entries = num_keys * keys_per_byte;
 
-        // Generate lookup table
-        for (size_t i = 0; i < num_entries; ++i) {
-            size_t index = i;
-            for (size_t j = 0; j < keys_per_byte; ++j) {
-                size_t key_index = index % num_keys;
-                lookup_data[i * keys_per_byte + j] = static_cast<uint8_t>(key_index);
-                index /= num_keys;
-            }
-        }
+        std::vector<uint8_t> initial_pool(num_keys, 0);
+        std::iota(initial_pool.begin(), initial_pool.end(), 0);
+        std::vector<std::vector<uint8_t>> pools = {initial_pool};
+
+        std::vector<uint8_t> lookup_data = product<uint8_t>(pools, keys_per_byte);
+
 
         return lookup_data;
     }
@@ -304,11 +311,11 @@ namespace lintdb {
             for (int k = 0; k < packed_dim; ++k) {
                 uint8_t packed = codes[i * packed_dim + k];
                 uint8_t reversed_bitmap_val = reverse_bitmap[packed];
+
                 // hydrate each residual value
                 for (int l=0; l < npacked_vals_per_byte; ++l) {
                     const int idx = k * npacked_vals_per_byte + l;
                     const int bucket_weight_idx = decompression_lut[reversed_bitmap_val * npacked_vals_per_byte + l];
-
                     x[i * dim + idx] = bucket_weights[bucket_weight_idx];
                 }
             }

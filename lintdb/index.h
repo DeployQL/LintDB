@@ -37,7 +37,7 @@ struct Configuration {
     size_t nbits = 2;
     size_t niter = 10;
     bool use_ivf = true;
-    bool use_compression = true;
+    bool use_compression = false;
 };
 
 struct SearchOptions {
@@ -70,7 +70,7 @@ struct IndexIVF {
             size_t dim,       // number of dimensions per embedding.
             size_t binarize_nbits=2, // nbits used in the LSH encoding for esiduals.
             size_t niter = 10,
-            bool use_compression = true,
+            bool use_compression = false,
             bool use_ivf = true
     );
 

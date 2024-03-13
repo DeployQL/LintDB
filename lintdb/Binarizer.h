@@ -32,7 +32,7 @@ namespace lintdb {
 
         void calculate_quantiles(const std::vector<float>& heldoout_residual);
 
-
+        std::vector<uint8_t> bucketize(const std::vector<float>& residuals);
         std::vector<uint8_t> packbits(const std::vector<uint8_t>& binarized);
         std::vector<uint8_t> unpackbits(const std::vector<uint8_t>& packed, size_t dim, size_t nbits);
         // binarize takes in the residuals as floats, bucketizes them, and 

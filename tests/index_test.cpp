@@ -42,11 +42,10 @@ TEST(IndexTest, TrainsCorrectly) {
 
     faiss::rand_smooth_vectors(num_docs * num_tokens, dim, buf.data(), 1234);
 
-    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits);
+    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, false, true);
 
     index.train(num_docs * num_tokens, buf);
     EXPECT_EQ(index.nlist, 250);
-
 
     std::vector<float> fake_doc(dim * num_tokens);
 
