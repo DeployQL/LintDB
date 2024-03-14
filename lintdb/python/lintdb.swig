@@ -40,6 +40,7 @@ typedef int64_t idx_t;
 // typedef lintdb::RawPassage RawPassage;
 
 namespace std {
+    %template(FloatVector) vector<float>;
     %template(IdxVector) vector<idx_t>;
     // the below work to use append to our own vector, but not for add.
     %template(RawPassageVector) vector<lintdb::RawPassage>;

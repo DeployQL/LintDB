@@ -55,7 +55,7 @@ TEST(IndexTest, TrainsCorrectly) {
 
     lintdb::RawPassage doc(fake_doc.data(), num_tokens, dim, 1);
     std::vector<lintdb::RawPassage> docs = { doc };
-    index.add(docs);
+    index.add(lintdb::kDefaultTenant, docs);
 
     // without knowing what ivf list we assigned the doc to, make sure one document is indexed.
     // this amounts to a full scan.
@@ -74,6 +74,59 @@ TEST(IndexTest, TrainsCorrectly) {
     }
 
 }
+
+
+TEST(IndexTest, TrainsWithCompressionCorrectly) {
+    size_t dim = 128;
+    // we'll generate num_docs * num_tokens random vectors for training.
+    // keep in mind this needs to be larger than the number of dimensions.
+    size_t num_docs = 100;
+    size_t num_tokens = 100;
+
+    size_t kclusters = 250; // number of centroids to calculate.
+
+    size_t centroid_bits = 2;
+    std::filesystem::path path = std::filesystem::temp_directory_path();
+    auto temp_db = path.append("test_index");
+    // buffer for the randomly created vectors.
+    // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
+    std::vector<float> buf(dim * (num_docs * num_tokens));
+
+    faiss::rand_smooth_vectors(num_docs * num_tokens, dim, buf.data(), 1234);
+
+    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, true, true);
+
+    index.train(num_docs * num_tokens, buf);
+    EXPECT_EQ(index.nlist, 250);
+
+    std::vector<float> fake_doc(dim * num_tokens);
+
+    faiss::rand_smooth_vectors(num_tokens, dim, fake_doc.data(), 1234);
+    // this doc is row-major on disk, and we can read memory as (num_tokensxdim)
+    lintdb::EmbeddingBlock block(fake_doc.data(), num_tokens, dim);
+
+    lintdb::RawPassage doc(fake_doc.data(), num_tokens, dim, 1);
+    std::vector<lintdb::RawPassage> docs = { doc };
+    index.add(lintdb::kDefaultTenant, docs);
+
+    // without knowing what ivf list we assigned the doc to, make sure one document is indexed.
+    // this amounts to a full scan.
+    for(idx_t i=0; i<kclusters; i++) {
+        lintdb::Key start{0, i, 0, true};
+        lintdb::Key end{0, i, std::numeric_limits<idx_t>::max(), false};
+        std::string start_string = start.serialize();
+        std::string end_string = end.serialize();
+        lintdb::RocksDBInvertedList casted = static_cast<lintdb::RocksDBInvertedList&>(*index.index_);
+        std::unique_ptr<lintdb::Iterator> it = casted.get_iterator(start_string, end_string);
+        for(; it->has_next(); it->next()) {
+            lintdb::Key key = it->get_key();
+            auto id = key.id;
+            EXPECT_EQ(id, idx_t(1));
+        }
+    }
+
+}
+
 
 // EmbeddingBlocks store data in column major format, so contiguous memory is
 // a column of data. we should expect the first column to be the first elements generated.
@@ -133,11 +186,11 @@ TEST(IndexTest, SearchCorrectly) {
 
     lintdb::RawPassage doc(fake_doc.data(), num_tokens, dim, 1);
     std::vector<lintdb::RawPassage> docs = { doc };
-    index.add(docs);
+    index.add(lintdb::kDefaultTenant, docs);
 
     auto opts = lintdb::SearchOptions();
     opts.expected_id = 1;
-    auto results = index.search(block, 10, 5, opts);
+    auto results = index.search(lintdb::kDefaultTenant, block, 10, 5, opts);
 
     EXPECT_GT(results.size(), 0);
     // we expect to get back the same document we added.
@@ -176,7 +229,7 @@ TEST(IndexTest, LoadsCorrectly) {
     auto loaded_index = lintdb::IndexIVF(temp_db.string());
 
     std::vector<float> query(dim * num_tokens, 1);
-    loaded_index.search(query.data(), num_tokens, dim, 10, 5);
+    loaded_index.search(lintdb::kDefaultTenant, query.data(), num_tokens, dim, 10, 5);
 }
 
 

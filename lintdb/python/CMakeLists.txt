@@ -22,8 +22,10 @@ include(${SWIG_USE_FILE})
 set(UseSWIG_TARGET_NAME_PREFERENCE STANDARD)
 set(SWIG_SOURCE_FILE_EXTENSIONS swig)
 
+# set(ADDITIONAL_SWG_DEFINES -doxygen)
+
 set(SRC lintdb.swig)
-set_source_files_properties(${SRC} PROPERTIES CPLUSPLUS ON)
+set_source_files_properties(${SRC} PROPERTIES CPLUSPLUS ON SWIG_FLAGS "-doxygen")
 swig_add_library(pylintdb
     LANGUAGE python
     SOURCES ${SRC}

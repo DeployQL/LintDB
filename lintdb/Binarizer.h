@@ -30,6 +30,9 @@ namespace lintdb {
 
         static std::unique_ptr<Binarizer> load(std::string path);
 
+        void set_weights(const std::vector<float>& weights, const std::vector<float>& cutoffs, const float avg_residual);
+
+        private:
         void calculate_quantiles(const std::vector<float>& heldoout_residual);
 
         std::vector<uint8_t> bucketize(const std::vector<float>& residuals);

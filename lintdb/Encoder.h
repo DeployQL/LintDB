@@ -70,6 +70,7 @@ namespace lintdb {
         virtual void train(float* embeddings, size_t n, size_t dim) = 0;
 
         virtual void set_centroids(float* data, int n, int dim) = 0;
+        virtual void set_weights(const std::vector<float>& weights, const std::vector<float>& cutoffs, const float avg_residual) = 0;
     };
 
     /**
@@ -120,6 +121,7 @@ namespace lintdb {
          * This is useful if you want to parallelize index writing and merge indices later.
         */
         void set_centroids(float* data, int n, int dim) override;
+        void set_weights(const std::vector<float>& weights, const std::vector<float>& cutoffs, const float avg_residual) override;
 
         private:
         std::unique_ptr<faiss::Index> quantizer;

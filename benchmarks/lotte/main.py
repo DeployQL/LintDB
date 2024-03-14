@@ -11,6 +11,9 @@ from collections import defaultdict
 from tqdm import tqdm
 import time
 import numpy as np
+import typer
+
+app = typer.Typer()
 
 LoTTeDataset = namedtuple('LoTTeDataset', ['collection', 'queries', 'qids', 'dids'])
 
@@ -35,7 +38,6 @@ def load_lotte(dataset, split, max_id=500000):
 
     return LoTTeDataset(collection[:max_id], filtered_queries, filtered_qids, filtered_dids)
 
-
 def colbert_indexing(experiment: str, exp_path: str, dataset: LoTTeDataset, nbits=2, checkpoint: str = "colbert-ir/colbertv2.0"):
      """
      colbert_indexing reads in paths to the collection and queries and indexes the collection using the colbert library.
@@ -48,8 +50,8 @@ def colbert_indexing(experiment: str, exp_path: str, dataset: LoTTeDataset, nbit
         # )
         config = ColBERTConfig.load_from_checkpoint(checkpoint)
         config.kmeans_niters=4
-        # indexer = Indexer(checkpoint=checkpoint, config=config)
-        # indexer.index(name=experiment, collection=dataset.collection) # "/path/to/MSMARCO/collection.tsv"
+        indexer = Indexer(checkpoint=checkpoint, config=config)
+        indexer.index(name=experiment, collection=dataset.collection) # "/path/to/MSMARCO/collection.tsv"
 
         searcher = Searcher(index=experiment, config=config, collection=dataset.collection)
         # print(searcher.ranker.codec.centroids)
@@ -95,11 +97,6 @@ def lintdb_indexing(
     index_path = f"/tmp/py_index_bench_{experiment}"
     if not os.path.exists(index_path):
         index = pylintdb.IndexIVF(index_path, 16384, 128, nbits, 4, use_compression)
-        
-        start = time.perf_counter()
-        index.train(dd.astype('float32'))
-        train_duration = time.perf_counter() - start
-        print(f"Training duration: {train_duration:.2f}s")
         if reuse_centroids:
             # we still train so that the binarizer is trained, but we reuse the centroids
             # from colbert.
@@ -107,16 +104,31 @@ def lintdb_indexing(
                 searcher = Searcher(index='colbert', config=config, collection=dataset.collection)
                 centroids = searcher.ranker.codec.centroids
                 index.set_centroids(centroids)
+                index.set_weights(
+                    searcher.ranker.codec.bucket_weights.tolist(), 
+                    searcher.ranker.codec.bucket_cutoffs.tolist(), 
+                    searcher.ranker.codec.avg_residual
+                )
                 index.save()
+
+        else:
+            start = time.perf_counter()
+            index.train(dd.astype('float32'))
+            train_duration = time.perf_counter() - start
+            print(f"Training duration: {train_duration:.2f}s")
 
         # add all the documents.
         start = time.perf_counter()
-        for i, embedding in tqdm(enumerate(training_data), desc="adding documents"):
+
+        for i, d in tqdm(enumerate(dataset.collection), desc="adding documents"):
+        # for i, embedding in tqdm(enumerate(training_data), desc="adding documents"):
+            embedding = checkpoint.docFromText([d])
+            e = embedding[0].numpy().astype('float32')
             doc = pylintdb.RawPassage(
-                embedding,
+                e,
                 i
             )
-            index.add([doc])
+            index.add(0, [doc])
 
         index_duration = time.perf_counter() - start
         print(f"Indexing duration: {index_duration:.2f}s")
@@ -124,13 +136,9 @@ def lintdb_indexing(
         print("Loading index")
         index = pylintdb.IndexIVF(index_path)
         if reuse_centroids:
-            # we still train so that the binarizer is trained, but we reuse the centroids
-            # from colbert.
-            with Run().context(RunConfig(nranks=1, experiment='colbert')):
-                searcher = Searcher(index='colbert', config=config, collection=dataset.collection)
-                centroids = searcher.ranker.codec.centroids
-                index.set_centroids(centroids)
-                index.save()
+            print("the index exists, but we are reusing centroids.",
+                  "This isn't supported, because the index relies on the centroids.",
+                  "Please delete the index and rerun.")
     
     print("Running search")
     with open(f"{exp_path}/{experiment}.ranking.tsv", "w") as f:
@@ -140,19 +148,30 @@ def lintdb_indexing(
         for id, query in zip(dataset.qids, dataset.queries):
             if failures and id not in failure_ids:
                 continue
-
+            
+            # I want only the query and no padding.
+            # obj = checkpoint.query_tokenizer.tok(query, padding=False, truncation=True, return_tensors='pt')
+            # ids, mask = obj['input_ids'], obj['attention_mask']
+            # embeddings = checkpoint.query(ids, mask)
             embeddings = checkpoint.queryFromText([query])
-            converted = np.squeeze(embeddings[0].numpy().astype('float32'))
+            converted = np.squeeze(embeddings.numpy().astype('float32'))
             
             expected_pids = failures.get(id, [])
 
+            # it looks like  nprobe should instead of be num tokens * ncells. we use ncells=2.
+            k = np.shape(converted)[0] * 2
+
             if expected_pids:
+                # print("query: ", query)
+                # print("embeddings: ", converted)
+                # print("using k centroids for search: ", k)
                 for pid in expected_pids:
                     print("Searching for pid: ", pid)
                     opts = pylintdb.SearchOptions()
                     opts.expected_id = pid
                     results = index.search(
-                        converted, 
+                        0, # tenant
+                       converted, # converted, 
                         k, # nprobe
                         100, # k to return
                         opts
@@ -213,41 +232,129 @@ def evaluate_dataset(query_type, dataset, split, k, data_rootdir, rankings_path)
         f"[query_type={query_type}, dataset={dataset}] "
         f"Success@{k}: {success / num_total_qids * 100:.1f}"
     )
-    print(
-        "success ids: ", success_ids
-    )
-    print(
-        "failure ids: ", failure_ids
+    # print(
+    #     "success ids: ", success_ids
+    # )
+    # print(
+    #     "failure ids: ", failure_ids
+    # )
+
+
+@app.command()
+def colbert(dataset, experiment, split='dev', k=5, checkpoint: str = "colbert-ir/colbertv2.0"):
+    d = load_lotte(dataset, split, max_id=40000000)
+
+    with Run().context(RunConfig(nranks=1, experiment=experiment)) as runner:
+        config = ColBERTConfig.load_from_checkpoint(checkpoint)
+        config.kmeans_niters=4
+        indexer = Indexer(checkpoint=checkpoint, config=config)
+        indexer.index(name=experiment, collection=dataset.collection) # "/path/to/MSMARCO/collection.tsv"
+
+        searcher = Searcher(index=experiment, config=config, collection=dataset.collection)
+        # print(searcher.ranker.codec.centroids)
+        # print(searcher.ranker.codec.centroids.shape)
+        mapped_queries = {id: q for id, q in zip(dataset.qids, dataset.queries)}
+        queries = Queries(data = mapped_queries) # "/path/to/MSMARCO/queries.dev.small.tsv"
+        ranking = searcher.search_all(queries, k=100)
+        ranking.save(f"{experiment}.ranking.tsv")
+
+        # Run() hides some of the path to the filename. let's grab it.
+        with runner.open(f"{experiment}.ranking.tsv") as f:
+            rankings_path = f.name
+
+    evaluate_dataset(
+        'search', 
+        dataset,
+        split,
+        k,
+        'data/lotte/',
+        rankings_path
     )
 
+@app.command()
+def lintdb(dataset, experiment, split='dev', k=5, checkpoint: str = "colbert-ir/colbertv2.0"):
+    d = load_lotte(dataset, split, max_id=40000000)
+
+    lintdb_indexing(
+        experiment, 
+        'experiments', 
+        d, 
+        2, 
+        nbits=2,
+        checkpoint=checkpoint,
+        reuse_centroids=True,
+        use_compression=True
+    )
+
+    evaluate_dataset(
+        'search', 
+        dataset,
+        split,
+        k,
+        'data/lotte/',
+        f'experiments/{experiment}.ranking.tsv'
+    )
+
+@app.command()
+def run_failures(dataset, experiment, split='dev', k=5, checkpoint: str = "colbert-ir/colbertv2.0"):
+    d = load_lotte(dataset, split, max_id=40000000)
+
+    failures = {
+        5: [5462],
+        # 11: [7767],
+        # 13: [4176, 4185, 5814, 4174],
+        15: [1925],
+        # 16: [3701, 3060, 3051, 3437],
+        # 19: [5619]
+    }
+    lintdb_indexing(
+        experiment, 
+        'experiments', 
+        d, 
+        2, 
+        nbits=2,
+        checkpoint=checkpoint,
+        reuse_centroids=True,
+        use_compression=True,
+        failures=failures
+    )
+
+    evaluate_dataset(
+        'search', 
+        dataset,
+        split,
+        k,
+        'data/lotte/',
+        f'experiments/{experiment}.ranking.tsv'
+    )
 
 def main():
     dataset = 'lifestyle'
     datasplit = 'dev'
-    runtime = 'lintdb' # lintdb
+    runtime = 'colbert' # lintdb
 
-    d = load_lotte(dataset, datasplit, max_id=10000)
+    d = load_lotte(dataset, datasplit, max_id=40000000)
 
     if runtime == 'colbert':
-        colbert_indexing('colbert2', '/tmp', d)
-        rankings_path = "/home/matt/deployql/LintDB/experiments/colbert/benchmarks.lotte.main/2024-03/04/17.37.19/colbert.ranking.tsv"
+        colbert_indexing('colbert-lifestyle-full', '/tmp', d)
+        rankings_path = f"/home/matt/deployql/LintDB/experiments/colbert-lifestyle-full/benchmarks.lotte.main/2024-03/04/17.37.19/colbert.ranking.tsv"
     elif runtime == 'lintdb':
         # these are failures when we do our own clustering.
         # If we use the centroids from the colbert model,
         # we only fail on 15, which is parity with colbert.
         failures = {
             5: [5462],
-            11: [7767],
-            13: [4176, 4185, 5814, 4174],
+            # 11: [7767],
+            # 13: [4176, 4185, 5814, 4174],
             15: [1925],
-            16: [3701, 3060, 3051, 3437],
-            19: [5619]
+            # 16: [3701, 3060, 3051, 3437],
+            # 19: [5619]
         }
         # 
         # failures from run without compression. I changed how the  floats are stored and read back.
         # i.e. we didn't cast ebfore, but we are now.
         #failure ids:  [(5, {5462}), (11, {7767}), (13, {4176, 4185, 5814, 4174}), (15, {1925}), (16, {3701, 3050, 3051, 3437}), (19, {5619})]
-        experiment = 'colbert'
+        experiment = 'colbert-full'
         lintdb_indexing(
             experiment, 
             'experiments', 
@@ -255,7 +362,7 @@ def main():
             2, 
             nbits=2,
             reuse_centroids=True,
-            use_compression=False,
+            use_compression=True,
             # failures=failures
         )
         rankings_path = f'experiments/{experiment}.ranking.tsv'
@@ -270,4 +377,5 @@ def main():
     )
 
 if __name__ == "__main__":
-    main()
+    app()
+    # main()

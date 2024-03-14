@@ -117,11 +117,12 @@ void IndexIVF::save() {
 }
 
 std::vector<SearchResult> IndexIVF::search(
+        const uint64_t tenant,
         EmbeddingBlock& block,
         size_t n_probe,
         size_t k,
         SearchOptions opts) const {
-    return search(block.embeddings.data(), block.num_tokens, block.dimensions, n_probe, k);
+    return search(tenant, block.embeddings.data(), block.num_tokens, block.dimensions, n_probe, k);
 }
 
 /**
@@ -132,6 +133,7 @@ std::vector<SearchResult> IndexIVF::search(
  * 2. n_probe: the number of lists we search on after sorting.
 */
 std::vector<SearchResult> IndexIVF::search(
+    const uint64_t tenant,
     float* data,
     int n,
     int dim,
@@ -195,11 +197,11 @@ std::vector<SearchResult> IndexIVF::search(
     auto num_centroids_to_eval = std::min<size_t>(n_probe, centroid_scores.size());
 
     if (opts.expected_id != -1) {
-        auto mapping = index_->get_mapping(opts.expected_id);
+        auto mapping = index_->get_mapping(tenant, opts.expected_id);
         std::unordered_set<idx_t> mapping_set(mapping.begin(), mapping.end());
         for(int i = 0; i < centroid_scores.size(); i++) {
             if (mapping_set.find(centroid_scores[i].second) != mapping_set.end()) {
-                LOG(INFO) << "expected id found in centroid: " << i;
+                LOG(INFO) << "expected id found in centroid: " << centroid_scores[i].second;
                 if (i > num_centroids_to_eval) {
                     LOG(INFO) << "expected id has been dropped from search.";
                 };
@@ -222,7 +224,7 @@ std::vector<SearchResult> IndexIVF::search(
             if (idx == -1) {
                 continue;
             }
-            local_pids = lookup_pids(idx);
+            local_pids = lookup_pids(tenant, idx);
         }
 #pragma omp critical
         global_pids.insert(local_pids.begin(), local_pids.end());
@@ -237,7 +239,7 @@ std::vector<SearchResult> IndexIVF::search(
      * score by passage codes
      */
     std::vector<idx_t> pid_list(global_pids.begin(), global_pids.end());
-    auto doc_codes = index_->get_codes(pid_list);
+    auto doc_codes = index_->get_codes(tenant, pid_list);
     std::vector<float> max_scores_per_centroid = max_score_by_centroid(
             coarse_idx, distances, total_centroids_to_calculate, n, nlist);
     // create a mapping from pid to the index. we'll need this to hydrate
@@ -306,7 +308,7 @@ std::vector<SearchResult> IndexIVF::search(
             top_25_scores.end(),
             std::back_inserter(top_25_ids),
             [](std::pair<float, idx_t> p) { return p.second; });
-    auto doc_residuals = index_->get_residuals(top_25_ids);
+    auto doc_residuals = index_->get_residuals(tenant, top_25_ids);
 
     std::vector<std::pair<float, idx_t>> actual_scores(top_25_ids.size());
 #pragma omp for
@@ -373,39 +375,45 @@ void IndexIVF::set_centroids(float* data, int n, int dim) {
     encoder->set_centroids(data, n, dim);
 }
 
-void IndexIVF::add(const std::vector<RawPassage>& docs) {
+void IndexIVF::set_weights(const std::vector<float> weights, const std::vector<float> cutoffs, const float avg_residual) {
+    encoder->set_weights(weights, cutoffs, avg_residual);
+
+}
+
+
+void IndexIVF::add(const uint64_t tenant, const std::vector<RawPassage>& docs) {
     LINTDB_THROW_IF_NOT(this->encoder->is_trained);
 
     for (auto doc : docs) {
-        add_single(doc);
+        add_single(tenant, doc);
     }
 }
 
-void IndexIVF::add_single(const RawPassage& doc) {
+void IndexIVF::add_single(const uint64_t tenant, const RawPassage& doc) {
     auto encoded = encoder->encode_vectors(doc);
     int i = 0;
 
-    index_->add(std::move(encoded));
+    index_->add(tenant, std::move(encoded));
 }
 
-void IndexIVF::remove(const std::vector<idx_t>& ids) {
-    index_->remove(ids);
+void IndexIVF::remove(const uint64_t tenant, const std::vector<idx_t>& ids) {
+    index_->remove(tenant, ids);
 }
 
-void IndexIVF::update(const std::vector<RawPassage>& docs) {
+void IndexIVF::update(const uint64_t tenant, const std::vector<RawPassage>& docs) {
     std::vector<idx_t> ids;
     for (auto doc : docs) {
         ids.push_back(doc.id);
     }
-    remove(ids);
-    add(docs);
+    remove(tenant, ids);
+    add(tenant, docs);
 }
 
-std::vector<idx_t> IndexIVF::lookup_pids(idx_t idx) const {
-    Key start_key{kDefaultTenant, idx, 0, true};
+std::vector<idx_t> IndexIVF::lookup_pids(const uint64_t tenant, idx_t idx) const {
+    Key start_key{tenant, idx, 0, true};
     // instead of using the max key value, we use the next centroid idx so that we include all
     // document ids.
-    Key end_key{kDefaultTenant, idx+1, 0, true};
+    Key end_key{tenant, idx+1, 0, true};
     const std::string start_string = start_key.serialize();
     const std::string end_string = end_key.serialize();
 

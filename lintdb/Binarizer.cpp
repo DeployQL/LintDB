@@ -18,6 +18,7 @@ namespace lintdb {
     }
 
     void Binarizer::train(size_t n, const float* x, size_t dim) {
+        LOG(INFO) << "Training binarizer with " << n << " vectors of dimension " << dim << " and " << nbits << " bits.";
         std::vector<float> avg_residual(dim, 0.0);
         for (size_t i = 0; i < n; ++i) {
             for (size_t j = 0; j < dim; ++j) {
@@ -40,6 +41,16 @@ namespace lintdb {
 
         reverse_bitmap = create_reverse_bitmap();
         decompression_lut = create_decompression_lut();
+    }
+
+    void Binarizer::set_weights(const std::vector<float>& weights, const std::vector<float>& cutoffs, const float avg_residual) {
+        LINTDB_THROW_IF_NOT(weights.size() == 1 << nbits);
+
+        this->bucket_weights = weights;
+        this->bucket_cutoffs = cutoffs;
+        this->avg_residual = avg_residual;
+        this->reverse_bitmap = create_reverse_bitmap();
+        this->decompression_lut = create_decompression_lut();
     }
 
     void Binarizer::save(std::string path) {
@@ -157,7 +168,7 @@ namespace lintdb {
 
         std::vector<float> bucket_weights_quantiles;
         for (float quantile : quantiles) {
-            bucket_weights_quantiles.push_back(quantile); // + (0.5f / num_options));
+            bucket_weights_quantiles.push_back(quantile);// + 0.5f/num_options);
         }
 
 

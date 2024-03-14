@@ -20,7 +20,7 @@ std::unique_ptr<Iterator> RocksDBInvertedList::get_iterator(
             db_, column_families[kIndexColumnIndex], start, end));
 }
 
-void RocksDBInvertedList::add(std::unique_ptr<EncodedDocument> doc) {
+void RocksDBInvertedList::add(const uint64_t tenant, std::unique_ptr<EncodedDocument> doc) {
     rocksdb::WriteOptions wo;
 
     // get unique indexes.
@@ -29,7 +29,7 @@ void RocksDBInvertedList::add(std::unique_ptr<EncodedDocument> doc) {
     VLOG(100) << "Unique coarse indexes: " << unique_coarse_idx.size();
     // store ivf -> doc mapping.
     for (code_t idx : unique_coarse_idx) {
-        Key key = Key{kDefaultTenant, idx, doc->id};
+        Key key = Key{tenant, idx, doc->id};
         std::string k_string = key.serialize();
 
         rocksdb::Status status =
@@ -45,7 +45,7 @@ void RocksDBInvertedList::add(std::unique_ptr<EncodedDocument> doc) {
     }
 
     // this key is used for all forward indices.
-    ForwardIndexKey forward_key = ForwardIndexKey{kDefaultTenant, doc->id};
+    ForwardIndexKey forward_key = ForwardIndexKey{tenant, doc->id};
     auto fks = forward_key.serialize();
 
     // add document mapping to centroids.
@@ -100,13 +100,13 @@ void RocksDBInvertedList::add(std::unique_ptr<EncodedDocument> doc) {
     ;
 };
 
-void RocksDBInvertedList::remove(std::vector<idx_t> ids) {
+void RocksDBInvertedList::remove(const uint64_t tenant, std::vector<idx_t> ids) {
     for (idx_t id : ids) {
-        auto id_map = this->get_mapping(id);
+        auto id_map = this->get_mapping(tenant, id);
         // delete from the inverse index.
         rocksdb::ReadOptions ro;
         for (auto idx : id_map) {
-            Key key = Key{kDefaultTenant, idx, id};
+            Key key = Key{tenant, idx, id};
             std::string k_string = key.serialize();
             rocksdb::WriteOptions wo;
             rocksdb::Status status = db_.Delete(
@@ -121,7 +121,7 @@ void RocksDBInvertedList::remove(std::vector<idx_t> ids) {
             // ignore the default cf at position 0 since we don't use it.
             auto cf = column_families[i];
 
-            ForwardIndexKey key = ForwardIndexKey{kDefaultTenant, id};
+            ForwardIndexKey key = ForwardIndexKey{tenant, id};
             auto serialized_key = key.serialize();
             rocksdb::WriteOptions wo;
             std::string value;
@@ -133,8 +133,8 @@ void RocksDBInvertedList::remove(std::vector<idx_t> ids) {
     }
 }
 
-std::vector<idx_t> RocksDBInvertedList::get_mapping(idx_t id) const {
-    ForwardIndexKey key = ForwardIndexKey{kDefaultTenant, id};
+std::vector<idx_t> RocksDBInvertedList::get_mapping(const uint64_t tenant, idx_t id) const {
+    ForwardIndexKey key = ForwardIndexKey{tenant, id};
     auto serialized_key = key.serialize();
     rocksdb::ReadOptions ro;
     std::string value;
@@ -158,14 +158,14 @@ std::vector<idx_t> RocksDBInvertedList::get_mapping(idx_t id) const {
 }
 
 std::vector<std::unique_ptr<DocumentResiduals>> RocksDBInvertedList::
-        get_residuals(std::vector<idx_t> ids) const {
+        get_residuals(const uint64_t tenant, std::vector<idx_t> ids) const {
     std::vector<rocksdb::Slice> keys;
     // rocksdb slices don't take ownership of the underlying data, so we need to
     // keep the strings around.
     std::vector<std::string> key_strings;
     for (idx_t i = 0; i < ids.size(); i++) {
         auto id = ids[i];
-        auto key = ForwardIndexKey{kDefaultTenant, id};
+        auto key = ForwardIndexKey{tenant, id};
         VLOG(100) << "Getting residuals for doc id: " << id;
         auto serialized_key = key.serialize();
         key_strings.push_back(serialized_key);
@@ -214,6 +214,7 @@ std::vector<std::unique_ptr<DocumentResiduals>> RocksDBInvertedList::
 }
 
 std::vector<std::unique_ptr<DocumentCodes>> RocksDBInvertedList::get_codes(
+        const uint64_t tenant, 
         std::vector<idx_t> ids) const {
     std::vector<rocksdb::Slice> keys;
     // rocksdb slices don't take ownership of the underlying data, so we need to
@@ -221,7 +222,7 @@ std::vector<std::unique_ptr<DocumentCodes>> RocksDBInvertedList::get_codes(
     std::vector<std::string> key_strings;
     for (idx_t i = 0; i < ids.size(); i++) {
         auto id = ids[i];
-        auto key = ForwardIndexKey{kDefaultTenant, id};
+        auto key = ForwardIndexKey{tenant, id};
         VLOG(100) << "Getting codes for doc id: " << id;
         auto serialized_key = key.serialize();
         key_strings.push_back(serialized_key);
@@ -268,8 +269,8 @@ std::vector<std::unique_ptr<DocumentCodes>> RocksDBInvertedList::get_codes(
     return docs;
 }
 
-void RocksDBInvertedList::delete_entry(idx_t list_no, idx_t id) {
-    Key key = Key{kDefaultTenant, list_no, id};
+void RocksDBInvertedList::delete_entry(idx_t list_no,const uint64_t tenant, idx_t id) {
+    Key key = Key{tenant, list_no, id};
     rocksdb::WriteOptions wo;
     std::string k_string = key.serialize();
     rocksdb::Status status = db_.Delete(wo, rocksdb::Slice(k_string));

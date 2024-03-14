@@ -57,9 +57,6 @@ namespace lintdb {
             return std::make_unique<EncodedDocument>(EncodedDocument(
                 token_coarse_idx, residual_codes, num_tokens, doc.id));
         } else {
-            // uint8_t* begin = reinterpret_cast<uint8_t*>(raw_residuals.data());
-            // auto size = raw_residuals.size() * (sizeof(float)/sizeof(uint8_t));
-            // std::vector<residual_t> residual_codes(begin, begin + size);
             std::vector<residual_t> residual_codes(raw_residuals.begin(), raw_residuals.end());
 
             return std::make_unique<EncodedDocument>(EncodedDocument(
@@ -88,11 +85,6 @@ namespace lintdb {
                     decoded_embeddings[i * dim + j] += decoded_residuals[j];
                 }
             } else {
-                // add the residual to the decoded embedding.
-                // float* casted = reinterpret_cast<float*>(const_cast<residual_t*>(residuals.data() + i * dim));
-                // for (size_t j = 0; j < dim; j++) {
-                //     decoded_embeddings[i * dim + j] += casted[j];
-                // }
                 for (size_t j = 0; j < dim; j++) {
                     decoded_embeddings[i * dim + j] += residuals[i * dim + j];
                 }
@@ -122,10 +114,9 @@ namespace lintdb {
         auto quantizer_path = path + "/"+ QUANTIZER_FILENAME;
         faiss::write_index(quantizer.get(), quantizer_path.c_str());
 
-        // if (use_compression) {
-        //     auto binarizer_path = path + "/"+ BINARIZER_FILENAME;
-        //     faiss::write_index(binarizer.get(), binarizer_path.c_str());
-        // }
+        if (use_compression) {
+            binarizer->save(path);
+        }
     }
 
     std::unique_ptr<Encoder> DefaultEncoder::load(std::string path, EncoderConfig& config) {
@@ -198,5 +189,9 @@ namespace lintdb {
         quantizer->add(n, data);
 
         this->is_trained = true;
+    }
+
+    void DefaultEncoder::set_weights(const std::vector<float>& weights, const std::vector<float>& cutoffs, const float avg_residual) {
+        binarizer->set_weights(weights, cutoffs, avg_residual);
     }
 }

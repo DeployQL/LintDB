@@ -55,22 +55,24 @@ struct RocksDBInvertedList : public InvertedList, public ForwardIndex {
             rocksdb::DB& db,
             std::vector<rocksdb::ColumnFamilyHandle*>& column_families);
 
-    void add(std::unique_ptr<EncodedDocument> docs) override;
-    void remove(std::vector<idx_t> ids) override;
+    void add(const uint64_t tenant, std::unique_ptr<EncodedDocument> docs) override;
+    void remove(const uint64_t tenant, std::vector<idx_t> ids) override;
 
     void merge(rocksdb::DB* db) override;
 
-    void delete_entry(idx_t list_no, idx_t id) override;
+    void delete_entry(idx_t list_no,const uint64_t tenant, idx_t id) override;
 
     std::unique_ptr<Iterator> get_iterator(
             const std::string& start,
             const std::string& end) const override;
             
     std::vector<std::unique_ptr<DocumentCodes>> get_codes(
+            const uint64_t tenant,
             std::vector<idx_t> ids) const override;
     std::vector<std::unique_ptr<DocumentResiduals>> get_residuals(
+            const uint64_t tenant,
             std::vector<idx_t> ids) const override;
-    std::vector<idx_t> get_mapping(idx_t id) const override;
+    std::vector<idx_t> get_mapping(const uint64_t tenant, idx_t id) const override;
 
    private:
     rocksdb::DB& db_;

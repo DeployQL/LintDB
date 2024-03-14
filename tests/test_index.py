@@ -39,13 +39,13 @@ def test_index_init():
 
     # index.add_single(obj)
 
-    index.add(passages)
+    index.add(0, passages)
 
     # index.search(dat, 10, 100)
 
 
     ids = list(range(5))
-    index.remove(ids)
+    index.remove(0, ids)
 
 
 def test_index_load():
@@ -59,6 +59,6 @@ def test_index_load():
 
     index = pylintdb.IndexIVF(dir.name)
     search = np.random.rand(10, 128).astype('float32')
-    index.search(search, 10, 10)
+    index.search(0, search, 10, 10)
 
 test_index_init()
