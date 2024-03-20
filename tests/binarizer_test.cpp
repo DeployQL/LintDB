@@ -5,6 +5,7 @@
 #include "lintdb/Binarizer.h"
 #include <cmath>
 #include <glog/logging.h>
+#include "lintdb/invlists/util.h"
 
 
 TEST(BinarizerTests, QuantilesTest) {
@@ -70,6 +71,29 @@ TEST(BinarizerTests, DecompressionLUT) {
     // Perform assertions on the generated lookup table
     ASSERT_EQ(lut.size(), num_entries * keys_per_byte); // Expected size of lookup table for 3 bucket weights and 2 bits per lookup
 }
+
+TEST(BinarizerTests, ReverseBitmapNbits1) {
+    // Create a mock Binarizer instance for testing
+    std::vector<float> bucket_weights = {0.1, 0.2, 0.3}; // Example bucket weights
+    size_t nbits = 1; // Example number of bits
+    lintdb::Binarizer binarizer(nbits, 16); // dim isn't necessary here, but we must pass it to init.
+    binarizer.bucket_weights = bucket_weights;
+
+    // Generate the decompression lookup table
+    std::vector<uint8_t> bm = binarizer.create_reverse_bitmap();
+
+    // Perform assertions on the generated lookup table
+    ASSERT_EQ(bm.size(), 256); 
+
+    for (size_t i = 0; i < 256; i++) {
+        uint8_t reverse = bm[i];
+        std::vector<unsigned char> expected;
+        lintdb::store_bigendian(uint8_t(i), expected);
+        uint8_t casted = expected[0];
+        ASSERT_EQ(reverse, casted); // with nbits==1, the reverse bitmap should be the same as the input.
+    }
+}
+
 
 TEST(BinarizerTests, EncodingTest) {
     // we get the number of buckets by 1 << nbits. 1 << 2 == 4

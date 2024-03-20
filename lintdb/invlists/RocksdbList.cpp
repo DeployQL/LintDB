@@ -22,7 +22,6 @@ std::unique_ptr<Iterator> RocksDBInvertedList::get_iterator(
 
 void RocksDBInvertedList::add(const uint64_t tenant, std::unique_ptr<EncodedDocument> doc) {
     rocksdb::WriteOptions wo;
-
     // get unique indexes.
     std::unordered_set<idx_t> unique_coarse_idx(
             doc->codes.begin(), doc->codes.end());
@@ -166,7 +165,6 @@ std::vector<std::unique_ptr<DocumentResiduals>> RocksDBInvertedList::
     for (idx_t i = 0; i < ids.size(); i++) {
         auto id = ids[i];
         auto key = ForwardIndexKey{tenant, id};
-        VLOG(100) << "Getting residuals for doc id: " << id;
         auto serialized_key = key.serialize();
         key_strings.push_back(serialized_key);
         keys.push_back(
@@ -223,7 +221,6 @@ std::vector<std::unique_ptr<DocumentCodes>> RocksDBInvertedList::get_codes(
     for (idx_t i = 0; i < ids.size(); i++) {
         auto id = ids[i];
         auto key = ForwardIndexKey{tenant, id};
-        VLOG(100) << "Getting codes for doc id: " << id;
         auto serialized_key = key.serialize();
         key_strings.push_back(serialized_key);
         keys.push_back(
@@ -250,8 +247,6 @@ std::vector<std::unique_ptr<DocumentCodes>> RocksDBInvertedList::get_codes(
     const uint8_t* empty_res = nullptr;
 
     for (size_t i = 0; i < ids.size(); i++) {
-        VLOG(100) << "Status of document with id: " << ids[i]
-                  << " is: " << statuses[i].ToString();
         if (statuses[i].ok()) {
             auto doc = GetInvertedIndexDocument(values[i].data());
             auto ptr = std::make_unique<DocumentCodes>(DocumentCodes(

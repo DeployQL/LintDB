@@ -1,8 +1,8 @@
-from pylintdb import pylintdb
+import lintdb
 import numpy as np
 
 def main():
-    index = pylintdb.IndexIVF("/tmp/py_index_bench")
+    index = lintdb.IndexIVF("/tmp/py_index_bench")
     # index = pylintdb.IndexIVF("/tmp/py_index", 32, 128, 1)
 
     # passages = []

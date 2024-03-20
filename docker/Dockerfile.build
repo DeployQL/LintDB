@@ -1,0 +1,19 @@
+# https://hub.docker.com/r/condaforge/mambaforge/tags
+FROM condaforge/mambaforge:23.3.1-1 as build
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y build-essential pkg-config libc-dev libstdc++6
+
+RUN conda config --set solver libmamba && conda update -y -q conda
+
+RUN conda install -y -q python=3.10 cmake make swig=4.0.2 numpy scipy pytest gxx_linux-64 sysroot_linux-64 gfortran clang libgcc libstdcxx-ng
+
+RUN conda install libopenblas libopenblas-ilp64 openblas openblas-ilp64 llvm-meta
+
+WORKDIR /src
+
+ENV CC=clang
+ENV CXX=clang++
+
+CMD make build-release && make build-python

@@ -14,7 +14,8 @@ float score_documents_by_codes(
                 max_scores_by_centroid, // the max score per centroid across the
                                         // query tokens.
         const std::vector<code_t>& doc_codes,
-        const float centroid_score_threshold) {
+        const float centroid_score_threshold,
+        const idx_t expected_id) {
     // Initialize a vector to store the approximate scores for each document
     float doc_score = 0;
     std::unordered_set<code_t> unique_codes;
@@ -29,11 +30,40 @@ float score_documents_by_codes(
         // we get the centroid score from query_scores. this is the max score
         // found in the query for that centroid.
         doc_score += max_scores_by_centroid[index];
-
         unique_codes.insert(index);
     }
 
     return doc_score;
+}
+
+float colbert_centroid_score(
+        std::vector<code_t>& doc_codes,
+        std::vector<float>& centroid_scores,
+        size_t nquery_vectors,
+        size_t n_centroids,
+        const idx_t expected_id) {
+    std::vector<float> per_doc_approx_scores(nquery_vectors, -9999);
+
+    std::unordered_set<int> seen_codes;
+    for (int j = 0; j < doc_codes.size(); j++) {
+        auto code = doc_codes[j];
+        if (seen_codes.find(code) == seen_codes.end()) {
+            for (int k = 0; k < nquery_vectors; k++) {
+                per_doc_approx_scores[k] =
+                    std::max(per_doc_approx_scores[k], centroid_scores[k * n_centroids + code]);
+                                // centroid_scores
+                                //     [code * nquery_vectors + k]);
+            }
+            seen_codes.insert(code);
+        }
+    }
+    float score = 0;
+    for (int k = 0; k < nquery_vectors; k++) {
+        score += per_doc_approx_scores[k];
+        per_doc_approx_scores[k] = -9999;
+    }
+
+    return score;
 }
 
 // below, we are summing up for every centroid. this ignores per word
@@ -97,8 +127,8 @@ float score_document_by_residuals(
 
     // find the max score for each doc_token.
     std::vector<float> max_scores(n, 0);
-    for (size_t i = 0; i < m; i++) {
-        for (size_t j = 0; j < n; j++) {
+    for (size_t i = 0; i < m; i++) { // per num_doc_tokens
+        for (size_t j = 0; j < n; j++) { // per num_query_tokens
             auto score = output[i * n + j];
             if (score > max_scores[j]) {
                 max_scores[j] = score;

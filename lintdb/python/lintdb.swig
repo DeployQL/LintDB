@@ -1,6 +1,6 @@
 /* -*- C -*-  (not really, but good for syntax highlighting) */
 
-%module("threads"=1) pylintdb
+%module("threads"=1) lintdb
 %{
 #define SWIG_FILE_WITH_INIT
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION

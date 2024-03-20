@@ -23,25 +23,28 @@
 #include "lintdb/Encoder.h"
 
 namespace lintdb {
-// static const std::string QUANTIZER_FILENAME = "_quantizer.bin";
-// static const std::string BINARIZER_FILENAME = "_binarizer.bin";
+
 static const std::string METADATA_FILENAME = "_lintdb_metadata.json";
 
+/**
+ * SearchResult is a simple struct to hold the results of a search.
+ * 
+*/
 struct SearchResult {
-    idx_t id;
-    float distance;
+    idx_t id; /* the document id being returned. */
+    float score; /* the score for the given document as compared to the query. */
 };
 
 struct Configuration {
-    size_t nlist = 256;
-    size_t nbits = 2;
-    size_t niter = 10;
-    bool use_ivf = true;
-    bool use_compression = false;
+    size_t nlist = 256; /* the number of centroids to train. */
+    size_t nbits = 2; /* the number of bits to use in residual compression. */
+    size_t niter = 10; /* the number of iterations to use during training. */
+    bool use_compression = false; /* whether to compress residuals. */
+    bool read_only = false;
 };
 
 struct SearchOptions {
-    idx_t expected_id = -1;
+    idx_t expected_id = -1; /* expects a document id in the return result. prints additional information during execution. useful for debugging.*/
 
     SearchOptions(): expected_id(-1) {};
 };
@@ -53,25 +56,26 @@ struct SearchOptions {
  * faiss.
  */
 struct IndexIVF {
-    size_t nlist; // number of centroids to use in L1 quantizing.
-    size_t nbits; // number of bits used in binarizing the residuals.
-    size_t niter; // number of iterations to use in k-means clustering.
-    bool use_ivf; // whether to use the inverted file structure.
-    bool use_compression; // whether to use the LSH encoding for residuals.
+    size_t nlist; /// number of centroids to use in L1 quantizing.
+    size_t nbits; /// number of bits used in binarizing the residuals.
+    size_t niter; /// number of iterations to use in k-means clustering.
+    bool use_ivf; /// whether to use the inverted file structure.
+    bool use_compression; /// whether to use the LSH encoding for residuals.
+    bool read_only; /// whether to open the index in read-only mode.
 
-    // load an existing index.
-    IndexIVF(std::string path);
+    /// load an existing index.
+    IndexIVF(std::string path, bool read_only=false);
 
     IndexIVF(std::string path, size_t dim, Configuration& config);
 
     IndexIVF(
-            std::string path, // path to the database.
-            size_t nlist,     // number of centroids to use in L1 quantizing.
-            size_t dim,       // number of dimensions per embedding.
-            size_t binarize_nbits=2, // nbits used in the LSH encoding for esiduals.
+            std::string path, /// path to the database.
+            size_t nlist,     /// number of centroids to use in L1 quantizing.
+            size_t dim,       /// number of dimensions per embedding.
+            size_t binarize_nbits=2, /// nbits used in the LSH encoding for esiduals.
             size_t niter = 10,
             bool use_compression = false,
-            bool use_ivf = true
+            bool read_only = false
     );
 
     /**
@@ -119,9 +123,8 @@ struct IndexIVF {
         SearchOptions opts=SearchOptions()) const;
 
     /**
-     * lookup_pids accesses the inverted list for a given ivf_id and returns the pids.
+     * lookup_pids accesses the inverted list for a given ivf_id and returns the passage ids.
      * 
-     * This should only be used during debugging.
     */
     std::vector<idx_t> lookup_pids(const uint64_t tenant, idx_t ivf_id) const;
 
@@ -167,11 +170,19 @@ struct IndexIVF {
 
     std::unique_ptr<Encoder> encoder;
 
-    size_t dim; // number of dimensions per embedding.
+    size_t dim; /// number of dimensions per embedding.
 
-    // the inverted list data structure.
+    /// the inverted list data structure.
     std::unique_ptr<ForwardIndex> index_;
     std::unordered_set<idx_t> get_pids(idx_t ivf_id) const;
+    std::vector<std::pair<float, idx_t>> get_top_centroids( 
+        std::vector<idx_t>& coarse_idx,
+        std::vector<float>& distances, 
+        size_t n,
+        const size_t total_centroids_to_calculate,
+        float centroid_score_threshold,
+        size_t k_top_centroids,
+        size_t n_probe) const;
 
     /**
      * Write_metadata (and read) are helper methods to persist metadata attributes.
@@ -181,6 +192,6 @@ struct IndexIVF {
     void read_metadata(std::string path);
 };
 
-} // namespace lintdb
+} /// namespace lintdb
 
 #endif

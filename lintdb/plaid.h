@@ -20,7 +20,8 @@ float score_documents_by_codes(
                 max_scores_by_centroid, // the max score per centroid across the
                                         // query tokens.
         const std::vector<code_t>& doc_codes,
-        const float centroid_score_threshold);
+        const float centroid_score_threshold,
+        const idx_t expected_id = -1);
 
 std::vector<float> max_score_by_centroid(
         gsl::span<idx_t> coarse_idx,
@@ -28,6 +29,13 @@ std::vector<float> max_score_by_centroid(
         size_t k_per_token,
         size_t num_tokens,
         size_t num_centroids);
+
+float colbert_centroid_score(
+        std::vector<code_t>& doc_codes, 
+        std::vector<float>& centroid_scores,
+        size_t nquery_vectors,
+        size_t n_centroids,
+        const idx_t expected_id);
 
 float score_document_by_residuals(
         const gsl::span<float>

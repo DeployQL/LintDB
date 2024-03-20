@@ -42,7 +42,7 @@ TEST(IndexTest, TrainsCorrectly) {
 
     faiss::rand_smooth_vectors(num_docs * num_tokens, dim, buf.data(), 1234);
 
-    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, false, true);
+    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, false);
 
     index.train(num_docs * num_tokens, buf);
     EXPECT_EQ(index.nlist, 250);
@@ -94,7 +94,7 @@ TEST(IndexTest, TrainsWithCompressionCorrectly) {
 
     faiss::rand_smooth_vectors(num_docs * num_tokens, dim, buf.data(), 1234);
 
-    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, true, true);
+    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, true);
 
     index.train(num_docs * num_tokens, buf);
     EXPECT_EQ(index.nlist, 250);

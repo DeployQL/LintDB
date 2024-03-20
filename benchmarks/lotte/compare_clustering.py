@@ -1,4 +1,4 @@
-from pylintdb import pylintdb
+import lintdb
 from datasets import load_dataset
 from collections import namedtuple
 from colbert import Indexer, Searcher
@@ -52,7 +52,7 @@ def compare_clustering(experiment, lintdb_path, data):
 
         searcher = Searcher(index=experiment, config=config, collection=data.collection)
 
-        index = pylintdb.IndexIVF(lintdb_path)
+        index = lintdb.IndexIVF(lintdb_path)
 
         for i in range(16384):
             pids, cell_lengths = searcher.ranker.ivf.lookup([i])

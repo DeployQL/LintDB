@@ -168,7 +168,7 @@ namespace lintdb {
 
         std::vector<float> bucket_weights_quantiles;
         for (float quantile : quantiles) {
-            bucket_weights_quantiles.push_back(quantile);// + 0.5f/num_options);
+            bucket_weights_quantiles.push_back(quantile); // + 0.5f/num_options);
         }
 
 
@@ -270,7 +270,7 @@ namespace lintdb {
                 uint8_t x = (i >> (j - nbits)) & mask;
                 uint8_t y = 0;
                 for (int k = nbits - 1; k >= 0; --k) {
-                    y += ((x >> (nbits - k - 1)) & 1) << k;
+                    y += ((x >> (nbits - k - 1)) & 1) * pow(2, k);
                 }
                 z |= y;
                 if (j > nbits) {

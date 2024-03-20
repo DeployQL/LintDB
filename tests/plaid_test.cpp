@@ -112,6 +112,60 @@ TEST(PlaidTests, CodesSameAsColBERT) {
     EXPECT_FLOAT_EQ(actual, expected);
 }
 
+TEST(PlaidTests, CodeScoresSameAsColBERT) {
+    // centroid scores is (n_centroids, nquery_vectors)
+    auto colbert = [](std::vector<code_t> codes, std::vector<float> centroid_scores, size_t nquery_vectors) {
+        std::vector<float> per_doc_approx_scores(nquery_vectors, -9999);
+
+        std::unordered_set<int> seen_codes;
+         for (int j = 0; j < codes.size(); j++) {
+            auto code = codes[j];
+            if (seen_codes.find(code) == seen_codes.end()) {
+                for (int k = 0; k < nquery_vectors; k++) {
+                    per_doc_approx_scores[k] =
+                        std::max(per_doc_approx_scores[k],
+                                 centroid_scores
+                                     [code * nquery_vectors + k]);
+                }
+                seen_codes.insert(code);
+            }
+        }
+        float score = 0;
+        for (int k = 0; k < nquery_vectors; k++) {
+            score += per_doc_approx_scores[k];
+            per_doc_approx_scores[k] = -9999;
+        }
+
+        return score;
+    };
+
+    // we have a document where each token has a code.
+    std::vector<code_t> doc_codes = { 0, 1, 2, 3, 4, 4, 0, 1, 4, 3, 2 };
+    // we have a list of centroid scores for each token. this should be (n_centroids, nquery_vectors)
+    std::vector<float> centroid_scores(100 * 5, 0.0);
+    std::vector<idx_t> coarse_idx(100*5, 0);
+    for (size_t i = 0; i < 5; i++) {
+        for (size_t j = 0; j < 100; j++) {
+            centroid_scores[i * 100 + j] = (rand() / RAND_MAX + 1.);
+            coarse_idx[i * 100 + j] = i;
+        }
+    }
+
+    LOG(INFO) << "getting our score";
+    // for our code, let's get the max per centroid.
+    auto actual = lintdb::colbert_centroid_score(
+        doc_codes,
+        centroid_scores,
+        5, // nquery_vectors
+        100, // n_centroids
+        -1
+    );
+    LOG(INFO) << "getting colbert score";
+    auto expected = colbert(doc_codes, centroid_scores, 5);
+
+    EXPECT_FLOAT_EQ(actual, expected);
+}
+
 TEST(PlaidTests, ResidualScoresTheSame) {
     // we bastardize the colbert code to be more amenable to our testing.
     // we only test for one document.

@@ -22,7 +22,7 @@ set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
 
 add_subdirectory(lintdb)
 
-find_package(OpenMP CONFIG REQUIRED)
+find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
     target_link_libraries(lintdb PUBLIC OpenMP::OpenMP_CXX)
 endif()

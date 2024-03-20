@@ -1,4 +1,4 @@
-from pylintdb import pylintdb
+import lintdb as ldb
 from datasets import load_dataset
 from collections import namedtuple
 from colbert import Indexer, Searcher
@@ -12,275 +12,58 @@ from tqdm import tqdm
 import time
 import numpy as np
 import typer
+import random 
+from typing import List, Annotated
+from common import load_lotte, lintdb_indexing, evaluate_dataset
 
 app = typer.Typer()
 
-LoTTeDataset = namedtuple('LoTTeDataset', ['collection', 'queries', 'qids', 'dids'])
-
-
-def load_lotte(dataset, split, max_id=500000):
-    collection_dataset = load_dataset("colbertv2/lotte_passages", dataset)
-    print(collection_dataset[split + '_collection'][0])
-    collection = [x['text'] for x in collection_dataset[split + '_collection']]
-    dids = [x['doc_id'] for x in collection_dataset[split + '_collection']]
-
-    queries_dataset = load_dataset("colbertv2/lotte", dataset)
-    queries = [x['query'] for x in queries_dataset['search_' + split]]
-    qids = [x['qid'] for x in queries_dataset['search_' + split]]
-
-    f'Loaded {len(queries)} queries and {len(collection):,} passages'
-
-    answer_pids = [x['answers']['answer_pids'] for x in queries_dataset['search_' + split]]
-    filtered_queries = [q for q, apids in zip(queries, answer_pids) if any(x < max_id for x in apids)]
-    filtered_qids = [i for i,(q, apids) in enumerate(zip(queries, answer_pids)) if any(x < max_id for x in apids)]
-    filtered_dids = [x for x in dids if x < max_id]
-    f'Filtered down to {len(filtered_queries)} queries'
-
-    return LoTTeDataset(collection[:max_id], filtered_queries, filtered_qids, filtered_dids)
-
-def colbert_indexing(experiment: str, exp_path: str, dataset: LoTTeDataset, nbits=2, checkpoint: str = "colbert-ir/colbertv2.0"):
-     """
-     colbert_indexing reads in paths to the collection and queries and indexes the collection using the colbert library.
-     """
-     with Run().context(RunConfig(nranks=1, experiment=experiment)):
-        # config = ColBERTConfig(
-        #     nbits=nbits,
-        #     kmeans_niters=4,
-        #     root=exp_path,
-        # )
-        config = ColBERTConfig.load_from_checkpoint(checkpoint)
-        config.kmeans_niters=4
-        indexer = Indexer(checkpoint=checkpoint, config=config)
-        indexer.index(name=experiment, collection=dataset.collection) # "/path/to/MSMARCO/collection.tsv"
-
-        searcher = Searcher(index=experiment, config=config, collection=dataset.collection)
-        # print(searcher.ranker.codec.centroids)
-        # print(searcher.ranker.codec.centroids.shape)
-        mapped_queries = {id: q for id, q in zip(dataset.qids, dataset.queries)}
-        queries = Queries(data = mapped_queries) # "/path/to/MSMARCO/queries.dev.small.tsv"
-        ranking = searcher.search_all(queries, k=100)
-        ranking.save(f"{experiment}.ranking.tsv")
-
-def lintdb_indexing(
-        experiment: str, 
-        exp_path: str, 
-        dataset:LoTTeDataset, 
-        k, 
-        nbits=2,  
-        checkpoint: str = "colbert-ir/colbertv2.0", 
-        reuse_centroids=True, 
-        use_compression=False,
-        failures={}):
-    # let's get the same model.
-    checkpoint_config = ColBERTConfig.load_from_checkpoint(checkpoint)
-    config = ColBERTConfig.from_existing(checkpoint_config, None)
-
-    from colbert.modeling.checkpoint import Checkpoint
-    from colbert import Searcher
-    checkpoint = Checkpoint(checkpoint, config)
-
-    if not os.path.exists(f"/tmp/py_index_raw_embeddings_{experiment}.npz"):
-        # sample and train the index.
-        training_data = []
-        for doc in tqdm(dataset.collection, desc="embedding training data"):
-            embeddings = checkpoint.docFromText([doc])
-            training_data.append(np.squeeze(embeddings.numpy().astype('float32')))
-
-        np.savez_compressed(f"/tmp/py_index_raw_embeddings_{experiment}.npz", *training_data)
-        dd = np.concatenate(training_data)
-    else:
-        with open(f"/tmp/py_index_raw_embeddings_{experiment}.npz", "rb") as f:
-            arr_maps = np.load(f)
-            training_data = [arr for _, arr in arr_maps.items()]
-            dd = np.vstack(training_data)
-
-    index_path = f"/tmp/py_index_bench_{experiment}"
-    if not os.path.exists(index_path):
-        index = pylintdb.IndexIVF(index_path, 16384, 128, nbits, 4, use_compression)
-        if reuse_centroids:
-            # we still train so that the binarizer is trained, but we reuse the centroids
-            # from colbert.
-            with Run().context(RunConfig(nranks=1, experiment='colbert')):
-                searcher = Searcher(index='colbert', config=config, collection=dataset.collection)
-                centroids = searcher.ranker.codec.centroids
-                index.set_centroids(centroids)
-                index.set_weights(
-                    searcher.ranker.codec.bucket_weights.tolist(), 
-                    searcher.ranker.codec.bucket_cutoffs.tolist(), 
-                    searcher.ranker.codec.avg_residual
-                )
-                index.save()
-
-        else:
-            start = time.perf_counter()
-            index.train(dd.astype('float32'))
-            train_duration = time.perf_counter() - start
-            print(f"Training duration: {train_duration:.2f}s")
-
-        # add all the documents.
-        start = time.perf_counter()
-
-        for i, d in tqdm(enumerate(dataset.collection), desc="adding documents"):
-        # for i, embedding in tqdm(enumerate(training_data), desc="adding documents"):
-            embedding = checkpoint.docFromText([d])
-            e = embedding[0].numpy().astype('float32')
-            doc = pylintdb.RawPassage(
-                e,
-                i
-            )
-            index.add(0, [doc])
-
-        index_duration = time.perf_counter() - start
-        print(f"Indexing duration: {index_duration:.2f}s")
-    else:
-        print("Loading index")
-        index = pylintdb.IndexIVF(index_path)
-        if reuse_centroids:
-            print("the index exists, but we are reusing centroids.",
-                  "This isn't supported, because the index relies on the centroids.",
-                  "Please delete the index and rerun.")
-    
-    print("Running search")
-    with open(f"{exp_path}/{experiment}.ranking.tsv", "w") as f:
-        failure_ids=set()
-        if failures:
-            failure_ids = set(failures.keys())
-        for id, query in zip(dataset.qids, dataset.queries):
-            if failures and id not in failure_ids:
-                continue
-            
-            # I want only the query and no padding.
-            # obj = checkpoint.query_tokenizer.tok(query, padding=False, truncation=True, return_tensors='pt')
-            # ids, mask = obj['input_ids'], obj['attention_mask']
-            # embeddings = checkpoint.query(ids, mask)
-            embeddings = checkpoint.queryFromText([query])
-            converted = np.squeeze(embeddings.numpy().astype('float32'))
-            
-            expected_pids = failures.get(id, [])
-
-            # it looks like  nprobe should instead of be num tokens * ncells. we use ncells=2.
-            k = np.shape(converted)[0] * 2
-
-            if expected_pids:
-                # print("query: ", query)
-                # print("embeddings: ", converted)
-                # print("using k centroids for search: ", k)
-                for pid in expected_pids:
-                    print("Searching for pid: ", pid)
-                    opts = pylintdb.SearchOptions()
-                    opts.expected_id = pid
-                    results = index.search(
-                        0, # tenant
-                       converted, # converted, 
-                        k, # nprobe
-                        100, # k to return
-                        opts
-                    )
-            else:
-                results = index.search(
-                    converted, 
-                    k, # nprobe
-                    100, # k to return
-                )
-            for rank, result in enumerate(results):
-                # qid, pid, rank
-                f.write(f"{id}\t{result.id}\t{rank+1}\t{result.distance}\n")
-
-
-
-# copied from colbert/util/evaluate
-def evaluate_dataset(query_type, dataset, split, k, data_rootdir, rankings_path):
-    data_path = os.path.join(data_rootdir, dataset, split)
-    
-    if not os.path.exists(rankings_path):
-        print("Rankings file not found! Skipping evaluation.")
-        return
-    rankings = defaultdict(list)
-    with open(rankings_path, "r") as f:
-        for line in f:
-            items = line.strip().split("\t")
-            qid, pid, rank = items[:3]
-            qid = int(qid)
-            pid = int(pid)
-            rank = int(rank)
-            rankings[qid].append(pid)
-            assert rank == len(rankings[qid])
-
-    success = 0
-    success_ids = []
-    failure_ids = []
-    qas_path = os.path.join(data_path, f"qas.{query_type}.jsonl")
-
-    num_total_qids = 0
-    with jsonlines.open(qas_path, mode="r") as f:
-        for line in f:
-            qid = int(line["qid"])
-            if qid not in rankings:
-                # print(f"WARNING: qid {qid} not found in {rankings_path}!", file=sys.stderr)
-                continue
-
-            num_total_qids += 1
-            answer_pids = set(line["answer_pids"])
-            if len(set(rankings[qid][:k]).intersection(answer_pids)) > 0:
-                success += 1
-                success_ids.append((qid, answer_pids))
-            else:
-                failure_ids.append((qid, answer_pids))
-
-    print(f"success: {success}, total: {num_total_qids}")
-    print(
-        f"[query_type={query_type}, dataset={dataset}] "
-        f"Success@{k}: {success / num_total_qids * 100:.1f}"
-    )
-    # print(
-    #     "success ids: ", success_ids
-    # )
-    # print(
-    #     "failure ids: ", failure_ids
-    # )
 
 
 @app.command()
-def colbert(dataset, experiment, split='dev', k=5, checkpoint: str = "colbert-ir/colbertv2.0"):
-    d = load_lotte(dataset, split, max_id=40000000)
+def colbert(dataset, experiment, split='dev', k: int=5, checkpoint: str = "colbert-ir/colbertv2.0"):
+    d = load_lotte(dataset, split, stop=40000000)
 
-    with Run().context(RunConfig(nranks=1, experiment=experiment)) as runner:
+    with Run().context(RunConfig(nranks=1, experiment=experiment)):
         config = ColBERTConfig.load_from_checkpoint(checkpoint)
         config.kmeans_niters=4
+        start = time.perf_counter()
         indexer = Indexer(checkpoint=checkpoint, config=config)
         indexer.index(name=experiment, collection=dataset.collection) # "/path/to/MSMARCO/collection.tsv"
+        index_duration = time.perf_counter() - start
+        print(f"Indexing duration: {index_duration:.2f}s")
 
-        searcher = Searcher(index=experiment, config=config, collection=dataset.collection)
+        searcher = Searcher(index=experiment, config=config, collection=d.collection)
         # print(searcher.ranker.codec.centroids)
         # print(searcher.ranker.codec.centroids.shape)
-        mapped_queries = {id: q for id, q in zip(dataset.qids, dataset.queries)}
+        mapped_queries = {id: q for id, q in zip(d.qids, d.queries)}
         queries = Queries(data = mapped_queries) # "/path/to/MSMARCO/queries.dev.small.tsv"
         ranking = searcher.search_all(queries, k=100)
         ranking.save(f"{experiment}.ranking.tsv")
 
         # Run() hides some of the path to the filename. let's grab it.
-        with runner.open(f"{experiment}.ranking.tsv") as f:
+        with Run().open(f"{experiment}.ranking.tsv") as f:
             rankings_path = f.name
 
     evaluate_dataset(
         'search', 
         dataset,
         split,
-        k,
+        int(k),
         'data/lotte/',
-        rankings_path
+        '/home/matt/deployql/LintDB/experiments/colbert-lifestyle-full/benchmarks.lotte.main/2024-03/15/15.56.46/colbert-lifestyle-full.ranking.tsv'
     )
 
 @app.command()
 def lintdb(dataset, experiment, split='dev', k=5, checkpoint: str = "colbert-ir/colbertv2.0"):
-    d = load_lotte(dataset, split, max_id=40000000)
+    d = load_lotte(dataset, split, stop=40000000)
 
     lintdb_indexing(
         experiment, 
         'experiments', 
         d, 
         2, 
-        nbits=2,
+        nbits=1,
         checkpoint=checkpoint,
         reuse_centroids=True,
         use_compression=True
@@ -290,23 +73,35 @@ def lintdb(dataset, experiment, split='dev', k=5, checkpoint: str = "colbert-ir/
         'search', 
         dataset,
         split,
-        k,
+        int(k),
         'data/lotte/',
         f'experiments/{experiment}.ranking.tsv'
     )
 
-@app.command()
-def run_failures(dataset, experiment, split='dev', k=5, checkpoint: str = "colbert-ir/colbertv2.0"):
-    d = load_lotte(dataset, split, max_id=40000000)
+def comma_separated(raw: str) -> List[int]:
+    if isinstance(raw, list):
+        return raw
+    return [int(x) for x in raw.split(",")]
 
-    failures = {
-        5: [5462],
-        # 11: [7767],
-        # 13: [4176, 4185, 5814, 4174],
-        15: [1925],
-        # 16: [3701, 3060, 3051, 3437],
-        # 19: [5619]
-    }
+@app.command()
+def run_failures(dataset, experiment, split='dev',  failure: Annotated[list, typer.Option(parser=comma_separated)] = [], checkpoint: str = "colbert-ir/colbertv2.0"):
+    d = load_lotte(dataset, split, stop=40000000)
+    with open(f"experiments/{experiment}.ranking.tsv.failures", "r") as f:
+        failures = {}
+        for line in f:
+            qid, apids = line.strip().split("\t")
+            apids = apids.replace("{", "").replace("}", "")
+            if (int(qid) in failure) or not failure:
+                failures[int(qid)] = [int(x) for x in apids.split(",")]
+
+    # failures = {
+    #     5: [5462],
+    #     # 11: [7767],
+    #     # 13: [4176, 4185, 5814, 4174],
+    #     15: [1925],
+    #     # 16: [3701, 3060, 3051, 3437],
+    #     # 19: [5619]
+    # }
     lintdb_indexing(
         experiment, 
         'experiments', 
@@ -319,14 +114,90 @@ def run_failures(dataset, experiment, split='dev', k=5, checkpoint: str = "colbe
         failures=failures
     )
 
-    evaluate_dataset(
-        'search', 
-        dataset,
-        split,
-        k,
-        'data/lotte/',
-        f'experiments/{experiment}.ranking.tsv'
-    )
+@app.command()
+def run_failures_colbert(dataset, experiment, split='dev', k:int=5, failure: Annotated[list, typer.Option(parser=comma_separated)] = [], checkpoint: str = "colbert-ir/colbertv2.0"):
+    d = load_lotte(dataset, split, stop=40000000)
+
+
+    # these are failures from lintdb
+    with open(f"experiments/{experiment}.ranking.tsv.failures", "r") as f:
+        failures = {}
+        for line in f:
+            qid, apids = line.strip().split("\t")
+            apids = apids.replace("{", "").replace("}", "")
+            failures[int(qid)] = [int(x) for x in apids.split(",")]
+
+    with Run().context(RunConfig(nranks=1, experiment='colbert-lifestyle-full')):
+        config = ColBERTConfig.load_from_checkpoint(checkpoint)
+        config.kmeans_niters=4
+        config.ncells = 2
+        config.ndocs=1024
+        config.centroid_score_threshold=.45
+        # indexer = Indexer(checkpoint=checkpoint, config=config)
+        # indexer.index(name=experiment, collection=dataset.collection) # "/path/to/MSMARCO/collection.tsv"
+        from colbert.modeling.checkpoint import Checkpoint
+        from colbert import Searcher
+        searcher = Searcher(index='colbert-lifestyle-full', config=config, collection=d.collection)
+        
+        failure = failure if failure else list(failures.keys())
+        for id, apids in [(int(x), failures.get(int(x), [])) for x in failure]:
+            print("query id: ", id)
+            text = d.queries[id]
+            # searcher.search(query, k=100)
+            # ranker.rank
+            # -> ranker.retrieve
+            # -> -> generate_candidates
+            # -> -> -> get cells
+            Q = searcher.encode(text, full_length_search=False)
+            print(Q.shape)
+            Q_ = Q[:,:32]
+            print(Q_.shape)
+            Q_ = Q_.squeeze(0)
+            cells, scores = searcher.ranker.get_cells(Q_, 2)
+            print("num cells: ", len(cells.tolist()))
+            print("cells: ", cells)
+            print("scores: ", scores)
+
+            pids, scores = searcher.ranker.generate_candidate_pids(Q_, 2)
+            print("num pids non-unique: ", len(pids.tolist()))
+            import torch
+            sorter = pids.sort()
+            pids = sorter.values
+            pids, pids_count = torch.unique_consecutive(pids, return_counts=True)
+            print("num pids unqiue: ", len(pids.tolist()))
+
+            # this is part of searcher.ranker.rank
+            pids, centroid_scores = searcher.ranker.retrieve(config, Q)
+            idx = centroid_scores.max(-1).values >= config.centroid_score_threshold
+            # get the filtered pids
+            # this filtered list isn't the same as the one from rank() ???
+            # filtered_pids = searcher.ranker.filter_pids(pids, centroid_scores, searcher.ranker.embeddings.codes, searcher.ranker.doclens, searcher.ranker.offsets, idx, 1024)
+            # print("num filtered pids: ", len(filtered_pids.tolist()))
+            # for pid in apids:
+            #     try:
+            #         index = filtered_pids.tolist().index(pid)
+            #         print(f"filtered pid: {pid} found at index: {index}.")
+            #     except:
+            #         print("pid not found in filtered pid list: ", pid)
+
+            # this gives us the final scores.
+            # scores, pids = searcher.ranker.score_pids(config, Q, pids, centroid_scores)
+            pids, scores = searcher.ranker.rank(config, Q)
+            # print("pids: ", pids)
+            for pid in apids:
+                try:
+                    index = pids.index(pid)
+                    print(f"pid: {pid} found at index: {index}. score: {scores[index]}")
+                    if index <= k:
+                        print("pid found in top k")
+                except:
+                    print("pid not found: ", pid)
+                    continue
+
+            reverse_bitmap = searcher.ranker.codec.reversed_bit_map
+            print(reverse_bitmap)
+
+
 
 def main():
     dataset = 'lifestyle'

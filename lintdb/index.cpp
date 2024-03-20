@@ -25,9 +25,10 @@
 #include <json/writer.h>
 #include <json/json.h>
 #include <json/reader.h>
+#include <rocksdb/utilities/optimistic_transaction_db.h>
 
 namespace lintdb {
-IndexIVF::IndexIVF(std::string path) {
+IndexIVF::IndexIVF(std::string path, bool read_only): path(path), read_only(read_only) {
     faiss::Index* quantizer;
     faiss::Index* binarizer;
 
@@ -45,11 +46,23 @@ IndexIVF::IndexIVF(std::string path) {
     options.create_missing_column_families = true;
 
     auto cfs = create_column_families();
-    rocksdb::DB* ptr;
-    rocksdb::Status s = rocksdb::DB::Open(
-            options, path, cfs, &(this->column_families), &ptr);
-    assert(s.ok());
-    this->db = std::unique_ptr<rocksdb::DB>(ptr);
+    if (!read_only) {
+        rocksdb::OptimisticTransactionDB* ptr2;
+        rocksdb::Status s = rocksdb::OptimisticTransactionDB::Open(
+                options, path, cfs, &(this->column_families), &ptr2);
+        assert(s.ok());
+        this->db = std::unique_ptr<rocksdb::OptimisticTransactionDB>(ptr2);
+    } else {
+        rocksdb::DB* ptr;
+        rocksdb::Status s = rocksdb::DB::Open(
+                options, path, cfs, &(this->column_families), &ptr);
+        assert(s.ok());
+        this->db = std::unique_ptr<rocksdb::DB>(ptr);
+    }
+    // rocksdb::Status s = rocksdb::DB::Open(
+    //         options, path, cfs, &(this->column_families), &ptr);
+    // assert(s.ok());
+    // this->db = std::unique_ptr<rocksdb::DB>(ptr);
 
     this->index_ = std::make_unique<RocksDBInvertedList>(RocksDBInvertedList(*this->db, this->column_families));
 }
@@ -61,8 +74,7 @@ IndexIVF::IndexIVF(std::string path, size_t dim, Configuration& config)
         config.nlist,
         dim,
         config.nbits,
-        config.niter,
-        config.use_ivf
+        config.niter
     );
 }
 
@@ -73,8 +85,8 @@ IndexIVF::IndexIVF(
         size_t binarize_nbits,
         size_t niter,
         bool use_compression,
-        bool use_ivf
-        ) : path(path), nlist(nlist), dim(dim), nbits(binarize_nbits), niter(niter), use_compression(use_compression), use_ivf(use_ivf) {
+        bool read_only
+    ) : path(path), nlist(nlist), dim(dim), nbits(binarize_nbits), niter(niter), use_compression(use_compression), read_only(read_only){
     // for now, we can only handle 32 bit coarse codes.
     LINTDB_THROW_IF_NOT(nlist <= std::numeric_limits<code_t>::max());
 
@@ -87,11 +99,19 @@ IndexIVF::IndexIVF(
     options.create_missing_column_families = true;
 
     auto cfs = create_column_families();
-    rocksdb::DB* ptr;
-    rocksdb::Status s = rocksdb::DB::Open(
-            options, path, cfs, &(this->column_families), &ptr);
-    assert(s.ok());
-    this->db = std::unique_ptr<rocksdb::DB>(ptr);
+    if (!read_only) {
+        rocksdb::OptimisticTransactionDB* ptr2;
+        rocksdb::Status s = rocksdb::OptimisticTransactionDB::Open(
+                options, path, cfs, &(this->column_families), &ptr2);
+        assert(s.ok());
+        this->db = std::unique_ptr<rocksdb::OptimisticTransactionDB>(ptr2);
+    } else {
+        rocksdb::DB* ptr;
+        rocksdb::Status s = rocksdb::DB::Open(
+                options, path, cfs, &(this->column_families), &ptr);
+        assert(s.ok());
+        this->db = std::unique_ptr<rocksdb::DB>(ptr);
+    }
 
     this->index_ = std::make_unique<RocksDBInvertedList>(RocksDBInvertedList(*this->db, this->column_families));
 }
@@ -114,6 +134,74 @@ void IndexIVF::train(float* embeddings, int n, int dim) {
 void IndexIVF::save() {
     this->encoder->save(this->path);
     this->write_metadata();
+}
+
+std::vector<std::pair<float, idx_t>> IndexIVF::get_top_centroids(
+    std::vector<idx_t>& coarse_idx,
+    std::vector<float>& distances, 
+    size_t n, // num_tokens
+    const size_t total_centroids_to_calculate,
+    float centroid_score_threshold,
+    size_t k_top_centroids,
+    size_t n_probe) const {
+
+    
+    // we're finding the highest centroid scores per centroid.
+    std::vector<float> high_scores(nlist, 0);
+    for (size_t i = 0; i < n; i++) {
+        for (size_t j = 0; j < k_top_centroids; j++) {
+            auto centroid_of_interest = coarse_idx[i*total_centroids_to_calculate+j];
+
+            // Note: including the centroid score threshold is not part of the original colBERT model.
+            // distances[i*total_centroids_to_calculate+j] > centroid_score_threshold && 
+                
+            if (distances[i*total_centroids_to_calculate+j] > high_scores[centroid_of_interest]) {
+                high_scores[centroid_of_interest] = distances[i*total_centroids_to_calculate+j];
+            }
+        }
+    }
+
+    // lets prepare a min heap comparator.
+    auto comparator = [](std::pair<float, idx_t> p1, std::pair<float, idx_t> p2) {
+        return p1.first > p2.first;
+    };
+
+    std::vector<std::pair<float, idx_t>> centroid_scores;
+    centroid_scores.reserve(n_probe);
+    for(int i=0; i < high_scores.size(); i++) {
+        auto key = i;
+        auto score = high_scores[i];
+        if (score > 0){
+            if (centroid_scores.size() < n_probe) {
+                centroid_scores.push_back(std::pair<float, idx_t>(score, key));
+
+                if (centroid_scores.size() == n_probe) {
+                    std::make_heap(centroid_scores.begin(), centroid_scores.end(), comparator);
+                }
+            } else if (score > centroid_scores.front().first) {
+                std::pop_heap(centroid_scores.begin(), centroid_scores.end(), comparator);
+                centroid_scores.front() = std::pair<float, idx_t>(score, key);
+                std::push_heap(centroid_scores.begin(), centroid_scores.end(), comparator);
+            }
+        }
+    }
+
+    if(centroid_scores.size() < n_probe) {
+        std::sort(
+                centroid_scores.begin(),
+                centroid_scores.end(),
+                std::greater<std::pair<float, idx_t>>()
+        );
+    } else {
+        std::sort_heap(centroid_scores.begin(), centroid_scores.end(), comparator);
+    }
+
+    VLOG(1) << "num centroids: " << centroid_scores.size();
+    for(auto p : centroid_scores) {
+        VLOG(1) << "centroid: " << p.second << " score: " << p.first;
+    }
+
+    return centroid_scores;
 }
 
 std::vector<SearchResult> IndexIVF::search(
@@ -140,10 +228,6 @@ std::vector<SearchResult> IndexIVF::search(
     size_t n_probe,
     size_t k,
     SearchOptions opts) const {
-    if (this->use_ivf) {
-        LINTDB_THROW_IF_NOT(this->encoder->is_trained);
-    }
-
 
     // per block, run a matrix multiplication and find the nearest centroid.
     // block: (num_tokens x dimensions)
@@ -164,35 +248,24 @@ std::vector<SearchResult> IndexIVF::search(
         total_centroids_to_calculate,
         centroid_score_threshold
     );
-    // get the centroids closest to each token.
-    // std::vector<idx_t> coarse_idx(n*k_top_centroids);
-    // std::vector<float> distances(n*k_top_centroids);
-    std::vector<std::pair<float, idx_t>> centroid_scores;
-    for(size_t i = 0; i < n; i++) {
-        for (size_t j = 0; j < k_top_centroids; j++) {
-            centroid_scores.push_back(
-                std::pair<float, idx_t>(
-                    // the index here is that we've calculated
-                    // the distance across a total number of centroids,
-                    // but we only want to take the k_top_centroids.
-                    distances[i*total_centroids_to_calculate+j], 
-                    coarse_idx[i*total_centroids_to_calculate+j]
-                )
-            );
+    // well, to get to the other side of this, we reorder the distances
+    // in order of the centroids.
+    std::vector<float> reordered_distances(n*total_centroids_to_calculate);
+    for(int i=0; i < n; i++) {
+        for(int j=0; j < total_centroids_to_calculate; j++) {
+            auto current_code = coarse_idx[i*total_centroids_to_calculate+j];
+            reordered_distances[i*total_centroids_to_calculate+current_code] = distances[i*total_centroids_to_calculate+j];
         }
     }
-    std::sort(
-            centroid_scores.begin(),
-            centroid_scores.end(),
-            std::greater<std::pair<float, idx_t>>()
-    );
-    //define lambda to get unique pairs
-    auto unique_pair = [](std::pair<float, idx_t> p1, std::pair<float, idx_t> p2) {
-        return p1.second == p2.second;
-    };
-    centroid_scores.erase(
-            std::unique(centroid_scores.begin(), centroid_scores.end(), unique_pair),
-            centroid_scores.end()
+
+    auto centroid_scores = get_top_centroids(
+        coarse_idx,
+        distances,
+        n,
+        total_centroids_to_calculate,
+        centroid_score_threshold,
+        k_top_centroids,
+        n_probe
     );
     auto num_centroids_to_eval = std::min<size_t>(n_probe, centroid_scores.size());
 
@@ -203,7 +276,7 @@ std::vector<SearchResult> IndexIVF::search(
             if (mapping_set.find(centroid_scores[i].second) != mapping_set.end()) {
                 LOG(INFO) << "expected id found in centroid: " << centroid_scores[i].second;
                 if (i > num_centroids_to_eval) {
-                    LOG(INFO) << "expected id has been dropped from search.";
+                    LOG(INFO) << "this centroid is not being searched.";
                 };
             };
         }
@@ -217,20 +290,22 @@ std::vector<SearchResult> IndexIVF::search(
 #pragma omp parallel
     {
         std::vector<idx_t> local_pids;
-#pragma omp for nowait
+        #pragma omp for nowait
         for (size_t i = 0; i < num_centroids_to_eval; i++) {
             auto idx = centroid_scores[i].second;
-            VLOG(10) << "Including centroid: " << idx << " in search.";
             if (idx == -1) {
                 continue;
             }
             local_pids = lookup_pids(tenant, idx);
+
+            #pragma omp critical
+            {
+                global_pids.insert(local_pids.begin(), local_pids.end());
+            }
         }
-#pragma omp critical
-        global_pids.insert(local_pids.begin(), local_pids.end());
+        
     } // end parallel
 
-    VLOG(100) << "found total num pids: " << global_pids.size();
     if (global_pids.size() == 0) {
         return std::vector<SearchResult>();
     }
@@ -240,13 +315,13 @@ std::vector<SearchResult> IndexIVF::search(
      */
     std::vector<idx_t> pid_list(global_pids.begin(), global_pids.end());
     auto doc_codes = index_->get_codes(tenant, pid_list);
-    std::vector<float> max_scores_per_centroid = max_score_by_centroid(
-            coarse_idx, distances, total_centroids_to_calculate, n, nlist);
+
     // create a mapping from pid to the index. we'll need this to hydrate
     // residuals.
     std::unordered_map<idx_t, size_t> pid_to_index;
     for (size_t i = 0; i < pid_list.size(); i++) {
-        pid_to_index[doc_codes[i]->id] = i;
+        auto id = doc_codes[i]->id;
+        pid_to_index[id] = i;
     }
 
     std::vector<std::pair<float, idx_t>> pid_scores(pid_list.size());
@@ -255,15 +330,18 @@ std::vector<SearchResult> IndexIVF::search(
     for (int i = 0; i < pid_list.size(); i++) {
         auto codes = doc_codes[i]->codes;
 
-        float score = score_documents_by_codes(
-                max_scores_per_centroid,
-                codes, // we'll have num_token codes
-                centroid_score_threshold);
+        float score = colbert_centroid_score(
+            codes,
+            reordered_distances,
+            n,
+            total_centroids_to_calculate,
+            opts.expected_id
+        );
         pid_scores[i] = std::pair<float, idx_t>(score, doc_codes[i]->id);
     }
 
 
-    VLOG(100) << "got pid scores: " << pid_scores.size();
+    VLOG(10) << "number of passages to evaluate: " << pid_scores.size();
     assert(pid_scores.size() == pid_list.size());
     // according to the paper, we take the top 25%.
     std::sort(
@@ -288,9 +366,9 @@ std::vector<SearchResult> IndexIVF::search(
                 });
         if (it != pid_scores.end()) {
             auto pos = it - pid_scores.begin();
-            LOG(INFO) << "found expected id in pid code scores at position: " << pos;
+            LOG(INFO) << "found expected id in pid code scores at position: " << pos << " score: " << it->first;
             if (pos > num_rerank) {
-                LOG(INFO) << "top 25 cutoff: " << num_rerank << ". expected id has been dropped";
+                LOG(INFO) << "top 25 cutoff: " << num_rerank << ". expected id is not being reranked";
             }
         }
     }
@@ -316,6 +394,7 @@ std::vector<SearchResult> IndexIVF::search(
         auto residuals = doc_residuals[i]->residuals;
 
         auto codes = doc_codes[pid_to_index[doc_residuals[i]->id]]->codes;
+
         std::vector<float> decompressed = encoder->decode_vectors(
             gsl::span<code_t>(codes),
             gsl::span<residual_t>(residuals),
@@ -328,7 +407,8 @@ std::vector<SearchResult> IndexIVF::search(
             n,
             decompressed.data(),
             doc_residuals[i]->num_tokens,
-            dim);
+            dim,
+            true);
 
         actual_scores[i] = std::pair<float, idx_t>(score, top_25_ids[i]);
     }
@@ -448,7 +528,6 @@ void IndexIVF::write_metadata() {
     metadata["nbits"] = nbits;
     metadata["dim"] = dim;
     metadata["niter"] = niter;
-    metadata["use_ivf"] = use_ivf;
     metadata["use_compression"] = use_compression;
 
     Json::StyledWriter writer;
@@ -472,7 +551,6 @@ void IndexIVF::read_metadata(std::string path) {
     nbits = metadata["nbits"].asUInt();
     dim = metadata["dim"].asUInt();
     niter = metadata["niter"].asUInt();
-    use_ivf = metadata["use_ivf"].asBool();
     use_compression = metadata["use_compression"].asBool();
 }
 } // namespace lintdb
