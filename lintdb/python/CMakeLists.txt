@@ -3,7 +3,6 @@
 cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
 
 project(pylintdb
-    VERSION 0.1.0
     LANGUAGES CXX
 )
 
@@ -51,9 +50,6 @@ target_link_libraries(pylintdb PRIVATE
 )
 
 target_include_directories(pylintdb PRIVATE ${PROJECT_SOURCE_DIR}/../..)
-
-find_package(PythonLibs REQUIRED)
-include_directories(${PYTHON_INCLUDE_DIRS})
 
 configure_file(setup.py setup.py COPYONLY)
 configure_file(__init__.py __init__.py COPYONLY)

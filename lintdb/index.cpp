@@ -35,36 +35,20 @@ IndexIVF::IndexIVF(std::string path, bool read_only): path(path), read_only(read
     LOG(INFO) << "loading LintDB from path: " << path;
 
     // set all of our individual attributes.
-    this->read_metadata(path);
+    Configuration index_config = this->read_metadata(path);
+    this->nlist = index_config.nlist;
+    this->nbits = index_config.nbits;
+    this->dim = index_config.dim;
+    this->niter = index_config.niter;
+    this->use_compression = index_config.use_compression;
+
     auto config = EncoderConfig{
         nlist, nbits, niter, dim, use_compression
     };
     this->encoder = DefaultEncoder::load(path, config);
 
-    rocksdb::Options options;
-    options.create_if_missing = true;
-    options.create_missing_column_families = true;
+    initialize_inverted_list();
 
-    auto cfs = create_column_families();
-    if (!read_only) {
-        rocksdb::OptimisticTransactionDB* ptr2;
-        rocksdb::Status s = rocksdb::OptimisticTransactionDB::Open(
-                options, path, cfs, &(this->column_families), &ptr2);
-        assert(s.ok());
-        this->db = std::unique_ptr<rocksdb::OptimisticTransactionDB>(ptr2);
-    } else {
-        rocksdb::DB* ptr;
-        rocksdb::Status s = rocksdb::DB::Open(
-                options, path, cfs, &(this->column_families), &ptr);
-        assert(s.ok());
-        this->db = std::unique_ptr<rocksdb::DB>(ptr);
-    }
-    // rocksdb::Status s = rocksdb::DB::Open(
-    //         options, path, cfs, &(this->column_families), &ptr);
-    // assert(s.ok());
-    // this->db = std::unique_ptr<rocksdb::DB>(ptr);
-
-    this->index_ = std::make_unique<RocksDBInvertedList>(RocksDBInvertedList(*this->db, this->column_families));
 }
 
 IndexIVF::IndexIVF(std::string path, size_t dim, Configuration& config)
@@ -98,22 +82,32 @@ IndexIVF::IndexIVF(
     options.create_if_missing = true;
     options.create_missing_column_families = true;
 
+    initialize_inverted_list();
+}
+
+void IndexIVF::initialize_inverted_list() {
+    rocksdb::Options options;
+    options.create_if_missing = true;
+    options.create_missing_column_families = true;
+
     auto cfs = create_column_families();
     if (!read_only) {
         rocksdb::OptimisticTransactionDB* ptr2;
         rocksdb::Status s = rocksdb::OptimisticTransactionDB::Open(
                 options, path, cfs, &(this->column_families), &ptr2);
         assert(s.ok());
-        this->db = std::unique_ptr<rocksdb::OptimisticTransactionDB>(ptr2);
+        auto owned_ptr = std::shared_ptr<rocksdb::OptimisticTransactionDB>(ptr2);
+        this->db = owned_ptr;
+        this->index_ = std::make_unique<WritableRocksDBInvertedList>(WritableRocksDBInvertedList(owned_ptr, this->column_families));
     } else {
         rocksdb::DB* ptr;
-        rocksdb::Status s = rocksdb::DB::Open(
+        rocksdb::Status s = rocksdb::DB::OpenForReadOnly(
                 options, path, cfs, &(this->column_families), &ptr);
         assert(s.ok());
-        this->db = std::unique_ptr<rocksdb::DB>(ptr);
+        auto owned_ptr = std::shared_ptr<rocksdb::DB>(ptr);
+        this->db = owned_ptr;
+        this->index_ = std::make_unique<ReadOnlyRocksDBInvertedList>(ReadOnlyRocksDBInvertedList(owned_ptr, this->column_families));
     }
-
-    this->index_ = std::make_unique<RocksDBInvertedList>(RocksDBInvertedList(*this->db, this->column_families));
 }
 
 void IndexIVF::train(size_t n, std::vector<float>& embeddings) {
@@ -489,6 +483,18 @@ void IndexIVF::update(const uint64_t tenant, const std::vector<RawPassage>& docs
     add(tenant, docs);
 }
 
+void IndexIVF::merge(const std::string path) {
+    Configuration our_config = Configuration{
+        nlist, nbits, dim, niter, use_compression};
+    Configuration incoming_config = read_metadata(path);
+    
+    LINTDB_THROW_IF_NOT(our_config == incoming_config);
+
+    IndexIVF incoming(path, true);
+
+    index_->merge(incoming.db);
+}
+
 std::vector<idx_t> IndexIVF::lookup_pids(const uint64_t tenant, idx_t idx) const {
     Key start_key{tenant, idx, 0, true};
     // instead of using the max key value, we use the next centroid idx so that we include all
@@ -535,7 +541,7 @@ void IndexIVF::write_metadata() {
     out.close();
 }
 
-void IndexIVF::read_metadata(std::string path) {
+Configuration IndexIVF::read_metadata(std::string path) {
     this->path = path;
     std::string in_path = path + "/" + METADATA_FILENAME;
     std::ifstream in(in_path);
@@ -547,10 +553,14 @@ void IndexIVF::read_metadata(std::string path) {
     Json::Value metadata;
     reader.parse(in, metadata);
 
-    nlist = metadata["nlist"].asUInt();
-    nbits = metadata["nbits"].asUInt();
-    dim = metadata["dim"].asUInt();
-    niter = metadata["niter"].asUInt();
-    use_compression = metadata["use_compression"].asBool();
+    Configuration config;
+
+    config.nlist = metadata["nlist"].asUInt();
+    config.nbits = metadata["nbits"].asUInt();
+    config.dim = metadata["dim"].asUInt();
+    config.niter = metadata["niter"].asUInt();
+    config.use_compression = metadata["use_compression"].asBool();
+
+    return config;
 }
 } // namespace lintdb

@@ -11,8 +11,6 @@ set(
     invlists/EncodedDocument.cpp
     schema/util.cpp
 )
-# file(GLOB LINT_DB_SRC "*.cpp" "invlist/*.cpp" "schema/*.cpp")
-# file(GLOB LINT_DB_HEADERS "*.h" "invlist/*.h" "schema/*.h")
 
 set(
     LINT_DB_HEADERS
@@ -68,3 +66,22 @@ install(TARGETS lintdb
   INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+  "${PROJECT_BINARY_DIR}/cmake/lintdb-config-version.cmake"
+  VERSION ${CMAKE_PROJECT_VERSION}
+  COMPATIBILITY AnyNewerVersion
+)
+
+configure_file(${PROJECT_SOURCE_DIR}/cmake/lintdb-config.cmake.in
+  ${PROJECT_BINARY_DIR}/cmake/lintdb-config.cmake
+  COPYONLY
+)
+install(FILES ${PROJECT_BINARY_DIR}/cmake/lintdb-config.cmake
+  ${PROJECT_BINARY_DIR}/cmake/lintdb-config-version.cmake
+  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/lintdb
+)
+
+install(EXPORT lintdb-targets
+  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/lintdb
+)

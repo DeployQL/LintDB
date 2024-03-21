@@ -64,7 +64,7 @@ TEST(IndexTest, TrainsCorrectly) {
         lintdb::Key end{0, i, std::numeric_limits<idx_t>::max(), false};
         std::string start_string = start.serialize();
         std::string end_string = end.serialize();
-        lintdb::RocksDBInvertedList casted = static_cast<lintdb::RocksDBInvertedList&>(*index.index_);
+        lintdb::ReadOnlyRocksDBInvertedList casted = static_cast<lintdb::ReadOnlyRocksDBInvertedList&>(*index.index_);
         std::unique_ptr<lintdb::Iterator> it = casted.get_iterator(start_string, end_string);
         for(; it->has_next(); it->next()) {
             lintdb::Key key = it->get_key();
@@ -116,7 +116,7 @@ TEST(IndexTest, TrainsWithCompressionCorrectly) {
         lintdb::Key end{0, i, std::numeric_limits<idx_t>::max(), false};
         std::string start_string = start.serialize();
         std::string end_string = end.serialize();
-        lintdb::RocksDBInvertedList casted = static_cast<lintdb::RocksDBInvertedList&>(*index.index_);
+        lintdb::ReadOnlyRocksDBInvertedList casted = static_cast<lintdb::ReadOnlyRocksDBInvertedList&>(*index.index_);
         std::unique_ptr<lintdb::Iterator> it = casted.get_iterator(start_string, end_string);
         for(; it->has_next(); it->next()) {
             lintdb::Key key = it->get_key();

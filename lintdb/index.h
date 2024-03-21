@@ -39,8 +39,16 @@ struct Configuration {
     size_t nlist = 256; /* the number of centroids to train. */
     size_t nbits = 2; /* the number of bits to use in residual compression. */
     size_t niter = 10; /* the number of iterations to use during training. */
+    size_t dim; /* the dimensions expected for incoming vectors. */
     bool use_compression = false; /* whether to compress residuals. */
-    bool read_only = false;
+
+    inline bool operator==(const Configuration& other) const {
+        return nlist == other.nlist && 
+            nbits == other.nbits && 
+            niter == other.niter && 
+            dim == other.dim && 
+            use_compression == other.use_compression;
+    }
 };
 
 struct SearchOptions {
@@ -150,6 +158,16 @@ struct IndexIVF {
     void update(const uint64_t tenant, const std::vector<RawPassage>& docs);
 
     /**
+     * Merge will combine the index with another index.
+     * 
+     * We verify that the configuration of each index is correct, but this doesn't
+     * prevent you from merging indices with different centroids. There will be
+     * subtle ways for this to break, but this can enable easier multiprocess
+     * building of indices.
+    */
+    void merge(const std::string path);
+
+    /**
      * Index should be able to resume from a previous state.
      * Any quantization and compression will be saved within the Index's path.
      *
@@ -165,12 +183,15 @@ struct IndexIVF {
 
    private:
     std::string path;
-    std::unique_ptr<rocksdb::DB> db;
+    std::shared_ptr<rocksdb::DB> db;
     std::vector<rocksdb::ColumnFamilyHandle*> column_families;
 
     std::unique_ptr<Encoder> encoder;
 
     size_t dim; /// number of dimensions per embedding.
+
+    // helper to initialize the inverted list.
+    void initialize_inverted_list();
 
     /// the inverted list data structure.
     std::unique_ptr<ForwardIndex> index_;
@@ -189,7 +210,7 @@ struct IndexIVF {
      * 
     */
     void write_metadata();
-    void read_metadata(std::string path);
+    Configuration read_metadata(std::string path);
 };
 
 } /// namespace lintdb

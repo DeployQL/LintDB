@@ -64,7 +64,7 @@ def consume_task(result_queue, experiment, nbits, use_compression, checkpoint):
     checkpoint_config = ColBERTConfig.load_from_checkpoint(checkpoint)
     config = ColBERTConfig.from_existing(checkpoint_config, None)
 
-    index_path = f"/tmp/py_index_bench_{experiment}"
+    index_path = f"experiments/py_index_bench_{experiment}"
         # lifestyle full centroids == 65536
     index = ldb.IndexIVF(index_path, 65536, 128, nbits, 10, use_compression)
     # in multiprocessing, we only allow for reuse of centroids.
@@ -96,7 +96,7 @@ def run(dataset: str, experiment: str, split: str = 'dev', k: int = 5, num_procs
     d = load_lotte(dataset, split, stop=40000000)
     print("Dataset loaded.")
 
-    index_path = f"/tmp/py_index_bench_{experiment}"
+    index_path = f"experiments/py_index_bench_{experiment}"
     assert not os.path.exists(index_path)
         # lifestyle full centroids == 65536
     index = ldb.IndexIVF(index_path, 65536, 128, nbits, 10, use_compression)
@@ -125,30 +125,6 @@ def run(dataset: str, experiment: str, split: str = 'dev', k: int = 5, num_procs
     for id, embedding in tqdm(pool.imap_unordered(encode_one, create_tuples()), total=270000):
         doc = ldb.RawPassage(embedding, id)
         index.add(0, [doc])
-
-
-    # input_queue = mp.Queue()
-    # result_queue = mp.Queue()
-
-    # producers = [mp.Process(target=encode_task, args=(input_queue, result_queue, dataset, experiment, split, checkpoint)) for _ in range(num_procs)]
-    # for p in producers:
-    #     p.start()
-
-    # for i, dd in tqdm(zip(d.dids, d.collection), desc="adding documents"):
-    #     input_queue.put((i, dd))
-
-    # for _ in range(num_procs):
-    #     input_queue.put(None)
-
-    # consumer = mp.Process(target=consume_task, args=(result_queue, experiment, 2, True, checkpoint))
-    # consumer.start()
-
-    # for p in producers:
-    #     p.join()
-
-    # print("Producers done. Waiting on consumer...")
-    # result_queue.put(None)
-    # consumer.join()
 
     duration = time.perf_counter() - start
     print(f"Indexing complete. duration: {duration:.2f}s")
