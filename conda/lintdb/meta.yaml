@@ -49,6 +49,8 @@ outputs:
         - cmake >=3.23.1
         - make  # [not win]
         - openblas
+        - conda-forge::swig >=4.0.2
+        - numpy
       host:
         - openblas
       run:
@@ -79,7 +81,8 @@ outputs:
         - conda-forge::libstdcxx-ng # [linux64]
         - openblas
         - sysroot_linux-64 =2.17 # [linux64]
-        - swig
+        - conda-forge::swig >= 4.0.2
+        - numpy
         - cmake >=3.23.1
         - make  # [not win]
       host:
@@ -94,7 +97,6 @@ outputs:
     test:
       requires:
         - numpy
-        - scipy
         - pytorch
       commands:
         - python -X faulthandler -m unittest discover -v -s tests/ -p "test_*"
@@ -102,4 +104,4 @@ outputs:
       files:
         - test_cpu_dispatch.sh  # [linux64]
       source_files:
-        - tests/
+        - tests

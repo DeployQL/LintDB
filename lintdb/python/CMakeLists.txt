@@ -21,14 +21,23 @@ include(${SWIG_USE_FILE})
 set(UseSWIG_TARGET_NAME_PREFERENCE STANDARD)
 set(SWIG_SOURCE_FILE_EXTENSIONS swig)
 
-# set(ADDITIONAL_SWG_DEFINES -doxygen)
-
 set(SRC lintdb.swig)
 set_source_files_properties(${SRC} PROPERTIES CPLUSPLUS ON SWIG_FLAGS "-doxygen")
 swig_add_library(pylintdb
     LANGUAGE python
     SOURCES ${SRC}
 )
+
+if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Darwin" AND NOT WIN32)
+set_source_files_properties(${SRC} PROPERTIES
+    SWIG_FLAGS -DSWIGWORDSIZE64
+)
+endif()
+if(WIN32)
+set_source_files_properties(${SRC} PROPERTIES
+    SWIG_FLAGS -DSWIGWIN
+)
+endif()
 
 set_property(TARGET pylintdb PROPERTY SWIG_USE_TARGET_INCLUDE_DIRECTORIES TRUE)
 # set_property(TARGET pylintdb PROPERTY SWIG_COMPILE_OPTIONS -doxygen)

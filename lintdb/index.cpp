@@ -530,10 +530,11 @@ void IndexIVF::write_metadata() {
     std::ofstream out(out_path);
 
     Json::Value metadata;
-    metadata["nlist"] = nlist;
-    metadata["nbits"] = nbits;
-    metadata["dim"] = dim;
-    metadata["niter"] = niter;
+    // the below castings to Json types enables this to build on M1 Mac.
+    metadata["nlist"] = Json::UInt64(nlist);
+    metadata["nbits"] = Json::UInt64(nbits);
+    metadata["dim"] = Json::UInt64(dim);
+    metadata["niter"] = Json::UInt64(niter);
     metadata["use_compression"] = use_compression;
 
     Json::StyledWriter writer;
