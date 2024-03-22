@@ -1,7 +1,6 @@
 set -e
 
 
-# Build libfaiss.so/libfaiss_avx2.so/libfaiss_avx512.so
 cmake -B _build \
       -DBUILD_SHARED_LIBS=ON \
       -DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \

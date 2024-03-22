@@ -29,16 +29,19 @@ outputs:
     script: build-lib.sh  # [x86_64 and not win and not osx]
     script: build-lib-osx.sh  # [x86_64 and osx]
     script: build-lib-arm64.sh  # [not x86_64]
+    script: build-lib-arm64.sh # [osx-arm64]
     script: build-lib.bat  # [win]
     build:
       string: "h{{ PKG_HASH }}_{{ number }}_cpu{{ suffix }}"
+      script_envs:
+        - CFLAGS=-march=apple-a14 -mcpu=cortex-a9 -mfloat-abi=hard
       run_exports:
         - {{ pin_compatible('liblintdb', exact=True) }}
     requirements:
       build:
         - {{ compiler('cxx') }}
         - {{ compiler('fortran')}}
-        - conda-forge::fortran-compiler
+        - conda-forge::fortran-compiler #[linux64]
         - conda-forge::gfortran #[linux64]
         - conda-forge::libgcc-ng # [linux64]
         - conda-forge::libstdcxx-ng # [linux64]
@@ -62,15 +65,15 @@ outputs:
     script: build-pkg.sh  # [x86_64 and not win and not osx]
     script: build-pkg-osx.sh  # [x86_64 and osx]
     script: build-pkg-arm64.sh # [not x86_64]
+    script: build-lib-arm64.sh # [osx-arm64]
     script: build-pkg.bat  # [win]
     build:
       string: "py{{ PY_VER }}_h{{ PKG_HASH }}_{{ number }}_cpu{{ suffix }}"
     requirements:
       build:
         - {{ compiler('cxx') }}
-        - {{ compiler('cxx') }}
         - {{ compiler('fortran')}}
-        - conda-forge::fortran-compiler
+        - conda-forge::fortran-compiler #[linux64]
         - conda-forge::gfortran #[linux64]
         - conda-forge::libgcc-ng # [linux64]
         - conda-forge::libstdcxx-ng # [linux64]

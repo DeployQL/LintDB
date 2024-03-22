@@ -10,6 +10,8 @@ cmake_minimum_required(VERSION 3.25)
 
 include(CMakeFindDependencyMacro)
 
+set(VCPKG_INSTALL_OPTIONS "--allow-unsupported")
+
 # Setup vcpkg script with CMake (note: should be placed before project() call)
 set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake CACHE STRING "Vcpkg toolchain file")
 
