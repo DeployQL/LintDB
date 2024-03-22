@@ -33,6 +33,12 @@ set_source_files_properties(${SRC} PROPERTIES
     SWIG_FLAGS -DSWIGWORDSIZE64
 )
 endif()
+# repeat of the above since I hit some problems with this.
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+set_source_files_properties(${SRC} PROPERTIES
+    SWIG_FLAGS -DSWIGWORDSIZE64
+)
+endif()
 if(WIN32)
 set_source_files_properties(${SRC} PROPERTIES
     SWIG_FLAGS -DSWIGWIN
