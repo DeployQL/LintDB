@@ -8,6 +8,7 @@
 #include <string>
 #include <memory>
 #include <faiss/Index.h>
+#include <faiss/IndexFlat.h>
 #include "lintdb/Binarizer.h"
 
 namespace lintdb {
@@ -124,7 +125,7 @@ namespace lintdb {
         void set_weights(const std::vector<float>& weights, const std::vector<float>& cutoffs, const float avg_residual) override;
 
         private:
-        std::unique_ptr<faiss::Index> quantizer;
+        std::unique_ptr<faiss::IndexFlat> quantizer;
         std::unique_ptr<Binarizer> binarizer;
         void save(std::string path) override;
     };

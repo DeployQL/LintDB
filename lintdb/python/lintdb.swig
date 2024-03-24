@@ -27,8 +27,8 @@ typedef int64_t idx_t;
 %include <std_string.i>
 %include cpointer.i
 
-// this is specific to 64 bit arches. I'm not quite sure why we need it.
-// note: moved this into cmake.
+// this uses code that makes this specific to 64bit arch. 
+// We should be able to define this in cmake, but it's not working for a reason I don't understand.
 #define SWIGWORDSIZE64
 %include <stdint.i>
 // Apply enables the typemap for the given argument(s) in the function signature.

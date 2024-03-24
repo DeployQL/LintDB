@@ -46,19 +46,13 @@ def colbert_indexing(experiment: str, exp_path: str, dataset: LoTTeDataset, nbit
      colbert_indexing reads in paths to the collection and queries and indexes the collection using the colbert library.
      """
      with Run().context(RunConfig(nranks=1, experiment=experiment)):
-        # config = ColBERTConfig(
-        #     nbits=nbits,
-        #     kmeans_niters=4,
-        #     root=exp_path,
-        # )
         config = ColBERTConfig.load_from_checkpoint(checkpoint)
         config.kmeans_niters=4
         indexer = Indexer(checkpoint=checkpoint, config=config)
         indexer.index(name=experiment, collection=dataset.collection) # "/path/to/MSMARCO/collection.tsv"
 
         searcher = Searcher(index=experiment, config=config, collection=dataset.collection)
-        # print(searcher.ranker.codec.centroids)
-        # print(searcher.ranker.codec.centroids.shape)
+
         mapped_queries = {id: q for id, q in zip(dataset.qids, dataset.queries)}
         queries = Queries(data = mapped_queries) # "/path/to/MSMARCO/queries.dev.small.tsv"
         ranking = searcher.search_all(queries, k=100)

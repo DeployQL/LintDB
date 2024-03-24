@@ -2,7 +2,8 @@ import lintdb
 import numpy as np
 
 def main():
-    index = lintdb.IndexIVF("/tmp/py_index_bench")
+    index = lintdb.IndexIVF("experiments/py_index_bench_colbert-lifestyle-2024-03-20")
+    # index = lintdb.IndexIVF("/tmp/py_index_bench")
     # index = pylintdb.IndexIVF("/tmp/py_index", 32, 128, 1)
 
     # passages = []
@@ -19,7 +20,7 @@ def main():
     # index.train(data)
 
     dat = np.random.rand(100, 128).astype('float32')
-    index.search(dat, 10, 100)
+    index.search(0, dat, 32, 100)
     # obj = pylintdb.RawPassage(
     #         dat,
     #         1,

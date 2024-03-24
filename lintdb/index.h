@@ -53,7 +53,10 @@ struct Configuration {
 
 struct SearchOptions {
     idx_t expected_id = -1; /* expects a document id in the return result. prints additional information during execution. useful for debugging.*/
-
+    float centroid_score_threshold = 0.45; /* the threshold for centroid scores. */
+    size_t k_top_centroids = 2; /* the number of top centroids to consider. */
+    size_t num_second_pass = 1024; /* the number of second pass candidates to consider. */
+    
     SearchOptions(): expected_id(-1) {};
 };
 

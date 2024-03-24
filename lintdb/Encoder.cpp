@@ -94,20 +94,83 @@ namespace lintdb {
     }
 
     void DefaultEncoder::search(
-            float* data,
-            int n,
+            float* data, // size: (num_query_tok, dim)
+            int num_query_tok,
             std::vector<idx_t>& coarse_idx,
             std::vector<float>& distances,
             size_t k_top_centroids,
             float centroid_threshold
     ) {
         // we get back the k top centroid matches per token.
-        quantizer->search(
-                n,
+        // faiss' quantizer->search() is taking up the majority of the search critical path.
+        // therefore, we will write our own to do our own matmul.
+        // quantizer->search(
+        //         num_query_tok,
+        //         data,
+        //         k_top_centroids,
+        //         distances.data(),
+        //         coarse_idx.data());
+        std::vector<float> query_scores(num_query_tok * nlist, 0);
+
+        cblas_sgemm(
+                CblasRowMajor,
+                CblasNoTrans,
+                CblasTrans,
+                num_query_tok,
+                nlist,
+                dim,
+                1.0,
                 data,
-                k_top_centroids,
-                distances.data(),
-                coarse_idx.data());
+                dim,
+                quantizer->get_xb(),
+                dim,
+                0.0,
+                query_scores.data(), // size: (num_query_tok x nlist)
+                nlist);
+
+        auto comparator = [](std::pair<float, idx_t> p1, std::pair<float, idx_t> p2) {
+            return p1.first > p2.first;
+        };
+
+        std::vector<std::pair<float, idx_t>> centroid_scores;
+        centroid_scores.reserve(num_query_tok*k_top_centroids);
+
+        std::vector<std::pair<float, idx_t>> token_centroid_scores;
+        token_centroid_scores.reserve(k_top_centroids);
+
+        for(int i=0; i < num_query_tok; i++) {
+            for (int j=0; j < nlist; j++) {
+                idx_t key = j;
+                float score = query_scores[i * nlist + j];
+                if (token_centroid_scores.size() < k_top_centroids) {
+                    token_centroid_scores.push_back(std::pair<float, idx_t>(score, key));
+
+                    if (token_centroid_scores.size() == k_top_centroids) {
+                        std::make_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
+                    }
+                } else if (score > token_centroid_scores.front().first) {
+                    std::pop_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
+                    token_centroid_scores.front() = std::pair<float, idx_t>(score, key);
+                    std::push_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
+                }
+            }
+            
+            for(idx_t k=0; k < k_top_centroids; k++) {
+                centroid_scores.push_back(token_centroid_scores[k]);
+            }
+
+            token_centroid_scores.clear();
+        }
+
+        // std::sort(centroid_scores.begin(), centroid_scores.end(), comparator);
+
+        for (int i = 0; i < num_query_tok; i++) {
+            for (int j = 0; j < k_top_centroids; j++) {
+                auto idx = i * k_top_centroids + j;
+                coarse_idx[idx] = centroid_scores[idx].second;
+                distances[idx] = centroid_scores[idx].first;
+            }
+        }
     }
 
     void DefaultEncoder::save(std::string path) {
@@ -120,11 +183,12 @@ namespace lintdb {
     }
 
     std::unique_ptr<Encoder> DefaultEncoder::load(std::string path, EncoderConfig& config) {
-        std::unique_ptr<faiss::Index> quantizer;
+        std::unique_ptr<faiss::IndexFlat> quantizer;
 
         if (FILE *file = fopen((path + "/" + QUANTIZER_FILENAME).c_str(), "r")) {
             fclose(file);
-            quantizer = std::unique_ptr<faiss::Index>(faiss::read_index((path + "/" + QUANTIZER_FILENAME).c_str()));
+            auto qptr = std::unique_ptr<faiss::Index>(faiss::read_index((path + "/" + QUANTIZER_FILENAME).c_str()));
+            quantizer = std::unique_ptr<faiss::IndexFlat>(static_cast<faiss::IndexFlat*>(qptr.release()));
         } else {
             throw LintDBException("Quantizer not found at path: " + path);
         }

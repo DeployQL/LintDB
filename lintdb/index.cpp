@@ -227,10 +227,10 @@ std::vector<SearchResult> IndexIVF::search(
     // block: (num_tokens x dimensions)
     // centroids: (nlist x dimensions)
     // result: (num_tokens x nlist)
-    const float centroid_score_threshold = 0.45;
+    const float centroid_score_threshold = opts.centroid_score_threshold;
     const size_t total_centroids_to_calculate = nlist;
-    const size_t k_top_centroids = 2;
-    const size_t num_second_pass = 1024;
+    const size_t k_top_centroids = opts.k_top_centroids;
+    const size_t num_second_pass = opts.num_second_pass;
 
     std::vector<idx_t> coarse_idx(n*total_centroids_to_calculate);
     std::vector<float> distances(n*total_centroids_to_calculate);

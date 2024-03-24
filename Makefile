@@ -1,7 +1,7 @@
 
 
 build-release:
-	CC=clang CXX=clang++ cmake -S . -B build -DCMAKE_MAKE_PROGRAM=make -DCMAKE_BUILD_TYPE=Release
+	CC=clang CXX=clang++ cmake -S . -B build -DCMAKE_MAKE_PROGRAM=make -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_LIBDIR=lib
 	cmake --build build -j12
 
 build-debug:
@@ -40,6 +40,9 @@ valgrind:
 # we need valgrind?-3.20 to process dwarf5
 	valgrind --trace-children=yes --suppressions=debug/valgrind-python.supp env PYTHONPATH="build/lintdb/python" python ./benchmarks/lotte/main.py
 
+callgrind:
+	valgrind --tool=callgrind PYTHONPATH="build/lintdb/python/build/lib" python ./benchmarks/run_lintdb.py
+	
 py-docs:
 	rm -rf docs/build
 	sphinx-apidoc -o docs/source/ ./build/lintdb/python/lintdb
