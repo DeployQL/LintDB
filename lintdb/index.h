@@ -56,7 +56,7 @@ struct SearchOptions {
     float centroid_score_threshold = 0.45; /* the threshold for centroid scores. */
     size_t k_top_centroids = 2; /* the number of top centroids to consider. */
     size_t num_second_pass = 1024; /* the number of second pass candidates to consider. */
-    
+
     SearchOptions(): expected_id(-1) {};
 };
 
@@ -120,17 +120,17 @@ struct IndexIVF {
      */
     std::vector<SearchResult> search(
         const uint64_t tenant,
-        EmbeddingBlock& block,
-        size_t n_probe,
-        size_t k,
+        const EmbeddingBlock& block,
+        const size_t n_probe,
+        const size_t k,
         SearchOptions opts=SearchOptions()) const;
     std::vector<SearchResult> search(
         const uint64_t tenant,
-        float* data,
-        int n,
-        int dim,
-        size_t n_probe,
-        size_t k,
+        const float* data,
+        const int n,
+        const int dim,
+        const size_t n_probe,
+        const size_t k,
         SearchOptions opts=SearchOptions()) const;
 
     /**
