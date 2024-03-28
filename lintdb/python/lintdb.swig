@@ -64,6 +64,8 @@ namespace std {
 %apply (float* IN_ARRAY2, int DIM1, int DIM2) {(const float* embeddings, const size_t num_tokens, const size_t dimensions)};
 // apply it to search.
 %apply (float* IN_ARRAY2, int DIM1, int DIM2) {(const float* data, const int n, const int dim)};
+// apply to set_centroids
+%apply (float* IN_ARRAY2, int DIM1, int DIM2) {(float* data, int n, int dim)};
 
 // below works to completely ignore the search methods overall.
 // %ignore search;

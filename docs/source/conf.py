@@ -37,10 +37,10 @@ release = '0.1'
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-   'sphinx.ext.autosummary',
-   'sphinx.ext.napoleon',
-   'sphinx_immaterial',
-   'myst_parser'
+    'sphinx.ext.autosummary',
+    'sphinx.ext.napoleon',
+    'sphinx_immaterial',
+    'myst_parser'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -75,8 +75,8 @@ html_theme_options = {
         "repo": "fontawesome/brands/github",
         "edit": "material/file-edit-outline",
     },
-    "site_url": "https://jbms.github.io/sphinx-immaterial/",
-    "repo_url": "https://github.com/jbms/sphinx-immaterial/",
+    "site_url": "https://deployql.github.io/LintDB/",
+    "repo_url": "https://github.com/DeployQL/LintDB",
     "repo_name": "LintDB",
     "edit_uri": "blob/main/docs",
     "globaltoc_collapse": True,

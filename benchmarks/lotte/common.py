@@ -186,7 +186,37 @@ def lintdb_indexing(
                 # qid, pid, rank
                 f.write(f"{id}\t{result.id}\t{rank+1}\t{result.score}\n")
 
+def _evaluate_dataset(rankings, dataset:str, query_type: str, split:str='dev', k=5):
+    success = 0
+    success_ids = []
+    failure_ids = []
 
+    queries_dataset = load_dataset("colbertv2/lotte", dataset)
+    queries_dataset = queries_dataset['search_'+split]
+    # answers = {x['qid']: x['answers']['answer_pids'] for x in queries_dataset}
+
+    num_total_qids = 0
+    for line in queries_dataset:
+        print(line)
+        qid = int(line["qid"])
+        if qid not in rankings:
+            # print(f"WARNING: qid {qid} not found in {rankings_path}!", file=sys.stderr)
+            continue
+
+        num_total_qids += 1
+        answer_pids = set(line["answer_pids"])
+
+        if len(set(rankings[qid][:k]).intersection(answer_pids)) > 0:
+            success += 1
+            success_ids.append((qid, answer_pids))
+        else:
+            failure_ids.append((qid, answer_pids))
+
+    print(f"success: {success}, total: {num_total_qids}")
+    print(
+        f"[query_type={query_type}, dataset={dataset}] "
+        f"Success@{k}: {success / num_total_qids * 100:.1f}"
+    )
 
 # copied from colbert/util/evaluate
 def evaluate_dataset(query_type, dataset, split, k, data_rootdir, rankings_path):
@@ -206,37 +236,11 @@ def evaluate_dataset(query_type, dataset, split, k, data_rootdir, rankings_path)
             rankings[qid].append(pid)
             assert rank == len(rankings[qid])
 
-    success = 0
-    success_ids = []
-    failure_ids = []
-    qas_path = os.path.join(data_path, f"qas.{query_type}.jsonl")
+    _evaluate_dataset(rankings, data_path, query_type, k)
 
-    num_total_qids = 0
-    with jsonlines.open(qas_path, mode="r") as f:
-        for line in f:
-            qid = int(line["qid"])
-            if qid not in rankings:
-                # print(f"WARNING: qid {qid} not found in {rankings_path}!", file=sys.stderr)
-                continue
-
-            num_total_qids += 1
-            answer_pids = set(line["answer_pids"])
-
-            if len(set(rankings[qid][:k]).intersection(answer_pids)) > 0:
-                success += 1
-                success_ids.append((qid, answer_pids))
-            else:
-                failure_ids.append((qid, answer_pids))
-
-    print(f"success: {success}, total: {num_total_qids}")
-    print(
-        f"[query_type={query_type}, dataset={dataset}] "
-        f"Success@{k}: {success / num_total_qids * 100:.1f}"
-    )
-
-    with open(f"{rankings_path}.failures", "w") as f:
-        for qid, answer_pids in failure_ids:
-            f.write(f"{qid}\t{answer_pids}\n")
+    # with open(f"{rankings_path}.failures", "w") as f:
+    #     for qid, answer_pids in failure_ids:
+    #         f.write(f"{qid}\t{answer_pids}\n")
     # print(
     #     "success ids: ", success_ids
     # )

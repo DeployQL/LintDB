@@ -15,39 +15,14 @@ import typer
 import random 
 from typing import List, Annotated
 from common import get_memory_usage
+from lotte.common import _evaluate_dataset, load_lotte
 # import cProfile
 # from pstats import SortKey, Stats
 
 app = typer.Typer()
 
-LoTTeDataset = namedtuple('LoTTeDataset', ['collection', 'queries', 'qids', 'dids'])
-
-
-def load_lotte(dataset, split, filter=False, start=0, stop=500000):
-    collection_dataset = load_dataset("colbertv2/lotte_passages", dataset)
-    collection = [x['text'] for x in collection_dataset[split + '_collection']]
-    dids = [x['doc_id'] for x in collection_dataset[split + '_collection']]
-
-    queries_dataset = load_dataset("colbertv2/lotte", dataset)
-    queries = [x['query'] for x in queries_dataset['search_' + split]]
-    qids = [x['qid'] for x in queries_dataset['search_' + split]]
-
-    f'Loaded {len(queries)} queries and {len(collection):,} passages'
-
-    if not filter:
-        return LoTTeDataset(collection, queries, qids, dids)
-    else:
-        answer_pids = [x['answers']['answer_pids'] for x in queries_dataset['search_' + split]]
-        filtered_queries = [q for q, apids in zip(queries, answer_pids) if any(start <= x < stop for x in apids)]
-        filtered_qids = [i for i,(q, apids) in enumerate(zip(queries, answer_pids)) if any(start <= x < stop for x in apids)]
-        filtered_dids = [x for x in dids if start <= x < stop]
-        f'Filtered down to {len(filtered_queries)} queries'
-
-        return LoTTeDataset(collection[start:stop], filtered_queries, filtered_qids, filtered_dids)
-    
-
 @app.command()
-def single_search(dataset:str='lifestyle', split:str='dev', checkpoint:str='colbert-ir/colbertv2.0', index_path:str='experiments/py_index_bench_colbert-lifestyle-2024-03-20'):
+def single_search(dataset:str='lifestyle', split:str='dev', checkpoint:str='colbert-ir/colbertv2.0', index_path:str='experiments/py_index_bench_colbert-lifestyle-40k-benchmark'):
     checkpoint_config = ColBERTConfig.load_from_checkpoint(checkpoint)
     config = ColBERTConfig.from_existing(checkpoint_config, None)
 
@@ -55,14 +30,14 @@ def single_search(dataset:str='lifestyle', split:str='dev', checkpoint:str='colb
     from colbert import Searcher
     checkpoint = Checkpoint(checkpoint, config)
 
-    d = load_lotte(dataset, split, stop=40000000)
+    d = load_lotte(dataset, split, stop=40000)
     latencies = []
     memory = []
 
     index = ldb.IndexIVF(index_path)
+    rankings = {}
 
-    # with cProfile.Profile() as pr:
-    for query in d.queries:
+    for id, query in zip(d.qids, d.queries):
         embeddings = checkpoint.queryFromText([query])
         converted = np.squeeze(embeddings.numpy().astype('float32'))
 
@@ -70,14 +45,15 @@ def single_search(dataset:str='lifestyle', split:str='dev', checkpoint:str='colb
         results = index.search(
             0,
             converted, 
-            64, # nprobe
+            32, # nprobe
             100, # k to return
         )
         latencies.append(time.perf_counter() - start)
         memory.append(get_memory_usage())
-        break
+        rankings[id] = [x.id for x in results]
 
         # Stats(pr).strip_dirs().sort_stats(SortKey.TIME).print_stats(10)
+    _evaluate_dataset(rankings, dataset, 'search', k=5)
 
     
     print(f"Average search latency: {np.mean(latencies):.2f}s")

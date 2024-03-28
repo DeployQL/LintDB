@@ -1,4 +1,3 @@
-import lintdb as ldb
 from datasets import load_dataset
 from collections import namedtuple
 from colbert import Indexer, Searcher
@@ -15,15 +14,15 @@ import numpy as np
 import typer
 import random 
 from typing import List, Annotated
-from lotte.common import load_lotte
+from lotte.common import load_lotte, _evaluate_dataset
 from common import get_memory_usage
 
 app = typer.Typer()
 
 
 @app.command()
-def single_search(experiment='colbert-lifestyle-full', dataset:str='lifestyle', split:str='dev', checkpoint:str='colbert-ir/colbertv2.0', index_path:str='indexes/lifestyle'):
-    d = load_lotte(dataset, split, stop=40000000)
+def single_search(experiment='colbert-lifestyle-40k-benchmark', dataset:str='lifestyle', split:str='dev', checkpoint:str='colbert-ir/colbertv2.0', index_path:str='indexes/lifestyle'):
+    d = load_lotte(dataset, split, stop=40000)
     latencies = []
     memory = []
 
@@ -37,8 +36,9 @@ def single_search(experiment='colbert-lifestyle-full', dataset:str='lifestyle', 
         # indexer.index(name=experiment, collection=dataset.collection) # "/path/to/MSMARCO/collection.tsv"
 
         searcher = Searcher(index=experiment, config=config, collection=d.collection)
+        rankings = {}
 
-        for query in d.queries:
+        for id, query in zip(d.qids, d.queries):
             embeddings = searcher.encode([query])
 
             # embeddings = embeddings.squeeze()
@@ -49,6 +49,11 @@ def single_search(experiment='colbert-lifestyle-full', dataset:str='lifestyle', 
             results = searcher._search_all_Q(Queries.cast({1: query}), embeddings, k=100)
             latencies.append(time.perf_counter() - start)
             memory.append(get_memory_usage())
+            for k, v in results.toDict():
+                rankings[id] = v
+
+        _evaluate_dataset(rankings, dataset, 'search', k=5)
+
 
     print(f"Average search latency: {np.mean(latencies):.2f}s")
     print(f"Median search latency: {np.median(latencies):.2f}s")
