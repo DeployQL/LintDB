@@ -9,6 +9,7 @@
 #include "lintdb/exception.h"
 // #include <rocksdb/utilities/transactions/optimistic_transaction.h>
 #include <rocksdb/utilities/transaction.h>
+#include <rocksdb/slice.h>
 
 namespace lintdb {
 template<typename DBType>
@@ -165,38 +166,44 @@ std::vector<idx_t> RocksDBInvertedList<DBType>::get_mapping(const uint64_t tenan
 
 template<typename DBType>
 std::vector<std::unique_ptr<DocumentResiduals>> RocksDBInvertedList<DBType>::
-        get_residuals(const uint64_t tenant, std::vector<idx_t> ids) const {
-    std::vector<rocksdb::Slice> keys;
-    // rocksdb slices don't take ownership of the underlying data, so we need to
-    // keep the strings around.
+        get_residuals(const uint64_t tenant, const std::vector<idx_t>& ids) const {
     std::vector<std::string> key_strings;
+    std::vector<rocksdb::Slice> keys;
     for (idx_t i = 0; i < ids.size(); i++) {
         auto id = ids[i];
-        auto key = ForwardIndexKey{tenant, id};
-        auto serialized_key = key.serialize();
-        key_strings.push_back(serialized_key);
-        keys.push_back(
-                rocksdb::Slice(key_strings[i].data(), key_strings[i].size()));
+        key_strings.push_back(ForwardIndexKey{tenant, id}.serialize());
+        keys.push_back(rocksdb::Slice(key_strings[i]));
     }
 
-    assert(keys.size() == ids.size());
-    VLOG(100) << "Getting num docs: " << keys.size()
+    assert(key_strings.size() == ids.size());
+    VLOG(100) << "Getting num docs: " << key_strings.size()
               << " from the forward index.";
 
     std::vector<std::unique_ptr<DocumentResiduals>> docs;
     rocksdb::ReadOptions ro;
-    std::vector<rocksdb::PinnableSlice> values(keys.size());
-    std::vector<rocksdb::Status> statuses(keys.size());
+    std::vector<rocksdb::PinnableSlice> values(key_strings.size());
+    std::vector<rocksdb::Status> statuses(key_strings.size());
 
-    db_->MultiGet(
+    // see get_codes() for why this method isn't working.
+    // db_->MultiGet(
+    //         ro,
+    //         column_families[kResidualsColumnIndex],
+    //         keys.size(),
+    //         keys.data(),
+    //         values.data(),
+    //         statuses.data());
+
+#pragma omp parallel for
+    for (int i=0; i < key_strings.size(); i++) {
+        auto key = rocksdb::Slice(key_strings[i]);
+
+        statuses[i] = db_->Get(
             ro,
             column_families[kResidualsColumnIndex],
-            keys.size(),
-            keys.data(),
-            values.data(),
-            statuses.data());
-
-    const code_t* empty_codes = nullptr;
+            key,
+            &values[i]
+        );
+    }
 
     for (size_t i = 0; i < ids.size(); i++) {
         if (statuses[i].ok()) {
@@ -222,22 +229,20 @@ std::vector<std::unique_ptr<DocumentResiduals>> RocksDBInvertedList<DBType>::
 template<typename DBType>
 std::vector<std::unique_ptr<DocumentCodes>> RocksDBInvertedList<DBType>::get_codes(
         const uint64_t tenant, 
-        std::vector<idx_t> ids) const {
+        const std::vector<idx_t>& ids) const {
+
+    std::vector<std::string> key_strings;
     std::vector<rocksdb::Slice> keys;
     // rocksdb slices don't take ownership of the underlying data, so we need to
     // keep the strings around.
-    std::vector<std::string> key_strings;
     for (idx_t i = 0; i < ids.size(); i++) {
         auto id = ids[i];
-        auto key = ForwardIndexKey{tenant, id};
-        auto serialized_key = key.serialize();
-        key_strings.push_back(serialized_key);
-        keys.push_back(
-                rocksdb::Slice(key_strings[i].data(), key_strings[i].size()));
+        key_strings.push_back(ForwardIndexKey{tenant, id}.serialize());
+        keys.push_back(rocksdb::Slice(key_strings[i]));
     }
 
-    assert(keys.size() == ids.size());
-    VLOG(100) << "Getting num docs: " << keys.size()
+    assert(key_strings.size() == ids.size());
+    VLOG(100) << "Getting num docs: " << key_strings.size()
               << " from the forward index.";
 
     std::vector<std::unique_ptr<DocumentCodes>> docs;
@@ -245,15 +250,30 @@ std::vector<std::unique_ptr<DocumentCodes>> RocksDBInvertedList<DBType>::get_cod
     std::vector<rocksdb::PinnableSlice> values(ids.size());
     std::vector<rocksdb::Status> statuses(ids.size());
 
-    db_->MultiGet(
+    // NOTE (MB): for some reason, multiget doesn't work. The issue is that
+    // the rocksdb::Slices don't seem to retain the string information **before** we
+    // make this call. I can't figure out why this is happening here, but not with individual
+    // get() calls.
+    // Multiget also works fine in an isolated binary, but copying that code here results in failure as well.
+    // I'm guessing there is an issue with this invlist accessing the memory of the strings for some reason.
+    // db_->MultiGet(
+    //         ro,
+    //         column_families[kCodesColumnIndex],
+    //         keys.size(),
+    //         keys.data(),
+    //         values.data(),
+    //         statuses.data());
+#pragma omp parallel for
+    for (int i=0; i < key_strings.size(); i++) {
+        auto key = rocksdb::Slice(key_strings[i].data(), key_strings[i].size());
+
+        statuses[i] = db_->Get(
             ro,
             column_families[kCodesColumnIndex],
-            keys.size(),
-            keys.data(),
-            values.data(),
-            statuses.data());
-
-    const uint8_t* empty_res = nullptr;
+            key,
+            &values[i]
+        );
+    }
 
     for (size_t i = 0; i < ids.size(); i++) {
         if (statuses[i].ok()) {
@@ -265,7 +285,8 @@ std::vector<std::unique_ptr<DocumentCodes>> RocksDBInvertedList<DBType>::get_cod
             // release the memory used by rocksdb for this value.
             values[i].Reset();
         } else {
-            LOG(WARNING) << "Could not find codes for doc id: " << ids[i];
+            LOG(ERROR) << "Could not find codes for doc id: " << ids[i];
+            LOG(ERROR) << "rocksdb: " << statuses[i].ToString();
             docs.push_back(nullptr);
         }
     }
@@ -317,74 +338,79 @@ void WritableRocksDBInvertedList::add(const uint64_t tenant, std::unique_ptr<Enc
     VLOG(100) << "Unique coarse indexes: " << unique_coarse_idx.size();
 
     std::unique_ptr<rocksdb::Transaction> txn = std::unique_ptr<rocksdb::Transaction>(db_->BeginTransaction(wo));
-    // store ivf -> doc mapping.
-    for (code_t idx : unique_coarse_idx) {
-        Key key = Key{tenant, idx, doc->id};
-        std::string k_string = key.serialize();
 
-        rocksdb::Status status =
-                txn->Put(column_families[kIndexColumnIndex],
-                        rocksdb::Slice(k_string),
-                        rocksdb::Slice() // store nothing. we only need the key
-                                         // to tell us what documents exist.
-                );
-        assert(status.ok());
-        VLOG(100) << "Added document with id: " << doc->id
-                  << " to inverted list " << idx;
+    try {
+        // store ivf -> doc mapping.
+        for (code_t idx : unique_coarse_idx) {
+            Key key = Key{tenant, idx, doc->id};
+            std::string k_string = key.serialize();
+
+            rocksdb::Status status =
+                    txn->Put(column_families[kIndexColumnIndex],
+                            rocksdb::Slice(k_string),
+                            rocksdb::Slice() // store nothing. we only need the key
+                                            // to tell us what documents exist.
+                    );
+            LINTDB_THROW_IF_NOT(status.ok());
+        }
+
+        // this key is used for all forward indices.
+        ForwardIndexKey forward_key = ForwardIndexKey{tenant, doc->id};
+        auto fks = forward_key.serialize();
+
+        // add document mapping to centroids.
+        std::vector<idx_t> unique_coarse_idx_vec(
+                unique_coarse_idx.begin(), unique_coarse_idx.end());
+        auto mapping_ptr = create_doc_mapping(
+                unique_coarse_idx_vec.data(), unique_coarse_idx_vec.size());
+
+        rocksdb::Status mapping_status =
+                txn->Put(column_families[kMappingColumnIndex],
+                        rocksdb::Slice(fks),
+                        rocksdb::Slice(
+                                reinterpret_cast<const char*>(
+                                        mapping_ptr->GetBufferPointer()),
+                                mapping_ptr->GetSize()));
+        assert(mapping_status.ok());
+
+        VLOG(100) << "codes size: " << doc->codes.size();
+        auto doc_ptr = create_inverted_index_document(
+                doc->codes.data(), doc->codes.size());
+        auto* ptr = doc_ptr->GetBufferPointer();
+        auto size = doc_ptr->GetSize();
+
+        // store document codes.
+
+        const rocksdb::Slice slice(reinterpret_cast<const char*>(ptr), size);
+        rocksdb::Status code_status = txn->Put(
+                column_families[kCodesColumnIndex], rocksdb::Slice(fks), slice);
+        LINTDB_THROW_IF_NOT(code_status.ok());
+
+        assert(doc->residuals.size() > 0);
+        VLOG(100) << "Residuals size: " << doc->residuals.size();
+        // store document data.
+        auto forward_doc_ptr = create_forward_index_document(
+                doc->num_tokens,
+                doc->residuals.data(),
+                doc->residuals.size());
+
+        auto* forward_ptr = forward_doc_ptr->GetBufferPointer();
+        auto forward_size = forward_doc_ptr->GetSize();
+        const rocksdb::Slice forward_slice(
+                reinterpret_cast<const char*>(forward_ptr), forward_size);
+
+        rocksdb::Status forward_status =
+                txn->Put(column_families[kResidualsColumnIndex],
+                        rocksdb::Slice(fks),
+                        forward_slice);
+        LINTDB_THROW_IF_NOT(forward_status.ok());
+
+        rocksdb::Status s = txn->Commit();
+        LINTDB_THROW_IF_NOT(s.ok());
+    } catch (lintdb::LintDBException e) {
+        txn->Rollback();
+        throw e;
     }
-
-    // this key is used for all forward indices.
-    ForwardIndexKey forward_key = ForwardIndexKey{tenant, doc->id};
-    auto fks = forward_key.serialize();
-
-    // add document mapping to centroids.
-    std::vector<idx_t> unique_coarse_idx_vec(
-            unique_coarse_idx.begin(), unique_coarse_idx.end());
-    auto mapping_ptr = create_doc_mapping(
-            unique_coarse_idx_vec.data(), unique_coarse_idx_vec.size());
-
-    rocksdb::Status mapping_status =
-            txn->Put(column_families[kMappingColumnIndex],
-                    rocksdb::Slice(fks),
-                    rocksdb::Slice(
-                            reinterpret_cast<const char*>(
-                                    mapping_ptr->GetBufferPointer()),
-                            mapping_ptr->GetSize()));
-    assert(mapping_status.ok());
-
-    auto doc_ptr = create_inverted_index_document(
-            doc->codes.data(), doc->codes.size());
-    auto* ptr = doc_ptr->GetBufferPointer();
-    auto size = doc_ptr->GetSize();
-
-    // store document codes.
-
-    const rocksdb::Slice slice(reinterpret_cast<const char*>(ptr), size);
-    rocksdb::Status code_status = db_->Put(
-            wo, column_families[kCodesColumnIndex], rocksdb::Slice(fks), slice);
-    assert(code_status.ok());
-
-    assert(doc->residuals.size() > 0);
-    VLOG(100) << "Residuals size: " << doc->residuals.size();
-    // store document data.
-    auto forward_doc_ptr = create_forward_index_document(
-            doc->num_tokens,
-            doc->residuals.data(),
-            doc->residuals.size());
-
-    auto* forward_ptr = forward_doc_ptr->GetBufferPointer();
-    auto forward_size = forward_doc_ptr->GetSize();
-    const rocksdb::Slice forward_slice(
-            reinterpret_cast<const char*>(forward_ptr), forward_size);
-
-    rocksdb::Status forward_status =
-            txn->Put(column_families[kResidualsColumnIndex],
-                    rocksdb::Slice(fks),
-                    forward_slice);
-    assert(forward_status.ok());
-
-    rocksdb::Status s = txn->Commit();
-    assert(s.ok());
 
     VLOG(100) << "Added document with id: " << doc->id << " to index.";
 };

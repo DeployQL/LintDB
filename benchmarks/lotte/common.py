@@ -19,7 +19,7 @@ from typing import List, Annotated
 LoTTeDataset = namedtuple('LoTTeDataset', ['collection', 'queries', 'qids', 'dids'])
 
 
-def load_lotte(dataset, split, filter=False, start=0, stop=500000):
+def load_lotte(dataset, split, filter=True, start=0, stop=500000):
     collection_dataset = load_dataset("colbertv2/lotte_passages", dataset)
     collection = [x['text'] for x in collection_dataset[split + '_collection']]
     dids = [x['doc_id'] for x in collection_dataset[split + '_collection']]

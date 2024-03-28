@@ -46,9 +46,7 @@ std::string ForwardIndexKey::serialize() const {
     store_bigendian(this->tenant, serialized_str);
     store_bigendian(this->id, serialized_str);
 
-    std::string result =
-            std::string(serialized_str.begin(), serialized_str.end());
-    return result;
+    return std::string(serialized_str.begin(), serialized_str.end());
 }
 
 ForwardIndexKey ForwardIndexKey::from_slice(const rocksdb::Slice& slice) {

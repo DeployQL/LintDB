@@ -70,10 +70,10 @@ struct RocksDBInvertedList : public InvertedList, public ForwardIndex {
             
     std::vector<std::unique_ptr<DocumentCodes>> get_codes(
             const uint64_t tenant,
-            std::vector<idx_t> ids) const override;
+            const std::vector<idx_t>& ids) const override;
     std::vector<std::unique_ptr<DocumentResiduals>> get_residuals(
             const uint64_t tenant,
-            std::vector<idx_t> ids) const override;
+            const std::vector<idx_t>& ids) const override;
     std::vector<idx_t> get_mapping(const uint64_t tenant, idx_t id) const override;
 
     protected:

@@ -42,10 +42,10 @@ namespace lintdb {
          * structures we use to retrieve the data, which is still in flux.
          */
         virtual std::vector<float> decode_vectors(
-                gsl::span<const code_t> codes,
-                gsl::span<const residual_t> residuals,
-                size_t num_tokens,
-                size_t dim) const = 0;
+                const gsl::span<const code_t> codes,
+                const gsl::span<const residual_t> residuals,
+                const size_t num_tokens,
+                const size_t dim) const = 0;
 
         /**
          * Given a query, search for the nearest centroids.
@@ -59,16 +59,16 @@ namespace lintdb {
          * The caller is responsible for converting it for its purpose.
         */
         virtual void search(
-            float* data,
-            int n,
+            const float* data,
+            const int n,
             std::vector<idx_t>& coarse_idx,
             std::vector<float>& distances,
-            size_t k_top_centroids=1,
-            float centroid_threshold=0.45
+            const size_t k_top_centroids=1,
+            const float centroid_threshold=0.45
         ) = 0;
 
         virtual void save(std::string path) = 0;
-        virtual void train(float* embeddings, size_t n, size_t dim) = 0;
+        virtual void train(const float* embeddings, const size_t n, const size_t dim) = 0;
 
         virtual void set_centroids(float* data, int n, int dim) = 0;
         virtual void set_weights(const std::vector<float>& weights, const std::vector<float>& cutoffs, const float avg_residual) = 0;
@@ -105,16 +105,16 @@ namespace lintdb {
                 size_t dim) const override;
 
         void search(
-            float* data,
-            int n,
+            const float* data,
+            const int n,
             std::vector<idx_t>& coarse_idx,
             std::vector<float>& distances,
-            size_t k_top_centroids=1,
-            float centroid_threshold=0.45
+            const size_t k_top_centroids=1,
+            const float centroid_threshold=0.45
         ) override;
         
         static std::unique_ptr<Encoder> load(std::string path, EncoderConfig& config);
-        void train(float* embeddings, size_t n, size_t dim) override;
+        void train(const float* embeddings, const size_t n, const size_t dim) override;
 
         /**
          * set_centroids overwrites the centroids in the encoder.

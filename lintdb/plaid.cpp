@@ -89,7 +89,7 @@ std::vector<float> max_score_by_centroid(
 }
 
 float score_document_by_residuals(
-        const gsl::span<float>
+        const gsl::span<const float>
                 query_vectors, // size: (num_query_tokens, num_dim)
         const size_t num_query_tokens,
         float* doc_residuals, // size: (num_doc_tokens, num_dim)

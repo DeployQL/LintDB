@@ -31,16 +31,20 @@ static const std::string METADATA_FILENAME = "_lintdb_metadata.json";
  * 
 */
 struct SearchResult {
-    idx_t id; /* the document id being returned. */
-    float score; /* the score for the given document as compared to the query. */
+    idx_t id; 
+    float score;
 };
 
+/**
+ * Configuration of the Index. 
+ * 
+*/
 struct Configuration {
-    size_t nlist = 256; /* the number of centroids to train. */
-    size_t nbits = 2; /* the number of bits to use in residual compression. */
-    size_t niter = 10; /* the number of iterations to use during training. */
-    size_t dim; /* the dimensions expected for incoming vectors. */
-    bool use_compression = false; /* whether to compress residuals. */
+    size_t nlist = 256; /// the number of centroids to train. 
+    size_t nbits = 2; /// the number of bits to use in residual compression. 
+    size_t niter = 10; /// the number of iterations to use during training. 
+    size_t dim; /// the dimensions expected for incoming vectors. 
+    bool use_compression = true; /// whether to compress residuals. 
 
     inline bool operator==(const Configuration& other) const {
         return nlist == other.nlist && 
@@ -51,20 +55,33 @@ struct Configuration {
     }
 };
 
+/**
+ * SearchOptions enables custom searching behavior. 
+ * 
+ * These options expose ways to tradeoff recall and latency at different levels of retrieval.
+ * Searching more centroids:
+ * - decrease centroid_score_threshold and increase k_top_centroids.
+ * - increase n_probe in search()
+ * 
+ * Decreasing latency:
+ * - increase centroid_score_threshold and decrease k_top_centroids.
+ * - decrease n_probe in search()
+*/
 struct SearchOptions {
-    idx_t expected_id = -1; /* expects a document id in the return result. prints additional information during execution. useful for debugging.*/
-    float centroid_score_threshold = 0.45; /* the threshold for centroid scores. */
-    size_t k_top_centroids = 2; /* the number of top centroids to consider. */
-    size_t num_second_pass = 1024; /* the number of second pass candidates to consider. */
+    idx_t expected_id = -1; /// expects a document id in the return result. prints additional information during execution. useful for debugging.
+    float centroid_score_threshold = 0.45; /// the threshold for centroid scores. 
+    size_t k_top_centroids = 2; /// the number of top centroids to consider. 
+    size_t num_second_pass = 1024; /// the number of second pass candidates to consider. 
 
     SearchOptions(): expected_id(-1) {};
 };
 
 /**
- * IndexIVF controls the inverted file structure.
- *
- * It's training will be a k-means clustering. We borrow naming conventions from
- * faiss.
+ * IndexIVF is a multi vector index with an inverted file structure. 
+ * 
+ * This relies on pretrained centroids to accurately retrieve the closest documents.
+ * 
+ * 
  */
 struct IndexIVF {
     size_t nlist; /// number of centroids to use in L1 quantizing.
@@ -85,7 +102,7 @@ struct IndexIVF {
             size_t dim,       /// number of dimensions per embedding.
             size_t binarize_nbits=2, /// nbits used in the LSH encoding for esiduals.
             size_t niter = 10,
-            bool use_compression = false,
+            bool use_compression = true,
             bool read_only = false
     );
 
@@ -114,16 +131,12 @@ struct IndexIVF {
     /**
      * search will find the nearest neighbors for a vector block.
      *
+     * @param tenant the tenant the document belongs to.
      * @param block the block of embeddings to search.
-     * @param n_probe the number of nearest neighbors to find.
+     * @param n_probe the number of centroids to search.
      * @param k the top k results to return.
+     * @param opts any search options to use during searching.
      */
-    std::vector<SearchResult> search(
-        const uint64_t tenant,
-        const EmbeddingBlock& block,
-        const size_t n_probe,
-        const size_t k,
-        SearchOptions opts=SearchOptions()) const;
     std::vector<SearchResult> search(
         const uint64_t tenant,
         const float* data,
@@ -131,24 +144,30 @@ struct IndexIVF {
         const int dim,
         const size_t n_probe,
         const size_t k,
-        SearchOptions opts=SearchOptions()) const;
+        const SearchOptions& opts=SearchOptions()) const;
+
+    std::vector<SearchResult> search(
+        const uint64_t tenant,
+        const EmbeddingBlock& block,
+        const size_t n_probe,
+        const size_t k,
+        const SearchOptions& opts=SearchOptions()) const;
 
     /**
-     * lookup_pids accesses the inverted list for a given ivf_id and returns the passage ids.
-     * 
-    */
-    std::vector<idx_t> lookup_pids(const uint64_t tenant, idx_t ivf_id) const;
-
-    /**
-     * add will add a block of embeddings to the index.
+     * Add will add a block of embeddings to the index.
      *
+     * @param tenant the tenant to assign the document to.
      * @param docs a vector of RawPassages. This includes embeddings and ids.
-     * @param ids the ids of the embeddings.
      */
     void add(const uint64_t tenant, const std::vector<RawPassage>& docs);
-    void add_single(const uint64_t tenant, const RawPassage& doc);
+
     /**
-     * remove deletes documents from the index by id.
+     * Add a single document.
+    */
+    void add_single(const uint64_t tenant, const RawPassage& doc);
+
+    /**
+     * Remove deletes documents from the index by id.
      *
      * void remove(const std::vector<int64_t>& ids) works if SWIG complains
      * about idx_t.
@@ -198,15 +217,28 @@ struct IndexIVF {
 
     /// the inverted list data structure.
     std::unique_ptr<ForwardIndex> index_;
-    std::unordered_set<idx_t> get_pids(idx_t ivf_id) const;
+    std::unordered_set<idx_t> get_pids(const idx_t ivf_id) const;
     std::vector<std::pair<float, idx_t>> get_top_centroids( 
-        std::vector<idx_t>& coarse_idx,
-        std::vector<float>& distances, 
-        size_t n,
+        const std::vector<idx_t>& coarse_idx,
+        const std::vector<float>& distances, 
+        const size_t n,
         const size_t total_centroids_to_calculate,
-        float centroid_score_threshold,
-        size_t k_top_centroids,
-        size_t n_probe) const;
+        const float centroid_score_threshold,
+        const size_t k_top_centroids,
+        const size_t n_probe) const;
+
+    /**
+     * Flush data to disk.
+     * 
+     * Note: currently not used. We may want to expose this in the future.
+    */
+    void flush();
+
+    /**
+     * lookup_pids accesses the inverted list for a given ivf_id and returns the passage ids.
+     * 
+    */
+    std::vector<idx_t> lookup_pids(const uint64_t tenant, const idx_t ivf_id) const;
 
     /**
      * Write_metadata (and read) are helper methods to persist metadata attributes.
@@ -214,6 +246,8 @@ struct IndexIVF {
     */
     void write_metadata();
     Configuration read_metadata(std::string path);
+
+
 };
 
 } /// namespace lintdb

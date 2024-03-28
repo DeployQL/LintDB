@@ -58,7 +58,8 @@ IndexIVF::IndexIVF(std::string path, size_t dim, Configuration& config)
         config.nlist,
         dim,
         config.nbits,
-        config.niter
+        config.niter,
+        config.use_compression
     );
 }
 
@@ -131,13 +132,13 @@ void IndexIVF::save() {
 }
 
 std::vector<std::pair<float, idx_t>> IndexIVF::get_top_centroids(
-    std::vector<idx_t>& coarse_idx,
-    std::vector<float>& distances, 
-    size_t n, // num_tokens
+    const std::vector<idx_t>& coarse_idx,
+    const std::vector<float>& distances, 
+    const size_t n, // num_tokens
     const size_t total_centroids_to_calculate,
-    float centroid_score_threshold,
-    size_t k_top_centroids,
-    size_t n_probe) const {
+    const float centroid_score_threshold,
+    const size_t k_top_centroids,
+    const size_t n_probe) const {
 
     
     // we're finding the highest centroid scores per centroid.
@@ -198,12 +199,17 @@ std::vector<std::pair<float, idx_t>> IndexIVF::get_top_centroids(
     return centroid_scores;
 }
 
+void IndexIVF::flush() {
+    rocksdb::FlushOptions fo;
+    this->db->Flush(fo, column_families);
+}
+
 std::vector<SearchResult> IndexIVF::search(
         const uint64_t tenant,
-        EmbeddingBlock& block,
-        size_t n_probe,
-        size_t k,
-        SearchOptions opts) const {
+        const EmbeddingBlock& block,
+        const size_t n_probe,
+        const size_t k,
+        const SearchOptions& opts) const {
     return search(tenant, block.embeddings.data(), block.num_tokens, block.dimensions, n_probe, k);
 }
 
@@ -216,12 +222,12 @@ std::vector<SearchResult> IndexIVF::search(
 */
 std::vector<SearchResult> IndexIVF::search(
     const uint64_t tenant,
-    float* data,
-    int n,
-    int dim,
-    size_t n_probe,
-    size_t k,
-    SearchOptions opts) const {
+    const float* data,
+    const int n,
+    const int dim,
+    const size_t n_probe,
+    const size_t k,
+    const SearchOptions& opts) const {
 
     // per block, run a matrix multiplication and find the nearest centroid.
     // block: (num_tokens x dimensions)
@@ -275,7 +281,6 @@ std::vector<SearchResult> IndexIVF::search(
             };
         }
     }
-
     /**
      * Get passage ids
      */
@@ -291,7 +296,7 @@ std::vector<SearchResult> IndexIVF::search(
                 continue;
             }
             local_pids = lookup_pids(tenant, idx);
-
+            VLOG(100) << "number of local pids: " << local_pids.size();
             #pragma omp critical
             {
                 global_pids.insert(local_pids.begin(), local_pids.end());
@@ -495,7 +500,7 @@ void IndexIVF::merge(const std::string path) {
     index_->merge(incoming.db);
 }
 
-std::vector<idx_t> IndexIVF::lookup_pids(const uint64_t tenant, idx_t idx) const {
+std::vector<idx_t> IndexIVF::lookup_pids(const uint64_t tenant, const idx_t idx) const {
     Key start_key{tenant, idx, 0, true};
     // instead of using the max key value, we use the next centroid idx so that we include all
     // document ids.

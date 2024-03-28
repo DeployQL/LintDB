@@ -1,7 +1,7 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join('..', '..', 'build/lintdb/python')))
+sys.path.insert(0, os.path.abspath(os.path.join('..', '..', 'build/lintdb/python/build/lib')))
 
 # Configuration file for the Sphinx documentation builder.
 #
@@ -40,6 +40,7 @@ extensions = [
    'sphinx.ext.autosummary',
    'sphinx.ext.napoleon',
    'sphinx_immaterial',
+   'myst_parser'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -50,9 +51,12 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = []
 
-include_patterns = [
-    'build/lintdb/**/*.py'
-]
+# include_patterns = [
+#     '_build_python_3_10/lintdb/**/*.py',
+#     'build/lintdb/**/*.py',
+#     '*.md',
+#     'docs/**/*'
+# ]
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
@@ -115,19 +119,19 @@ html_theme_options = {
         },
     ],
     # BEGIN: version_dropdown
-    "version_dropdown": True,
-    "version_info": [
-        {
-            "version": "https://sphinx-immaterial.rtfd.io",
-            "title": "ReadTheDocs",
-            "aliases": [],
-        },
-        {
-            "version": "https://jbms.github.io/sphinx-immaterial",
-            "title": "Github Pages",
-            "aliases": [],
-        },
-    ],
+    # "version_dropdown": True,
+    # "version_info": [
+    #     {
+    #         "version": "https://sphinx-immaterial.rtfd.io",
+    #         "title": "ReadTheDocs",
+    #         "aliases": [],
+    #     },
+    #     {
+    #         "version": "https://jbms.github.io/sphinx-immaterial",
+    #         "title": "Github Pages",
+    #         "aliases": [],
+    #     },
+    # ],
     # END: version_dropdown
     "toc_title_is_page_title": True
     # BEGIN: social icons

@@ -22,14 +22,14 @@ app = typer.Typer()
 
 @app.command()
 def colbert(dataset, experiment, split='dev', k: int=5, checkpoint: str = "colbert-ir/colbertv2.0"):
-    d = load_lotte(dataset, split, stop=40000000)
+    d = load_lotte(dataset, split, stop=40000)
 
     with Run().context(RunConfig(nranks=1, experiment=experiment)):
         config = ColBERTConfig.load_from_checkpoint(checkpoint)
-        config.kmeans_niters=4
+        # config.kmeans_niters=4
         start = time.perf_counter()
         indexer = Indexer(checkpoint=checkpoint, config=config)
-        indexer.index(name=experiment, collection=dataset.collection) # "/path/to/MSMARCO/collection.tsv"
+        indexer.index(name=experiment, collection=d.collection) # "/path/to/MSMARCO/collection.tsv"
         index_duration = time.perf_counter() - start
         print(f"Indexing duration: {index_duration:.2f}s")
 
@@ -204,10 +204,10 @@ def main():
     datasplit = 'dev'
     runtime = 'colbert' # lintdb
 
-    d = load_lotte(dataset, datasplit, max_id=40000000)
+    d = load_lotte(dataset, datasplit, max_id=40000)
 
     if runtime == 'colbert':
-        colbert_indexing('colbert-lifestyle-full', '/tmp', d)
+        colbert_indexing('colbert-lifestyle-40k-benchmark', '/tmp', d)
         rankings_path = f"/home/matt/deployql/LintDB/experiments/colbert-lifestyle-full/benchmarks.lotte.main/2024-03/04/17.37.19/colbert.ranking.tsv"
     elif runtime == 'lintdb':
         # these are failures when we do our own clustering.

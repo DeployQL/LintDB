@@ -3,4 +3,4 @@ API
 
 .. toctree::
 
-   generated/lintdb
+   lintdb

@@ -66,10 +66,10 @@ namespace lintdb {
     }
 
     std::vector<float> DefaultEncoder::decode_vectors(
-            gsl::span<const code_t> codes,
-            gsl::span<const residual_t> residuals,
-            size_t num_tokens,
-            size_t dim) const {
+            const gsl::span<const code_t> codes,
+            const gsl::span<const residual_t> residuals,
+            const size_t num_tokens,
+            const size_t dim) const {
         std::vector<float> decoded_embeddings(dim * num_tokens);
         for (size_t i = 0; i < num_tokens; i++) {
             auto centroid_id = codes[i];
@@ -94,12 +94,12 @@ namespace lintdb {
     }
 
     void DefaultEncoder::search(
-            float* data, // size: (num_query_tok, dim)
-            int num_query_tok,
+            const float* data, // size: (num_query_tok, dim)
+            const int num_query_tok,
             std::vector<idx_t>& coarse_idx,
             std::vector<float>& distances,
-            size_t k_top_centroids,
-            float centroid_threshold
+            const size_t k_top_centroids,
+            const float centroid_threshold
     ) {
         // we get back the k top centroid matches per token.
         // faiss' quantizer->search() is taking up the majority of the search critical path.
@@ -156,7 +156,7 @@ namespace lintdb {
             }
             
             for(idx_t k=0; k < k_top_centroids; k++) {
-                centroid_scores.push_back(token_centroid_scores[k]);
+                centroid_scores.emplace_back(token_centroid_scores[k]);
             }
 
             token_centroid_scores.clear();
@@ -209,7 +209,7 @@ namespace lintdb {
         return std::move(encoder);
     }
 
-    void DefaultEncoder::train(float* embeddings, size_t n, size_t dim) {
+    void DefaultEncoder::train(const float* embeddings, const size_t n, const size_t dim) {
         try {
             faiss::ClusteringParameters cp;
             cp.niter = this->niter;

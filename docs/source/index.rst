@@ -2,13 +2,10 @@
    sphinx-quickstart on Thu Mar 14 20:13:59 2024.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
-
-Welcome to LintDB's documentation!
-==================================
-
  
 
-.. mdinclude:: ../../README.md
+.. include:: ../../README.md
+   :parser: myst_parser.sphinx_
 
 .. toctree::
    :maxdepth: 2

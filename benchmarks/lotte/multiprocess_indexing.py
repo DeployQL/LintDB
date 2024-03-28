@@ -93,18 +93,19 @@ def consume_task(result_queue, experiment, nbits, use_compression, checkpoint):
 @app.command()
 def run(dataset: str, experiment: str, split: str = 'dev', k: int = 5, num_procs:int=10, nbits: int=1, use_compression: bool = True, checkpoint: str = "colbert-ir/colbertv2.0"):
     print("Loading dataset...")
-    d = load_lotte(dataset, split, stop=40000000)
+    d = load_lotte(dataset, split, stop=40000)
     print("Dataset loaded.")
 
     index_path = f"experiments/py_index_bench_{experiment}"
     assert not os.path.exists(index_path)
         # lifestyle full centroids == 65536
-    index = ldb.IndexIVF(index_path, 65536, 128, nbits, 10, use_compression)
+        #lifestyle-40k-benchmark centroids == 32768
+    index = ldb.IndexIVF(index_path, 32768, 128, nbits, 4, use_compression)
     # in multiprocessing, we only allow for reuse of centroids.
-    with Run().context(RunConfig(nranks=1, experiment='colbert-lifestyle-full')):
+    with Run().context(RunConfig(nranks=1, experiment='colbert-lifestyle-40k-benchmark')):
         checkpoint_config = ColBERTConfig.load_from_checkpoint(checkpoint)
         config = ColBERTConfig.from_existing(checkpoint_config, None)
-        searcher = Searcher(index='colbert-lifestyle-full', config=config, collection=d.collection)
+        searcher = Searcher(index='colbert-lifestyle-40k-benchmark', config=config, collection=d.collection)
         centroids = searcher.ranker.codec.centroids
         index.set_centroids(centroids)
         index.set_weights(

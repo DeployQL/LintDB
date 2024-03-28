@@ -35,6 +35,26 @@ TEST(RocksDBTests, KeyEncodesAndDecodesCorrectly) {
 
 }
 
+TEST(RocksDBTests, ForwardKeyEncodesAndDecodesCorrectly) {
+    // this loop exists because we hit a decoding error, and I want to make sure
+    // encoding/decoding works for more values.
+    for (code_t i=0; i < 20000; i++) {
+        auto test_key = lintdb::ForwardIndexKey{
+            1, // tenant
+            i // doc id
+        };
+
+        std::string ks = test_key.serialize();
+        auto slice = rocksdb::Slice(ks);
+
+        auto decoded = lintdb::ForwardIndexKey::from_slice(slice);
+
+        EXPECT_EQ(test_key.tenant, decoded.tenant);
+        EXPECT_EQ(test_key.id, decoded.id);
+    }
+
+}
+
 TEST(RocksDBTests, Endianness) {
     std::vector<unsigned char> number;
 

@@ -29,7 +29,7 @@ typedef int64_t idx_t;
 
 // this uses code that makes this specific to 64bit arch. 
 // We should be able to define this in cmake, but it's not working for a reason I don't understand.
-#define SWIGWORDSIZE64
+// #define SWIGWORDSIZE64
 %include <stdint.i>
 // Apply enables the typemap for the given argument(s) in the function signature.
 // without this, python was complaining about the idx_t.
@@ -57,26 +57,31 @@ namespace std {
     import_array();
 %}
 
-%apply (float* IN_ARRAY2, int DIM1, int DIM2) {(const float* block, int num_tokens, int dim)}
+// RawPassage constructor.
+%apply (float* IN_ARRAY2, int DIM1, int DIM2) {(const float* block, int num_tokens, int dim)};
 // arguments have to be exact to the C++ function signature. e.g. embeddings, n, dim.
-%apply (float* IN_ARRAY2, int DIM1, int DIM2) {(float* embeddings, int n, int dim)}
-%apply (float* IN_ARRAY2, int DIM1, int DIM2) {(const float* embeddings, size_t num_tokens, size_t dimensions)}
+%apply (float* IN_ARRAY2, int DIM1, int DIM2) {(float* embeddings, int n, int dim)};
+%apply (float* IN_ARRAY2, int DIM1, int DIM2) {(const float* embeddings, const size_t num_tokens, const size_t dimensions)};
 // apply it to search.
-%apply (float* IN_ARRAY2, int DIM1, int DIM2) {(float* data, int n, int dim)}
+%apply (float* IN_ARRAY2, int DIM1, int DIM2) {(const float* data, const int n, const int dim)};
 
-%ignore search(EmbeddingBlock&, size_t, size_t ) const;
+// below works to completely ignore the search methods overall.
+// %ignore search;
+%ignore search(
+        const uint64_t tenant,
+        const EmbeddingBlock& block,
+        const size_t n_probe,
+        const size_t k,
+        const SearchOptions& opts=SearchOptions()) const;
 %ignore train(float*, size_t, size_t);
 %ignore train(size_t n,std::vector<float>& embeddings);
 %ignore RawPassage::RawPassage();
-// %ignore IndexIVF::encode_vectors;
 %ignore IndexIVF::invlists;
 %ignore IndexIVF::decode_vectors;
 %ignore IndexIVF::get_pids;
 %ignore IndexIVF(std::string path, size_t dim, Configuration& config);
-// %ignore IndexIVF(std::string, size_t, size_t, size_t, size_t, bool);
 
 %ignore EmbeddingBlock::EmbeddingBlock(const float* embeddings, size_t num_tokens, size_t dimensions);
-
 
 // Python-specific: release GIL by default for all functions
 %exception {
