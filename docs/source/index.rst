@@ -13,6 +13,7 @@
 
    installation
    usage
+   benchmarks
    api
 
 Indices and tables
