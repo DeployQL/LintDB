@@ -3,6 +3,7 @@
 debug/
 target/
 
+.DS_Store
 # Remove Cargo.lock from gitignore if creating an executable, leave it for libraries
 # More information here https://doc.rust-lang.org/cargo/guide/cargo-toml-vs-cargo-lock.html
 Cargo.lock
@@ -54,3 +55,12 @@ Cargo.lock
 vcpkg_installed
 build
 .vscode
+
+data
+models
+tests/__pycache__
+experiments
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class

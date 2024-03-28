@@ -7,10 +7,9 @@
       "rocksdb",
       "flatbuffers",
       {"name": "openblas", "features": ["threads"]},
-      "lapack",
-      {"name": "arrayfire", "features": ["cpu"]},
       "gtest",
       "glog",
-      "jsoncpp"
+      "jsoncpp",
+      "ms-gsl"
     ]
   }

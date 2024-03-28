@@ -10,27 +10,23 @@ cmake_minimum_required(VERSION 3.25)
 
 include(CMakeFindDependencyMacro)
 
+set(VCPKG_INSTALL_OPTIONS "--allow-unsupported")
+
 # Setup vcpkg script with CMake (note: should be placed before project() call)
 set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake CACHE STRING "Vcpkg toolchain file")
 
-project(lintdb)
+project(lintdb
+  VERSION 0.0.1
+  DESCRIPTION "A multi-vector database for late interaction retrieval"
+  LANGUAGES CXX
+)
+include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -fopenmp -pthread")
 set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
 
-set(AF_COMPUTE_LIBRARY "FFTW/LAPACK/BLAS")
-set(USE_CPU_MKL:BOOL OFF)
-set(USE_OPENCL_MKL OFF)
-set(AF_BUILD_CPU OFF)
-set(AF_BUILD_CUDA OFF)
-set(AF_BUILD_OPENCL OFF)
-set(AF_BUILD_ONEAPI OFF)
-set(AF_BUILD_EXAMPLES OFF)
-set(AF_BUILD_TESTS OFF)
-
 add_subdirectory(lintdb)
-# add_subdirectory(test)
 
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
@@ -54,11 +50,15 @@ target_link_libraries(lintdb PRIVATE RocksDB::rocksdb)
 find_package(flatbuffers CONFIG REQUIRED)
 target_link_libraries(lintdb PRIVATE flatbuffers::flatbuffers)
 
-find_package(ArrayFire CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE ArrayFire::af ArrayFire::afcpu)
-
 find_package(glog CONFIG REQUIRED)
 target_link_libraries(lintdb PRIVATE glog::glog)
+
+# this is heuristically generated, and may not be correct
+find_package(Microsoft.GSL CONFIG REQUIRED)
+target_link_libraries(lintdb PRIVATE Microsoft.GSL::GSL)
+
+find_package(jsoncpp CONFIG REQUIRED)
+target_link_libraries(lintdb PRIVATE JsonCpp::JsonCpp)
 
 include(CTest)
 add_subdirectory(tests)

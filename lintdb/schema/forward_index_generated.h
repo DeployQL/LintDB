@@ -21,13 +21,9 @@ struct ForwardIndexDocumentBuilder;
 struct ForwardIndexDocument FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef ForwardIndexDocumentBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_DOC_ID = 4,
-    VT_NUM_TOKENS = 6,
-    VT_RESIDUALS = 8
+    VT_NUM_TOKENS = 4,
+    VT_RESIDUALS = 6
   };
-  const ::flatbuffers::String *doc_id() const {
-    return GetPointer<const ::flatbuffers::String *>(VT_DOC_ID);
-  }
   uint32_t num_tokens() const {
     return GetField<uint32_t>(VT_NUM_TOKENS, 0);
   }
@@ -36,8 +32,6 @@ struct ForwardIndexDocument FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Tab
   }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyOffset(verifier, VT_DOC_ID) &&
-           verifier.VerifyString(doc_id()) &&
            VerifyField<uint32_t>(verifier, VT_NUM_TOKENS, 4) &&
            VerifyOffset(verifier, VT_RESIDUALS) &&
            verifier.VerifyVector(residuals()) &&
@@ -49,9 +43,6 @@ struct ForwardIndexDocumentBuilder {
   typedef ForwardIndexDocument Table;
   ::flatbuffers::FlatBufferBuilder &fbb_;
   ::flatbuffers::uoffset_t start_;
-  void add_doc_id(::flatbuffers::Offset<::flatbuffers::String> doc_id) {
-    fbb_.AddOffset(ForwardIndexDocument::VT_DOC_ID, doc_id);
-  }
   void add_num_tokens(uint32_t num_tokens) {
     fbb_.AddElement<uint32_t>(ForwardIndexDocument::VT_NUM_TOKENS, num_tokens, 0);
   }
@@ -71,26 +62,21 @@ struct ForwardIndexDocumentBuilder {
 
 inline ::flatbuffers::Offset<ForwardIndexDocument> CreateForwardIndexDocument(
     ::flatbuffers::FlatBufferBuilder &_fbb,
-    ::flatbuffers::Offset<::flatbuffers::String> doc_id = 0,
     uint32_t num_tokens = 0,
     ::flatbuffers::Offset<::flatbuffers::Vector<uint8_t>> residuals = 0) {
   ForwardIndexDocumentBuilder builder_(_fbb);
   builder_.add_residuals(residuals);
   builder_.add_num_tokens(num_tokens);
-  builder_.add_doc_id(doc_id);
   return builder_.Finish();
 }
 
 inline ::flatbuffers::Offset<ForwardIndexDocument> CreateForwardIndexDocumentDirect(
     ::flatbuffers::FlatBufferBuilder &_fbb,
-    const char *doc_id = nullptr,
     uint32_t num_tokens = 0,
     const std::vector<uint8_t> *residuals = nullptr) {
-  auto doc_id__ = doc_id ? _fbb.CreateString(doc_id) : 0;
   auto residuals__ = residuals ? _fbb.CreateVector<uint8_t>(*residuals) : 0;
   return lintdb::CreateForwardIndexDocument(
       _fbb,
-      doc_id__,
       num_tokens,
       residuals__);
 }
