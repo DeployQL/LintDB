@@ -1,0 +1,2 @@
+chardet = "^5.2.0"
+sphinx-immaterial = "^0.11.11"
