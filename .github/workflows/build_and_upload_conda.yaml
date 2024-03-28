@@ -37,5 +37,3 @@ jobs:
           # user: uibcdf
           # label: auto
           # token: ${{ secrets.ANACONDA_TOKEN }} # Replace with the right name of your secret
-  build_docs:
-    needs: conda_deployment_with_new_tag
