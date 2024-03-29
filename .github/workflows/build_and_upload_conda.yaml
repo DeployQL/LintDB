@@ -36,7 +36,7 @@ jobs:
       - name: Build and upload the conda packages
         uses: uibcdf/action-build-and-upload-conda-packages@v1.3.0
         with:
-          meta_yaml_dir: conda
+          meta_yaml_dir: conda/lintdb
           python-version: ${{ matrix.python-version }} # Values previously defined in `matrix`
           upload: false
           # user: uibcdf
