@@ -43,7 +43,7 @@ endif()
 # set_source_files_properties(lintdb.swig PROPERTIES
 #     SWIG_FLAGS -DSWIGWORDSIZE64
 # )
-endif()
+# endif()
 if(WIN32)
 set_source_files_properties(lintdb.swig PROPERTIES
     SWIG_FLAGS -DSWIGWIN
