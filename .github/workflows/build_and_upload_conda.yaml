@@ -11,7 +11,9 @@ jobs:
     strategy:
       matrix:
         os: [macOS-latest, ubuntu-latest]
-        python-version: ["3.8", "3.9", "3.10"]
+        # python-version: ["3.8", "3.9", "3.10"]
+        python-version: ["3.10"]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -21,6 +23,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           environment-file: conda/environment.yaml    # Path to the build conda environment
+          mamba-version: "*"
+          channels: conda-forge,defaults
           auto-update-conda: false
           auto-activate-base: false
           show-channel-urls: true
