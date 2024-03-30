@@ -26,7 +26,7 @@ source:
 
 outputs:
   - name: liblintdb
-    script: build-lib.sh  # [x86_64 and not win and not osx]
+    script: build-lib.sh  # [linux64]
     script: build-lib-osx.sh  # [x86_64 and osx]
     script: build-lib-osx.sh # [osx-64]
     script: build-lib-arm64.sh  # [not x86_64]
@@ -65,7 +65,7 @@ outputs:
         - conda inspect objects -p $PREFIX $PKG_NAME   # [osx]
 
   - name: lintdb
-    script: build-pkg.sh  # [x86_64 and not win and not osx]
+    script: build-pkg.sh  # [linux64]
     script: build-pkg-osx.sh  # [x86_64 and osx]
     script: build-pkg-osx.sh # [osx-64]
     script: build-pkg-arm64.sh # [not x86_64]
@@ -81,6 +81,7 @@ outputs:
         - conda-forge::gfortran #[linux64]
         - conda-forge::libgcc-ng # [linux64]
         - conda-forge::libstdcxx-ng # [linux64]
+        - llvm-openmp  # [osx]
         - openblas
         - sysroot_linux-64 =2.17 # [linux64]
         - conda-forge::swig >= 4.0.2

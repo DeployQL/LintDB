@@ -17,7 +17,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
+          submodules: true
           fetch-depth: 0
+      - uses: lukka/get-cmake@latest
       - name: Conda environment creation and activation
         uses: conda-incubator/setup-miniconda@v3
         with:
@@ -33,6 +35,22 @@ jobs:
         run: |
           conda info
           conda list
+      # - name: Setup Conda
+      #   shell: bash -l {0}
+      #   run: |
+      #     conda env create -f conda/environment.yaml -n lintdb-build
+      #     conda activate lintdb-build
+      # - name: Setup vcpkg
+      #   uses: lukka/run-vcpkg@v11
+      #   id: runvcpkg
+      #   with:
+      #     # This one is not needed, as it is the default value anyway.
+      #     # vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+      #     vcpkgDirectory: '${{ github.workspace }}/tools/vcpkg'
+      #     vcpkgJsonGlob: 'vcpkg.json'
+      # - name: Run CMake
+      #   uses: lukka/run-cmake@v10
+      #   id: runcmake
       - name: Build and upload the conda packages
         uses: uibcdf/action-build-and-upload-conda-packages@v1.3.0
         with:
@@ -42,3 +60,10 @@ jobs:
           # user: uibcdf
           # label: auto
           # token: ${{ secrets.ANACONDA_TOKEN }} # Replace with the right name of your secret
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: conda-build-dir
+          path: /usr/local/miniconda/envs/lintdb-build/conda-bld/lintdb-pkg_*/work/tools/vcpkg/buildtrees/flatbuffers/install-x64-osx-rel-out.log
+          retention-days: 1
+          overwrite: true
