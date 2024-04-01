@@ -56,9 +56,7 @@ jobs:
           path: |
             ${{ env.CONDA }}/envs
             conda-${{ runner.os }}--${{ runner.arch }}-build-cache
-            $HOME/.cache/vcpkg/archives
-            $VCPKG_DEFAULT_BINARY_CACHE
-            $XDG_CACHE_HOME/vcpkg/archives
+            /vcpkg-binary-cache
           key:
             conda-${{ runner.os }}--${{ runner.arch }}--${{
             steps.get-date.outputs.today }}-${{
@@ -109,6 +107,8 @@ jobs:
         id: packages-compilation
         shell: bash -l {0}
         working-directory: ./conda
+        env:
+          VCPKG_DEFAULT_BINARY_CACHE: /vcpkg-binary-cache
         run: |
           conda activate lintdb-build
           out_dir=`mktemp -d -t compilation-XXXXXXXXXX`
@@ -119,6 +119,6 @@ jobs:
         if: failure()
         with:
           name: conda-build-dir
-          path: /usr/local/miniconda/envs/lintdb-build/conda-bld/lintdb-pkg_*/work/tools/vcpkg/buildtrees/flatbuffers/install-x64-osx-rel-out.log
+          path: /usr/local/miniconda/envs/lintdb-build/conda-bld/lintdb-pkg_*/work/tools/vcpkg/buildtrees/*/install-x64-osx-*-out.log
           retention-days: 1
           overwrite: true
