@@ -27,9 +27,6 @@ typedef int64_t idx_t;
 %include <std_string.i>
 %include cpointer.i
 
-// this uses code that makes this specific to 64bit arch. 
-// We should be able to define this in cmake, but it's not working for a reason I don't understand.
-// #define SWIGWORDSIZE64
 %include <stdint.i>
 // Apply enables the typemap for the given argument(s) in the function signature.
 // without this, python was complaining about the idx_t.

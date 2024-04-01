@@ -97,15 +97,3 @@ install(FILES ${PROJECT_BINARY_DIR}/cmake/lintdb-config.cmake
 install(EXPORT lintdb-targets
   DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/lintdb
 )
-
-add_executable(
-  lintdb-bin
-  ${PROJECT_SOURCE_DIR}/tests/search_bin.cpp
-)
-
-target_link_libraries(lintdb-bin PRIVATE lintdb)
-find_package(faiss CONFIG REQUIRED)
-target_link_libraries(lintdb-bin PRIVATE faiss)
-# target_link_libraries(lintdb-bin PRIVATE OpenBLAS::OpenBLAS)
-# target_link_libraries(lintdb-bin PRIVATE ${LAPACK_LIBRARIES})
-# target_link_libraries(lintdb-bin PRIVATE Microsoft.GSL::GSL)

@@ -36,7 +36,6 @@ FetchContent_Declare(
 )
 
 
-
 # target_include_directories(lintdb-tests PUBLIC
 # $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)
 

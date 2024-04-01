@@ -105,12 +105,12 @@ jobs:
       - name: Conda Build
         id: packages-compilation
         shell: bash -l {0}
-        working-directory: ./${{ inputs.meta_yaml_dir }}
+        working-directory: ./conda
         run: |
-        out_dir=`mktemp -d -t compilation-XXXXXXXXXX`
-        echo "::group::Building conda package for host platform"
-        echo "conda build . --no-anaconda-upload --output-folder $out_dir --python ${{ inputs.python-version }}"
-        conda build . --no-anaconda-upload --cache-dir "conda-${{ runner.os }}--${{ runner.arch }}-build-cache" --output-folder $out_dir --python ${{ inputs.python-version }}
+          out_dir=`mktemp -d -t compilation-XXXXXXXXXX`
+          echo "::group::Building conda package for host platform"
+          echo "conda build lintdb --no-anaconda-upload --cache-dir "conda-${{ runner.os }}--${{ runner.arch }}-build-cache" --output-folder $out_dir --python ${{ matrix.python-version }}"
+          conda build lintdb --no-anaconda-upload --cache-dir "conda-${{ runner.os }}--${{ runner.arch }}-build-cache" --output-folder $out_dir --python ${{ matrix.python-version }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
