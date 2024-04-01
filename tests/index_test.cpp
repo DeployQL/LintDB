@@ -232,6 +232,68 @@ TEST(IndexTest, LoadsCorrectly) {
     loaded_index.search(lintdb::kDefaultTenant, query.data(), num_tokens, dim, 10, 5);
 }
 
+TEST(IndexTest, MergeCorrectly) {
+    size_t dim = 128;
+    // we'll generate num_docs * num_tokens random vectors for training.
+    // keep in mind this needs to be larger than the number of dimensions.
+    size_t num_docs = 100;
+    size_t num_tokens = 100;
+
+    size_t kclusters = 250; // number of centroids to calculate.
+
+    size_t centroid_bits = 2;
+    std::filesystem::path path = std::filesystem::temp_directory_path();
+    auto temp_db = path.append("test_index_one");
+    // buffer for the randomly created vectors.
+    // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
+    std::vector<float> buf(dim * (num_docs * num_tokens));
+    // fake data where every vector is either all 1s,2s...9s. 
+    for(size_t i=0; i<num_docs * num_tokens; i++) {
+        for(size_t j=0; j<dim; j++) {
+            buf[i*dim + j] = i%11 + 1;
+        }
+    }
+    // normalize before training. ColBERT returns normalized embeddings.
+    lintdb::normalize_vector(buf.data(), num_docs * num_tokens, dim);
+
+    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits);
+
+    index.train(num_docs * num_tokens, buf);
+
+    EXPECT_EQ(index.nlist, 250);
+
+    std::vector<float> fake_doc(dim * num_tokens, 1);
+    lintdb::normalize_vector(fake_doc.data(), num_tokens, dim);
+
+    lintdb::EmbeddingBlock block{fake_doc.data(), num_tokens, dim};
+
+    lintdb::RawPassage doc(fake_doc.data(), num_tokens, dim, 1);
+    std::vector<lintdb::RawPassage> docs = { doc };
+    index.add(lintdb::kDefaultTenant, docs);
+
+
+    // create a second db.
+    std::filesystem::path path_two = std::filesystem::temp_directory_path();
+    auto second_db = path_two.append("test_index_two");
+    // copy the first index to create the second db.
+    auto index_two = lintdb::IndexIVF(index, second_db.string());
+    lintdb::RawPassage doc_two(fake_doc.data(), num_tokens, dim, 2);
+    std::vector<lintdb::RawPassage> docs_two = { doc_two };
+    index_two.add(lintdb::kDefaultTenant, docs_two);
+
+    // merge the two indices.
+    index.merge(second_db.string());
+
+    auto opts = lintdb::SearchOptions();
+    opts.centroid_score_threshold = 0;
+    opts.expected_id = 1;
+    auto results = index.search(lintdb::kDefaultTenant, block, 250, 5, opts);
+
+    LOG(INFO) << "Results: " << results.size();
+
+    EXPECT_EQ(results.size(), 2);
+}
+
 
 int main(int argc, char **argv) {
     google::InitGoogleLogging(argv[0]);

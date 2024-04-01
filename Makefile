@@ -15,7 +15,7 @@ build-python:
 test: build
 	export AF_PRINT_ERRORS=1
 	export AF_TRACE=all
-	cd build && cmake -E env GLOG_v=10 GLOG_logtostderr=1 ctest --output-on-failure
+	cd build && cmake -E env GLOG_v=100 GLOG_logtostderr=1 ctest --output-on-failure
 
 test-python: build-python
 # had to fix up conda to make this work--

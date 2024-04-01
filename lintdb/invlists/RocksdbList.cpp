@@ -305,24 +305,28 @@ void RocksDBInvertedList<DBType>::delete_entry(idx_t list_no,const uint64_t tena
 };
 
 template<typename DBType>
-void RocksDBInvertedList<DBType>::merge(std::shared_ptr<rocksdb::DB> db) {
-        // merge the indices.
+void RocksDBInvertedList<DBType>::merge(std::shared_ptr<rocksdb::DB> db, std::vector<rocksdb::ColumnFamilyHandle*> cfs) {
+    // very weak check to make sure the column families are the same.
+    LINTDB_THROW_IF_NOT(cfs.size() == column_families.size());
+
 #pragma omp for
-        for (size_t i = 1; i < column_families.size(); i++) {
-                // ignore the default cf at position 0 since we don't use it.
-                auto cf = column_families[i];
-                rocksdb::ReadOptions ro;
-                auto it = db->NewIterator(ro, cf);
-                it->SeekToFirst();
-                rocksdb::WriteOptions wo;
-                while (it->Valid()) {
-                    auto key = it->key();
-                    auto value = it->value();
-                    auto status = db_->Put(wo, cf, key, value);
-                    assert(status.ok());
-                    it->Next();
-                }
-        }
+    for (size_t i = 1; i < cfs.size(); i++) {
+            // ignore the default cf at position 0 since we don't use it.
+            auto cf = cfs[i];
+            rocksdb::ReadOptions ro;
+            auto it = db->NewIterator(ro, cf);
+            it->SeekToFirst();
+            rocksdb::WriteOptions wo;
+            while (it->Valid()) {
+                auto key = it->key();
+                auto value = it->value();
+                auto status = db_->Put(wo, column_families[i], key, value);
+                assert(status.ok());
+                it->Next();
+            }
+
+            delete it;
+    }
 }
 
 WritableRocksDBInvertedList::WritableRocksDBInvertedList(
@@ -432,7 +436,7 @@ void ReadOnlyRocksDBInvertedList::remove(const uint64_t tenant, std::vector<idx_
     throw LintDBException("Cannot remove from a read-only index.");
 }
 
-void ReadOnlyRocksDBInvertedList::merge(std::shared_ptr<rocksdb::DB> db) {
+void ReadOnlyRocksDBInvertedList::merge(std::shared_ptr<rocksdb::DB> db, std::vector<rocksdb::ColumnFamilyHandle*> cfs) {
     // throw an error.
     throw LintDBException("Cannot merge a read-only index.");
 

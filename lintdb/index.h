@@ -197,6 +197,7 @@ struct IndexIVF {
      * prevent you from merging indices with different centroids. There will be
      * subtle ways for this to break, but this can enable easier multiprocess
      * building of indices.
+     *
     */
     void merge(const std::string path);
 

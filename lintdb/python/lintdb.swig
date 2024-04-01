@@ -67,9 +67,9 @@ namespace std {
 
 // %nodefaultctor IndexIVF;
 
-%ignore IndexIVF(std::string path, Configuration& config);
+// %ignore IndexIVF(std::string path, Configuration& config);
 // %ignore IndexIVF::IndexIVF(const IndexIVF&, const std::string);
-%ignore IndexIVF(const IndexIVF& other, const std::string path);
+// %ignore IndexIVF(const IndexIVF& other, const std::string path);
 // below works to completely ignore the search methods overall.
 // %ignore search;
 %ignore search(

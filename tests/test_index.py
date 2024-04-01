@@ -36,7 +36,6 @@ class TestIndex(unittest.TestCase):
             )
 
         index.add(0, passages)
-
         index.search(0, dat, 10, 100)
 
 
@@ -58,40 +57,34 @@ class TestIndex(unittest.TestCase):
         index.search(0, search, 10, 10)
 
     def test_index_merge(self):
-        dir_one = tempfile.TemporaryDirectory(prefix="lintdb_test")
-        index_one = lintdb.IndexIVF(dir_one.name, 32, 128, 2, 4, True)
+        with tempfile.TemporaryDirectory(prefix="lintdb_test-one") as dir_one:
+            with tempfile.TemporaryDirectory(prefix="lintdb_test-two") as dir_two:
+                index_one = lintdb.IndexIVF(dir_one, 32, 128, 2, 4, True)
 
-        data = np.random.rand(1500, 128).astype('float32')
-        index_one.train(data)
+                data = np.random.rand(1500, 128).astype('float32')
+                index_one.train(data)
 
-        dir_two = tempfile.TemporaryDirectory(prefix="lintdb_test")
-        index_two = lintdb.IndexIVF(index_one, dir_two.name)
+                index_two = lintdb.IndexIVF(index_one, dir_two)
 
-        query = np.random.rand(30, 128).astype('float32')
-        index_one.add(0, lintdb.RawPassage(query, 1))
+                query = np.random.rand(30, 128).astype('float32')
+                index_one.add(0,[lintdb.RawPassage(query, 1)])
 
-        result = index_one.search(0, query, 10, 10)
-        assert(len(result) == 1)
+                result = index_one.search(0, query, 10, 10)
+                assert(len(result) == 1)
 
-        index_two.add(0, lintdb.RawPassage(query, 2))
+                index_two.add(0, [lintdb.RawPassage(query, 2)])
 
-        # search index one againt to test we didn't add a new document to it.
-        result = index_one.search(0, query, 10, 10)
-        assert(len(result) == 1)
+                # search index one againt to test we didn't add a new document to it.
+                result = index_one.search(0, query, 10, 10)
+                assert(len(result) == 1)
+                result = index_two.search(0, query, 10, 10)
+                assert(len(result) == 1)
 
-        index_one.merge(index_two)
+                del index_two
+                index_one.merge(dir_two)
 
-        # test that after merging, we get two results.
-        result = index_one.search(0, query, 10, 10)
-        assert(len(result) == 2)
-
-
-
-        
-
-
-
-
+                result = index_one.search(0, query, 10, 10)
+                assert(len(result) == 2)
 
 if __name__ == '__main__':
     unittest.main()

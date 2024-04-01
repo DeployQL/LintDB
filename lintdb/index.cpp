@@ -80,7 +80,7 @@ IndexIVF::IndexIVF(
     initialize_inverted_list();
 }
 
-IndexIVF::IndexIVF(const IndexIVF& other, const std::string path): path(path) {
+IndexIVF::IndexIVF(const IndexIVF& other, const std::string path) {
     // we'll leverage the loading methods and construct the index components from files on disk.
     Configuration index_config = this->read_metadata(other.path);
     this->nlist = index_config.nlist;
@@ -89,6 +89,8 @@ IndexIVF::IndexIVF(const IndexIVF& other, const std::string path): path(path) {
     this->niter = index_config.niter;
     this->use_compression = index_config.use_compression;
     this->read_only = other.read_only;
+
+    this->path = path;
 
     auto config = EncoderConfig{
         nlist, nbits, niter, dim, use_compression
@@ -110,6 +112,9 @@ void IndexIVF::initialize_inverted_list() {
         rocksdb::OptimisticTransactionDB* ptr2;
         rocksdb::Status s = rocksdb::OptimisticTransactionDB::Open(
                 options, path, cfs, &(this->column_families), &ptr2);
+        if (!s.ok()) {
+            LOG(ERROR) << s.ToString();
+        }
         assert(s.ok());
         auto owned_ptr = std::shared_ptr<rocksdb::OptimisticTransactionDB>(ptr2);
         this->db = owned_ptr;
@@ -179,7 +184,8 @@ std::vector<std::pair<float, idx_t>> IndexIVF::get_top_centroids(
     for(int i=0; i < high_scores.size(); i++) {
         auto key = i;
         auto score = high_scores[i];
-        if (score > 0){
+        // Note(MB): removing the filtering by score enables searching with exact copies.
+        // if (score > 0){
             if (centroid_scores.size() < n_probe) {
                 centroid_scores.push_back(std::pair<float, idx_t>(score, key));
 
@@ -191,7 +197,7 @@ std::vector<std::pair<float, idx_t>> IndexIVF::get_top_centroids(
                 centroid_scores.front() = std::pair<float, idx_t>(score, key);
                 std::push_heap(centroid_scores.begin(), centroid_scores.end(), comparator);
             }
-        }
+        // }
     }
 
     if(centroid_scores.size() < n_probe) {
@@ -502,14 +508,29 @@ void IndexIVF::update(const uint64_t tenant, const std::vector<RawPassage>& docs
 
 void IndexIVF::merge(const std::string path) {
     Configuration our_config = Configuration{
-        nlist, nbits, dim, niter, use_compression};
+        nlist, nbits, niter, dim, use_compression};
     Configuration incoming_config = read_metadata(path);
-    
+
     LINTDB_THROW_IF_NOT(our_config == incoming_config);
 
-    IndexIVF incoming(path, true);
+    rocksdb::Options options;
+    options.create_if_missing = false;
+    options.create_missing_column_families = false;
 
-    index_->merge(incoming.db);
+    auto cfs = create_column_families();
+    std::vector<rocksdb::ColumnFamilyHandle*> other_cfs;
+
+    rocksdb::DB* ptr;
+    rocksdb::Status s = rocksdb::DB::OpenForReadOnly(
+            options, path, cfs, &other_cfs, &ptr);
+    assert(s.ok());
+    std::shared_ptr<rocksdb::DB> owned_ptr = std::shared_ptr<rocksdb::DB>(ptr);
+
+    index_->merge(owned_ptr, other_cfs);
+
+    for (auto cf : other_cfs) {
+            owned_ptr->DestroyColumnFamilyHandle(cf);
+        }
 }
 
 std::vector<idx_t> IndexIVF::lookup_pids(const uint64_t tenant, const idx_t idx) const {

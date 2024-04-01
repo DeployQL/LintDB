@@ -60,7 +60,7 @@ struct RocksDBInvertedList : public InvertedList, public ForwardIndex {
     void add(const uint64_t tenant, std::unique_ptr<EncodedDocument> docs) override;
     void remove(const uint64_t tenant, std::vector<idx_t> ids) override;
 
-    void merge(std::shared_ptr<rocksdb::DB> db) override;
+    void merge(std::shared_ptr<rocksdb::DB> db, std::vector<rocksdb::ColumnFamilyHandle*> cfs) override;
 
     void delete_entry(idx_t list_no,const uint64_t tenant, idx_t id) override;
 
@@ -102,7 +102,7 @@ struct ReadOnlyRocksDBInvertedList : public RocksDBInvertedList<rocksdb::DB> {
     void add(const uint64_t tenant, std::unique_ptr<EncodedDocument> docs) override;
     void remove(const uint64_t tenant, std::vector<idx_t> ids) override;
 
-    void merge(std::shared_ptr<rocksdb::DB> db) override;
+    void merge(std::shared_ptr<rocksdb::DB> db, std::vector<rocksdb::ColumnFamilyHandle*> cfs) override;
 
     void delete_entry(idx_t list_no,const uint64_t tenant, idx_t id) override;
 };
