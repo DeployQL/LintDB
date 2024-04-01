@@ -56,6 +56,9 @@ jobs:
           path: |
             ${{ env.CONDA }}/envs
             conda-${{ runner.os }}--${{ runner.arch }}-build-cache
+            $HOME/.cache/vcpkg/archives
+            $VCPKG_DEFAULT_BINARY_CACHE
+            $XDG_CACHE_HOME/vcpkg/archives
           key:
             conda-${{ runner.os }}--${{ runner.arch }}--${{
             steps.get-date.outputs.today }}-${{

@@ -1,7 +1,7 @@
 set -e
 
 
-cmake -B _build_python_${PY_VER} \
+CXXFLAGS="${CXXFLAGS} -D_LIBCPP_DISABLE_AVAILABILITY" cmake -B _build_python_${PY_VER} \
       -Dlintdb_ROOT=_liblintdb_stage/ \
       -DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
       -DOpenMP_CXX_LIB_NAMES=libiomp5 \

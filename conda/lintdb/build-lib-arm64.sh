@@ -1,7 +1,7 @@
 set -e
 
 # do we want to specify the build arch explicitly?       -DCMAKE_OSX_ARCHITECTURES=arm64 \
-cmake -B _build \
+CXXFLAGS="${CXXFLAGS} -D_LIBCPP_DISABLE_AVAILABILITY" cmake -B _build \
       -DBUILD_SHARED_LIBS=ON \
       -DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
       -DOpenMP_CXX_LIB_NAMES=libiomp5 \
