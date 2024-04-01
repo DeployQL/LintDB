@@ -26,11 +26,10 @@ source:
 
 outputs:
   - name: liblintdb
-    script: build-lib.sh  # [linux64]
+    script: build-lib.sh  # [x86_64 and linux]
     script: build-lib-osx.sh  # [x86_64 and osx]
-    script: build-lib-osx.sh # [osx-64]
+    script: build-lib-arm64.sh # [arm64 and osx]
     script: build-lib-arm64.sh  # [not x86_64]
-    script: build-lib-arm64.sh # [osx-arm64]
     script: build-lib.bat  # [win]
     build:
       string: "h{{ PKG_HASH }}_{{ number }}_cpu{{ suffix }}"
@@ -65,11 +64,10 @@ outputs:
         - conda inspect objects -p $PREFIX $PKG_NAME   # [osx]
 
   - name: lintdb
-    script: build-pkg.sh  # [linux64]
+    script: build-pkg.sh  # [x86_64 and linux]
     script: build-pkg-osx.sh  # [x86_64 and osx]
-    script: build-pkg-osx.sh # [osx-64]
+    script: build-lib-arm64.sh # [arm64 and osx]
     script: build-pkg-arm64.sh # [not x86_64]
-    script: build-lib-arm64.sh # [osx-arm64]
     script: build-pkg.bat  # [win]
     build:
       string: "py{{ PY_VER }}_h{{ PKG_HASH }}_{{ number }}_cpu{{ suffix }}"

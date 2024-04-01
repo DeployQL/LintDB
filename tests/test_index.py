@@ -37,7 +37,7 @@ class TestIndex(unittest.TestCase):
 
         index.add(0, passages)
 
-        index.search(dat, 10, 100)
+        index.search(0, dat, 10, 100)
 
 
         ids = list(range(5))
