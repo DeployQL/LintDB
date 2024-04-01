@@ -107,6 +107,7 @@ jobs:
         shell: bash -l {0}
         working-directory: ./conda
         run: |
+          conda activate lintdb-build
           out_dir=`mktemp -d -t compilation-XXXXXXXXXX`
           echo "::group::Building conda package for host platform"
           echo "conda build lintdb --no-anaconda-upload --cache-dir "conda-${{ runner.os }}--${{ runner.arch }}-build-cache" --output-folder $out_dir --python ${{ matrix.python-version }}"
