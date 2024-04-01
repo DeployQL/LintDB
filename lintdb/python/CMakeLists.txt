@@ -9,7 +9,7 @@ project(pylintdb
 set(PYTHON_INCLUDE)
 
 if(UNIX)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fvisibility=hidden")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 endif()
 
 set(CMAKE_CXX_STANDARD 17)

@@ -24,6 +24,15 @@ include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -fopenmp -pthread")
+
+# the below is caused by github actions failing to build flatbuffers.
+# therefore, we set this value so that we use a higher sdk version to build it.
+set(CMAKE_OSX_DEPLOYMENT_TARGET 10.13)
+# https://conda-forge.org/docs/maintainer/knowledge_base/#newer-c-features-with-old-sdk
+if(APPLE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_LIBCPP_DISABLE_AVAILABILITY")
+endif()
+
 set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
 
 add_subdirectory(lintdb)

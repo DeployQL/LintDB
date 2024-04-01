@@ -67,6 +67,12 @@ namespace std {
 // apply to set_centroids
 %apply (float* IN_ARRAY2, int DIM1, int DIM2) {(float* data, int n, int dim)};
 
+
+// %nodefaultctor IndexIVF;
+
+%ignore IndexIVF(std::string path, Configuration& config);
+%ignore IndexIVF::IndexIVF(const IndexIVF&, const std::string);
+%ignore IndexIVF(const IndexIVF& other, const std::string path);
 // below works to completely ignore the search methods overall.
 // %ignore search;
 %ignore search(
@@ -81,7 +87,7 @@ namespace std {
 %ignore IndexIVF::invlists;
 %ignore IndexIVF::decode_vectors;
 %ignore IndexIVF::get_pids;
-%ignore IndexIVF(std::string path, size_t dim, Configuration& config);
+
 
 %ignore EmbeddingBlock::EmbeddingBlock(const float* embeddings, size_t num_tokens, size_t dimensions);
 

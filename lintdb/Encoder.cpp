@@ -12,8 +12,8 @@
 #include <cblas.h>
 
 namespace lintdb {
-    DefaultEncoder::DefaultEncoder(std::string path, size_t nlist, size_t nbits, size_t niter, size_t dim, bool use_compression)
-        : Encoder(), path(path), nlist(nlist), nbits(nbits), niter(niter), dim(dim), use_compression(use_compression) {
+    DefaultEncoder::DefaultEncoder(size_t nlist, size_t nbits, size_t niter, size_t dim, bool use_compression)
+        : Encoder(), nlist(nlist), nbits(nbits), niter(niter), dim(dim), use_compression(use_compression) {
         
         // colBERT uses L2 during clustering.
         // for normalized vectors, this should be the same as IP.
@@ -85,9 +85,7 @@ namespace lintdb {
                     decoded_embeddings[i * dim + j] += decoded_residuals[j];
                 }
             } else {
-                for (size_t j = 0; j < dim; j++) {
-                    decoded_embeddings[i * dim + j] += residuals[i * dim + j];
-                }
+                std::memcpy(decoded_embeddings.data(), residuals.data(), dim * num_tokens * sizeof(float));
             }
         }
         return decoded_embeddings;
@@ -102,7 +100,7 @@ namespace lintdb {
             const float centroid_threshold
     ) {
         // we get back the k top centroid matches per token.
-        // faiss' quantizer->search() is taking up the majority of the search critical path.
+        // faiss' quantizer->search() is slightly slower than doing this ourselves.
         // therefore, we will write our own to do our own matmul.
         // quantizer->search(
         //         num_query_tok,
@@ -194,7 +192,7 @@ namespace lintdb {
         }
 
         auto encoder = std::make_unique<DefaultEncoder>(
-                DefaultEncoder(path, config.nlist, config.nbits, config.niter, config.dim));
+                DefaultEncoder(config.nlist, config.nbits, config.niter, config.dim));
         encoder->quantizer = std::move(quantizer);
 
         if(config.use_compression) {

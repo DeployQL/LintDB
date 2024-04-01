@@ -94,7 +94,7 @@ struct IndexIVF {
     /// load an existing index.
     IndexIVF(std::string path, bool read_only=false);
 
-    IndexIVF(std::string path, size_t dim, Configuration& config);
+    IndexIVF(std::string path, Configuration& config);
 
     IndexIVF(
             std::string path, /// path to the database.
@@ -105,6 +105,17 @@ struct IndexIVF {
             bool use_compression = true,
             bool read_only = false
     );
+
+    // TODO(mbarta): this breaks SWIG. SWIG needs to ignore this, but won't.
+    /**
+     * Copy creates a new index at the given path from a trained index. The copy
+     * will always be writeable.
+     * 
+     * Will throw an exception if the index isn't trained when this method is called.
+     * 
+     * @param path the path to initialize the index.
+    */
+    IndexIVF(const IndexIVF& other, const std::string path);
 
     /**
      * Train will learn quantization and compression parameters from the given data.

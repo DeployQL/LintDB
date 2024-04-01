@@ -84,11 +84,9 @@ namespace lintdb {
         size_t nbits; // number of bits used in binarizing the residuals.
         size_t niter; // number of iterations to use in k-means clustering.
         size_t dim; // number of dimensions per embedding.
-        std::string path;
         bool use_compression;
         // create a new encoder
         DefaultEncoder(
-            std::string path, 
             size_t nlist, 
             size_t nbits, 
             size_t niter, 

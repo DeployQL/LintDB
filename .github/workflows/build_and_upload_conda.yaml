@@ -10,9 +10,20 @@ jobs:
     name: Conda deployment of package with Python ${{ matrix.python-version }}
     strategy:
       matrix:
-        os: [macOS-latest, ubuntu-latest]
-        # python-version: ["3.8", "3.9", "3.10"]
-        python-version: ["3.10"]
+        include:
+          - os: ubuntu-latest
+            label: linux-64
+            prefix: /usr/share/miniconda3/envs/my-env
+            python-version: "3.10"
+
+          - os: macOS-latest
+            label: osx-64
+            prefix: /usr/local/miniconda/envs/lintdb-build/conda-bld
+            python-version: "3.10"
+
+        # os: [macOS-latest, ubuntu-latest]
+        # # python-version: ["3.8", "3.9", "3.10"]
+        # python-version: ["3.10"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -20,17 +31,46 @@ jobs:
           submodules: true
           fetch-depth: 0
       - uses: lukka/get-cmake@latest
+
       - name: Conda environment creation and activation
         uses: conda-incubator/setup-miniconda@v3
         with:
           activate-environment: lintdb-build
           python-version: ${{ matrix.python-version }}
-          environment-file: conda/environment.yaml    # Path to the build conda environment
+          # environment-file: conda/environment.yaml    # Path to the build conda environment
+          use-mamba: true
           mamba-version: "*"
           channels: conda-forge,pytorch,defaults
           auto-update-conda: false
           auto-activate-base: false
           show-channel-urls: true
+
+      - name: Get Date
+        id: get-date
+        run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Cache Conda env
+        uses: actions/cache@v3
+        with:
+          path: |
+            ${{ env.CONDA }}/envs
+            conda-${{ runner.os }}--${{ runner.arch }}-build-cache
+          key:
+            conda-${{ runner.os }}--${{ runner.arch }}--${{
+            steps.get-date.outputs.today }}-${{
+            hashFiles('conda/environment.yaml') }}-${{ env.CACHE_NUMBER }}
+        env:
+          # Increase this value to reset cache if etc/example-environment.yml has not changed
+          CACHE_NUMBER: 0
+        id: cache
+
+      - name: Update environment
+        run:
+          mamba env update -n lintdb-build -f
+          conda/environment.yaml
+        if: steps.cache.outputs.cache-hit != 'true'
+      
       - shell: bash -l {0}
         run: |
           conda info
@@ -51,15 +91,26 @@ jobs:
       # - name: Run CMake
       #   uses: lukka/run-cmake@v10
       #   id: runcmake
-      - name: Build and upload the conda packages
-        uses: uibcdf/action-build-and-upload-conda-packages@v1.3.0
-        with:
-          meta_yaml_dir: conda/lintdb
-          python-version: ${{ matrix.python-version }} # Values previously defined in `matrix`
-          upload: false
+
+      # - name: Build and upload the conda packages
+      #   uses: uibcdf/action-build-and-upload-conda-packages@v1.3.0
+      #   with:
+      #     meta_yaml_dir: conda/lintdb
+      #     python-version: ${{ matrix.python-version }} # Values previously defined in `matrix`
+      #     upload: false
           # user: uibcdf
           # label: auto
           # token: ${{ secrets.ANACONDA_TOKEN }} # Replace with the right name of your secret
+
+      - name: Conda Build
+        id: packages-compilation
+        shell: bash -l {0}
+        working-directory: ./${{ inputs.meta_yaml_dir }}
+        run: |
+        out_dir=`mktemp -d -t compilation-XXXXXXXXXX`
+        echo "::group::Building conda package for host platform"
+        echo "conda build . --no-anaconda-upload --output-folder $out_dir --python ${{ inputs.python-version }}"
+        conda build . --no-anaconda-upload --cache-dir "conda-${{ runner.os }}--${{ runner.arch }}-build-cache" --output-folder $out_dir --python ${{ inputs.python-version }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

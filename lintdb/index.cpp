@@ -29,9 +29,6 @@
 
 namespace lintdb {
 IndexIVF::IndexIVF(std::string path, bool read_only): path(path), read_only(read_only) {
-    faiss::Index* quantizer;
-    faiss::Index* binarizer;
-
     LOG(INFO) << "loading LintDB from path: " << path;
 
     // set all of our individual attributes.
@@ -41,6 +38,7 @@ IndexIVF::IndexIVF(std::string path, bool read_only): path(path), read_only(read
     this->dim = index_config.dim;
     this->niter = index_config.niter;
     this->use_compression = index_config.use_compression;
+    this->read_only = read_only;
 
     auto config = EncoderConfig{
         nlist, nbits, niter, dim, use_compression
@@ -51,12 +49,12 @@ IndexIVF::IndexIVF(std::string path, bool read_only): path(path), read_only(read
 
 }
 
-IndexIVF::IndexIVF(std::string path, size_t dim, Configuration& config)
+IndexIVF::IndexIVF(std::string path, Configuration& config)
         : nlist(config.nlist), nbits(config.nbits), path(path) {
     IndexIVF(
         path,
         config.nlist,
-        dim,
+        config.dim,
         config.nbits,
         config.niter,
         config.use_compression
@@ -76,14 +74,30 @@ IndexIVF::IndexIVF(
     LINTDB_THROW_IF_NOT(nlist <= std::numeric_limits<code_t>::max());
 
     this->encoder = std::make_unique<DefaultEncoder>(
-        path, nlist, nbits, niter, dim, use_compression // use compression
+        nlist, nbits, niter, dim, use_compression
     );
 
-    rocksdb::Options options;
-    options.create_if_missing = true;
-    options.create_missing_column_families = true;
+    initialize_inverted_list();
+}
+
+IndexIVF::IndexIVF(const IndexIVF& other, const std::string path): path(path) {
+    // we'll leverage the loading methods and construct the index components from files on disk.
+    Configuration index_config = this->read_metadata(other.path);
+    this->nlist = index_config.nlist;
+    this->nbits = index_config.nbits;
+    this->dim = index_config.dim;
+    this->niter = index_config.niter;
+    this->use_compression = index_config.use_compression;
+    this->read_only = other.read_only;
+
+    auto config = EncoderConfig{
+        nlist, nbits, niter, dim, use_compression
+    };
+    this->encoder = DefaultEncoder::load(other.path, config);
 
     initialize_inverted_list();
+
+    this->save();
 }
 
 void IndexIVF::initialize_inverted_list() {
@@ -117,7 +131,6 @@ void IndexIVF::train(size_t n, std::vector<float>& embeddings) {
 
 void IndexIVF::train(float* embeddings, size_t n, size_t dim) {
     encoder->train(embeddings, n, dim);
-
     this->save();
 }
 
@@ -456,7 +469,6 @@ void IndexIVF::set_centroids(float* data, int n, int dim) {
 
 void IndexIVF::set_weights(const std::vector<float> weights, const std::vector<float> cutoffs, const float avg_residual) {
     encoder->set_weights(weights, cutoffs, avg_residual);
-
 }
 
 
