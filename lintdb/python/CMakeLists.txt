@@ -11,7 +11,7 @@ set(PYTHON_INCLUDE)
 
 set(CMAKE_CXX_STANDARD 17)
 find_package(SWIG REQUIRED COMPONENTS python)
-find_package(Python 3.10 REQUIRED COMPONENTS NumPy Development.Module)
+find_package(Python REQUIRED COMPONENTS NumPy Development.Module)
 find_package(RocksDB CONFIG REQUIRED)
 include(${SWIG_USE_FILE})
 

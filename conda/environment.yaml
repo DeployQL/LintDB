@@ -8,5 +8,6 @@ dependencies:
   - anaconda-client
   - faiss-cpu
   - pytorch::pytorch
+  - conda-forge::numpy
   - pip:
     - chardet

@@ -36,7 +36,9 @@ class TestIndex(unittest.TestCase):
             )
 
         index.add(0, passages)
-        index.search(0, dat, 10, 100)
+        opt = lintdb.SearchOptions()
+        opt.centroid_score_threshold = 0.0
+        index.search(0, dat, 10, 100, opt)
 
 
         ids = list(range(5))
@@ -54,7 +56,9 @@ class TestIndex(unittest.TestCase):
 
         index = lintdb.IndexIVF(dir.name)
         search = np.random.rand(10, 128).astype('float32')
-        index.search(0, search, 10, 10)
+        opt = lintdb.SearchOptions()
+        opt.centroid_score_threshold = 0.0
+        index.search(0, search, 10, 10, opt)
 
     def test_index_merge(self):
         with tempfile.TemporaryDirectory(prefix="lintdb_test-one") as dir_one:

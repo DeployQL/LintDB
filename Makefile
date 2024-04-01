@@ -47,3 +47,6 @@ py-docs:
 	rm -rf docs/build
 	sphinx-apidoc -o docs/source/ ./build/lintdb/python/lintdb
 	cd docs && make html
+
+debug-conda:
+	conda debug lintdb --python 3.10 --output-id 'lintdb-*-py*' 
