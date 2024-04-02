@@ -30,7 +30,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -fopenmp -pthread")
 # therefore, we set this value so that we use a higher sdk version to build it.
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.13)
 # https://conda-forge.org/docs/maintainer/knowledge_base/#newer-c-features-with-old-sdk
-if(APPLE)
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_LIBCPP_DISABLE_AVAILABILITY")
 endif()
 
