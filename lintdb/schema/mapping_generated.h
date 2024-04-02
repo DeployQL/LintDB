@@ -23,8 +23,8 @@ struct DocumentClusterMapping FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::T
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_CENTROIDS = 4
   };
-  const ::flatbuffers::Vector<uint32_t> *centroids() const {
-    return GetPointer<const ::flatbuffers::Vector<uint32_t> *>(VT_CENTROIDS);
+  const ::flatbuffers::Vector<int64_t> *centroids() const {
+    return GetPointer<const ::flatbuffers::Vector<int64_t> *>(VT_CENTROIDS);
   }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -38,7 +38,7 @@ struct DocumentClusterMappingBuilder {
   typedef DocumentClusterMapping Table;
   ::flatbuffers::FlatBufferBuilder &fbb_;
   ::flatbuffers::uoffset_t start_;
-  void add_centroids(::flatbuffers::Offset<::flatbuffers::Vector<uint32_t>> centroids) {
+  void add_centroids(::flatbuffers::Offset<::flatbuffers::Vector<int64_t>> centroids) {
     fbb_.AddOffset(DocumentClusterMapping::VT_CENTROIDS, centroids);
   }
   explicit DocumentClusterMappingBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
@@ -54,7 +54,7 @@ struct DocumentClusterMappingBuilder {
 
 inline ::flatbuffers::Offset<DocumentClusterMapping> CreateDocumentClusterMapping(
     ::flatbuffers::FlatBufferBuilder &_fbb,
-    ::flatbuffers::Offset<::flatbuffers::Vector<uint32_t>> centroids = 0) {
+    ::flatbuffers::Offset<::flatbuffers::Vector<int64_t>> centroids = 0) {
   DocumentClusterMappingBuilder builder_(_fbb);
   builder_.add_centroids(centroids);
   return builder_.Finish();
@@ -62,8 +62,8 @@ inline ::flatbuffers::Offset<DocumentClusterMapping> CreateDocumentClusterMappin
 
 inline ::flatbuffers::Offset<DocumentClusterMapping> CreateDocumentClusterMappingDirect(
     ::flatbuffers::FlatBufferBuilder &_fbb,
-    const std::vector<uint32_t> *centroids = nullptr) {
-  auto centroids__ = centroids ? _fbb.CreateVector<uint32_t>(*centroids) : 0;
+    const std::vector<int64_t> *centroids = nullptr) {
+  auto centroids__ = centroids ? _fbb.CreateVector<int64_t>(*centroids) : 0;
   return lintdb::CreateDocumentClusterMapping(
       _fbb,
       centroids__);

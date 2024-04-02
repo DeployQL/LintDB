@@ -13,32 +13,34 @@ class TestIndex(unittest.TestCase):
         np.random.seed(seed=12345)
         db_dir = tempfile.TemporaryDirectory(prefix="lintdb_test")
         config = lintdb.Configuration()
-        index = lintdb.IndexIVF(db_dir.name, 5, 128, 1, 10)
+        index = lintdb.IndexIVF(db_dir.name, 5, 128, 2, 10)
 
         passages = []
         for i in range(10):
-            data = np.random.normal(i, 2, size=(100, 128)).astype('float32')
+            data = np.full((100, 128), i).astype('float32')
             obj = lintdb.RawPassage(
                 data,
                 i
             )
             passages.append(obj)
+        
+        # create training data. we will use constant data for this, so that we have deterministic clusters.
+        training_data = None
+        for i in range(5):
+            data = np.full((300, 128), i).astype('float32')
+            if training_data is None:
+                training_data = data
+            else:
+                training_data = np.vstack((training_data, data))
 
-        data = np.random.normal(5, 5, size=(1500, 128)).astype('float32')
-        normed_data = normalized(data)
+        normed_data = normalized(training_data)
         index.train(normed_data)
 
-        dat = np.random.normal(2, 1, size=(100, 128)).astype('float32')
+        dat = np.full((100, 128), 1).astype('float32')
         normed_dat = normalized(dat)
-        obj = lintdb.RawPassage(
-                normed_dat,
-                1
-            )
 
         index.add(0, passages)
-        opt = lintdb.SearchOptions()
-        opt.centroid_score_threshold = 0.0
-        index.search(0, dat, 10, 100, opt)
+        index.search(0, normed_dat, 10, 100)
 
 
         ids = list(range(5))
