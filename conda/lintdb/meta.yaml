@@ -58,6 +58,7 @@ outputs:
         - libblas * *openblas
         - openblas 
         - conda-forge::lapack
+        - __osx >={{ MACOSX_DEPLOYMENT_TARGET|default("10.13") }}  # [osx and x86_64]
     test:
       requires:
         - conda-build
@@ -98,6 +99,7 @@ outputs:
         - libblas * *openblas
         - openblas
         - {{ pin_subpackage('liblintdb', exact=True) }}
+        - __osx >={{ MACOSX_DEPLOYMENT_TARGET|default("10.13") }}  # [osx and x86_64]
     test:
       requires:
         - conda-forge::numpy
