@@ -7,7 +7,6 @@
       "rocksdb",
       "flatbuffers",
       {"name": "openblas", "features": ["threads"]},
-      "lapack",
       "gtest",
       "glog",
       "jsoncpp",
