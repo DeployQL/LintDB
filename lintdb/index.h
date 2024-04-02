@@ -8,7 +8,6 @@
 #include <vector>
 
 // #include <rocksdb/db.h>
-// #include <gsl/span>
 #include <unordered_set>
 #include "lintdb/EmbeddingBlock.h"
 #include "lintdb/RawPassage.h"
@@ -17,11 +16,12 @@
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/Encoder.h"
 
+// forward declare these classes and avoid including the rocksdb headers.
 namespace rocksdb {
-class DB;
-class ColumnFamilyHandle;
-}
+    class DB;
+    class ColumnFamilyHandle;
 
+}
 
 namespace lintdb {
 
