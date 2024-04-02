@@ -4,7 +4,6 @@
 #define private public
 #include "lintdb/Binarizer.h"
 #include <cmath>
-#include <glog/logging.h>
 #include "lintdb/invlists/util.h"
 
 
@@ -103,14 +102,6 @@ TEST(BinarizerTests, EncodingTest) {
     std::vector<float> input = {0.1, 0.2, 0.3, 0.1, 0.2, 0.3, 0.1, 0.2, 0.1, 0.2, 0.3, 0.1, 0.2, 0.3, 0.1, 0.2}; // Example input data
     binarizer.train(1, input.data(), 16);
 
-    for (auto cutoff : binarizer.bucket_cutoffs) {
-        LOG(INFO) << "bucket cutoff: " << cutoff;
-    }
-    for (auto bucket : binarizer.bucket_weights) {
-        LOG(INFO) << "bucket weight: " << bucket;
-    }
-
-
     std::vector<uint8_t> output(16 / 8 * nbits, 0); // 
     binarizer.sa_encode(1, input.data(), output.data());
 
@@ -118,6 +109,5 @@ TEST(BinarizerTests, EncodingTest) {
     binarizer.sa_decode(1, output.data(), decoded.data());
 
     ASSERT_EQ(input, decoded);
-    
 
 }

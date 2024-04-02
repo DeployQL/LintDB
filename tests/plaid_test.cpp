@@ -11,7 +11,6 @@
 #include <iostream>
 #include <algorithm>
 #include <stdlib.h>
-#include <glog/logging.h>
 #include <cblas.h>
 #include "lintdb/util.h"
 
@@ -92,7 +91,6 @@ TEST(PlaidTests, CodesSameAsColBERT) {
         }
     }
 
-    LOG(INFO) << "getting our score";
     // for our code, let's get the max per centroid.
     auto max_scores = lintdb::max_score_by_centroid(
         coarse_idx, 
@@ -106,7 +104,6 @@ TEST(PlaidTests, CodesSameAsColBERT) {
         doc_codes,
         0.0
     );
-    LOG(INFO) << "getting colbert score";
     auto expected = colbert(doc_codes, centroid_scores, 5);
 
     EXPECT_FLOAT_EQ(actual, expected);
@@ -151,7 +148,6 @@ TEST(PlaidTests, CodeScoresSameAsColBERT) {
         }
     }
 
-    LOG(INFO) << "getting our score";
     // for our code, let's get the max per centroid.
     auto actual = lintdb::colbert_centroid_score(
         doc_codes,
@@ -160,7 +156,6 @@ TEST(PlaidTests, CodeScoresSameAsColBERT) {
         100, // n_centroids
         -1
     );
-    LOG(INFO) << "getting colbert score";
     auto expected = colbert(doc_codes, centroid_scores, 5);
 
     EXPECT_FLOAT_EQ(actual, expected);
