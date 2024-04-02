@@ -41,6 +41,44 @@ set(LINT_DB_HEADERS ${LINT_DB_HEADERS} PARENT_SCOPE)
 
 add_library(lintdb ${LINT_DB_SRC})
 
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(lintdb PUBLIC OpenMP::OpenMP_CXX)
+endif()
+
+find_package(OpenBLAS CONFIG REQUIRED)
+target_link_libraries(lintdb PRIVATE OpenBLAS::OpenBLAS)
+
+find_package(LAPACK CONFIG REQUIRED)
+target_link_libraries(lintdb PRIVATE LAPACK::LAPACK)
+# find_package(BLAS REQUIRED)
+# target_link_libraries(lintdb PRIVATE ${BLAS_LIBRARIES})
+
+# find_package(LAPACK REQUIRED)
+# target_link_libraries(lintdb PRIVATE ${LAPACK_LIBRARIES})
+  
+# this is heuristically generated, and may not be correct
+find_package(faiss CONFIG REQUIRED)
+target_link_libraries(lintdb PRIVATE faiss)
+
+# this is heuristically generated, and may not be correct
+find_package(RocksDB CONFIG REQUIRED)
+target_link_libraries(lintdb PRIVATE RocksDB::rocksdb)
+
+find_package(flatbuffers CONFIG REQUIRED)
+target_link_libraries(lintdb PRIVATE flatbuffers::flatbuffers)
+
+find_package(glog CONFIG REQUIRED)
+target_link_libraries(lintdb PRIVATE glog::glog)
+
+# this is heuristically generated, and may not be correct
+find_package(Microsoft.GSL CONFIG REQUIRED)
+target_link_libraries(lintdb PRIVATE Microsoft.GSL::GSL)
+
+find_package(jsoncpp CONFIG REQUIRED)
+target_link_libraries(lintdb PRIVATE JsonCpp::JsonCpp)
+
+
 if(NOT WIN32)
   target_compile_options(lintdb PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-mavx2 -mfma -mf16c -mpopcnt>)
 else()
@@ -67,8 +105,6 @@ foreach(header ${LINT_DB_HEADERS})
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lintdb/${dir}
   )
 endforeach()
-
-add_subdirectory(python)
 
 install(TARGETS lintdb
   EXPORT lintdb-targets

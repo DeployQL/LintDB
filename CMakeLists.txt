@@ -10,6 +10,7 @@ cmake_minimum_required(VERSION 3.25)
 
 include(CMakeFindDependencyMacro)
 
+# allow faiss to build on m1 mac.
 set(VCPKG_INSTALL_OPTIONS "--allow-unsupported")
 
 # Setup vcpkg script with CMake (note: should be placed before project() call)
@@ -33,44 +34,22 @@ if(APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_LIBCPP_DISABLE_AVAILABILITY")
 endif()
 
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+
 set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
+
+option(LINTDB_ENABLE_PYTHON "Build Python extension." ON)
 
 add_subdirectory(lintdb)
 
-find_package(OpenMP)
-if(OpenMP_CXX_FOUND)
-    target_link_libraries(lintdb PUBLIC OpenMP::OpenMP_CXX)
+if (LINTDB_ENABLE_PYTHON)
+  add_subdirectory(lintdb/python)
 endif()
 
-find_package(OpenBLAS CONFIG REQUIRED)
-target_link_libraries(lintdb PUBLIC OpenBLAS::OpenBLAS)
-
-find_package(LAPACK CONFIG REQUIRED)
-target_link_libraries(lintdb PUBLIC LAPACK::LAPACK)
-  
-# this is heuristically generated, and may not be correct
-find_package(faiss CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE faiss)
-
-# this is heuristically generated, and may not be correct
-find_package(RocksDB CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE RocksDB::rocksdb)
-
-find_package(flatbuffers CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE flatbuffers::flatbuffers)
-
-find_package(glog CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE glog::glog)
-
-# this is heuristically generated, and may not be correct
-find_package(Microsoft.GSL CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE Microsoft.GSL::GSL)
-
-find_package(jsoncpp CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE JsonCpp::JsonCpp)
-
 include(CTest)
+if(BUILD_TESTING)
 add_subdirectory(tests)
+endif()
 
 # if(BUILD_TESTING)
 # endif()

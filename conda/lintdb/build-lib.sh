@@ -5,6 +5,8 @@ set -e
 
 cmake -B _build \
       -DBUILD_SHARED_LIBS=ON \
+      -DBUILD_TESTING=OFF \
+      -DENABLE_PYTHON=OFF \
       -DCMAKE_INSTALL_LIBDIR=lib \
       -DPython_EXECUTABLE=$PYTHON \
       -DPYTHON_INCLUDE_DIR=$(python -c "import sysconfig; print(sysconfig.get_path('include'))")  \
