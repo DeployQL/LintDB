@@ -63,7 +63,6 @@ outputs:
     test:
       requires:
         - conda-build
-        - openblas
       commands:
         - test -f $PREFIX/lib/liblintdb$SHLIB_EXT       # [not win]
         - conda inspect linkages -p $PREFIX $PKG_NAME  # [not win]
@@ -84,10 +83,10 @@ outputs:
         # - {{ compiler('fortran')}}
         # - conda-forge::fortran-compiler #[linux64]
         # - conda-forge::gfortran #[linux64]
-        - conda-forge::libgcc-ng # [linux64]
-        - conda-forge::libstdcxx-ng # [linux64]
-        - llvm-openmp  # [osx]
-        - libblas
+        # - conda-forge::libgcc-ng # [linux64]
+        # - conda-forge::libstdcxx-ng # [linux64]
+        # - llvm-openmp  # [osx]
+        # - libblas
         - sysroot_linux-64 =2.17 # [linux64]
         - conda-forge::swig >= 4.0.2
         - conda-forge::numpy
@@ -97,13 +96,10 @@ outputs:
         - python {{ python }}
         - conda-forge::numpy
         - {{ pin_subpackage('liblintdb', exact=True) }}
-        - openblas
       run:
         - python {{ python }}
         - conda-forge::numpy
         - packaging
-        - libblas * *openblas
-        - openblas
         - {{ pin_subpackage('liblintdb', exact=True) }}
     test:
       requires:
