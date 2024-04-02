@@ -54,6 +54,7 @@ outputs:
         - conda-forge::swig >=4.0.2
         - conda-forge::numpy
       host:
+        - libblas * *openblas
         - openblas
         - conda-forge::lapack
       run:
@@ -100,6 +101,7 @@ outputs:
         - python {{ python }}
         - conda-forge::numpy
         - packaging
+        - libblas * *openblas
         - openblas
         - {{ pin_subpackage('liblintdb', exact=True) }}
     test:

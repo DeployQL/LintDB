@@ -26,7 +26,7 @@ vcpkg_cmake_configure(
         -DFAISS_ENABLE_PYTHON=OFF  # Requires SWIG
         -DBUILD_TESTING=OFF
         -DCMAKE_BUILD_TYPE=Release
-        # -DBLA_VENDOR=OpenBLAS
+        -DBLA_VENDOR=OpenBLAS
 )
 
 vcpkg_cmake_install()
