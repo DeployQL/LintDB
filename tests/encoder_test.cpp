@@ -8,7 +8,6 @@
 #include <iostream>
 #include <cblas.h>
 #include <filesystem>
-#include <glog/logging.h>
 #include <gsl/span>
 
 TEST(IndexTest, ResidualsAreEncodedCorrectly) {

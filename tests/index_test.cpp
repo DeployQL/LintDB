@@ -9,7 +9,6 @@
 #include <iostream>
 #include <cblas.h>
 #include <filesystem>
-#include <glog/logging.h>
 #include <gsl/span>
 #include "lintdb/util.h"
 
@@ -289,14 +288,11 @@ TEST(IndexTest, MergeCorrectly) {
     opts.expected_id = 1;
     auto results = index.search(lintdb::kDefaultTenant, block, 250, 5, opts);
 
-    LOG(INFO) << "Results: " << results.size();
-
     EXPECT_EQ(results.size(), 2);
 }
 
 
 int main(int argc, char **argv) {
-    google::InitGoogleLogging(argv[0]);
     testing::InitGoogleTest(&argc, argv);
 
     return RUN_ALL_TESTS();

@@ -23,8 +23,8 @@ struct InvertedIndexDocument FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Ta
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_CODES = 4
   };
-  const ::flatbuffers::Vector<uint32_t> *codes() const {
-    return GetPointer<const ::flatbuffers::Vector<uint32_t> *>(VT_CODES);
+  const ::flatbuffers::Vector<int64_t> *codes() const {
+    return GetPointer<const ::flatbuffers::Vector<int64_t> *>(VT_CODES);
   }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -38,7 +38,7 @@ struct InvertedIndexDocumentBuilder {
   typedef InvertedIndexDocument Table;
   ::flatbuffers::FlatBufferBuilder &fbb_;
   ::flatbuffers::uoffset_t start_;
-  void add_codes(::flatbuffers::Offset<::flatbuffers::Vector<uint32_t>> codes) {
+  void add_codes(::flatbuffers::Offset<::flatbuffers::Vector<int64_t>> codes) {
     fbb_.AddOffset(InvertedIndexDocument::VT_CODES, codes);
   }
   explicit InvertedIndexDocumentBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
@@ -54,7 +54,7 @@ struct InvertedIndexDocumentBuilder {
 
 inline ::flatbuffers::Offset<InvertedIndexDocument> CreateInvertedIndexDocument(
     ::flatbuffers::FlatBufferBuilder &_fbb,
-    ::flatbuffers::Offset<::flatbuffers::Vector<uint32_t>> codes = 0) {
+    ::flatbuffers::Offset<::flatbuffers::Vector<int64_t>> codes = 0) {
   InvertedIndexDocumentBuilder builder_(_fbb);
   builder_.add_codes(codes);
   return builder_.Finish();
@@ -62,8 +62,8 @@ inline ::flatbuffers::Offset<InvertedIndexDocument> CreateInvertedIndexDocument(
 
 inline ::flatbuffers::Offset<InvertedIndexDocument> CreateInvertedIndexDocumentDirect(
     ::flatbuffers::FlatBufferBuilder &_fbb,
-    const std::vector<uint32_t> *codes = nullptr) {
-  auto codes__ = codes ? _fbb.CreateVector<uint32_t>(*codes) : 0;
+    const std::vector<int64_t> *codes = nullptr) {
+  auto codes__ = codes ? _fbb.CreateVector<int64_t>(*codes) : 0;
   return lintdb::CreateInvertedIndexDocument(
       _fbb,
       codes__);

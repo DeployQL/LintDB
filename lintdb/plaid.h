@@ -31,10 +31,10 @@ std::vector<float> max_score_by_centroid(
         size_t num_centroids);
 
 float colbert_centroid_score(
-        std::vector<code_t>& doc_codes, 
-        std::vector<float>& centroid_scores,
-        size_t nquery_vectors,
-        size_t n_centroids,
+        std::vector<code_t>& doc_codes, /// codes from the document. each token is assigned a code.
+        std::vector<float>& centroid_scores, /// the score of those codes to the query.
+        size_t nquery_vectors, /// the number of query vectors.
+        size_t n_centroids, /// how many centroids there are. this may change based on how many scores we choose to calculate.
         const idx_t expected_id);
 
 float score_document_by_residuals(

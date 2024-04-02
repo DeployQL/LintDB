@@ -6,6 +6,7 @@
 #include "lintdb/api.h"
 #include "lintdb/util.h"
 #include <numeric>
+#include <algorithm>
 
 namespace lintdb {
 
@@ -37,8 +38,8 @@ float score_documents_by_codes(
 }
 
 float colbert_centroid_score(
-        std::vector<code_t>& doc_codes,
-        std::vector<float>& centroid_scores,
+        std::vector<code_t>& doc_codes, // of size num_doc_tokens. one code per token.
+        std::vector<float>& centroid_scores, // of size nquery_vectors x n_centroids
         size_t nquery_vectors,
         size_t n_centroids,
         const idx_t expected_id) {
@@ -47,12 +48,11 @@ float colbert_centroid_score(
     std::unordered_set<int> seen_codes;
     for (int j = 0; j < doc_codes.size(); j++) {
         auto code = doc_codes[j];
+
         if (seen_codes.find(code) == seen_codes.end()) {
             for (int k = 0; k < nquery_vectors; k++) {
                 per_doc_approx_scores[k] =
                     std::max(per_doc_approx_scores[k], centroid_scores[k * n_centroids + code]);
-                                // centroid_scores
-                                //     [code * nquery_vectors + k]);
             }
             seen_codes.insert(code);
         }

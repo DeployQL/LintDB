@@ -40,26 +40,23 @@ outputs:
     requirements:
       build:
         - {{ compiler('cxx') }}
-        # - {{ compiler('fortran')}}
-        # - conda-forge::fortran-compiler #[linux64]
-        # - conda-forge::gfortran #[linux64]
-        - conda-forge::libgcc-ng # [linux64]
-        - conda-forge::libstdcxx-ng # [linux64]
+        - sysroot_linux-64 =2.17 # [linux64]
         - llvm-openmp  # [osx]
         - libgomp      # [linux]
         - cmake >=3.23.1
         - make  # [not win]
-        # - openblas
-        - libblas
-        - libcblas
-        - conda-forge::lapack
+        - openblas
+        - lapack
         - conda-forge::swig >=4.0.2
         - conda-forge::numpy
       host:
+        - libblas * *openblas
         - openblas
+        - conda-forge::lapack
       run:
         - libblas * *openblas
         - openblas 
+        - conda-forge::lapack
     test:
       requires:
         - conda-build
@@ -72,7 +69,7 @@ outputs:
   - name: lintdb
     script: build-pkg.sh  # [x86_64 and linux]
     script: build-pkg-osx.sh  # [x86_64 and osx]
-    script: build-lib-arm64.sh # [arm64 and osx]
+    script: build-pkg-arm64.sh # [arm64 and osx]
     script: build-pkg-arm64.sh # [not x86_64]
     script: build-pkg.bat  # [win]
     build:
@@ -80,13 +77,9 @@ outputs:
     requirements:
       build:
         - {{ compiler('cxx') }}
-        # - {{ compiler('fortran')}}
-        # - conda-forge::fortran-compiler #[linux64]
-        # - conda-forge::gfortran #[linux64]
-        # - conda-forge::libgcc-ng # [linux64]
-        # - conda-forge::libstdcxx-ng # [linux64]
-        # - llvm-openmp  # [osx]
-        # - libblas
+        - llvm-openmp  # [osx]
+        - openblas
+        - lapack
         - sysroot_linux-64 =2.17 # [linux64]
         - conda-forge::swig >= 4.0.2
         - conda-forge::numpy
@@ -100,6 +93,8 @@ outputs:
         - python {{ python }}
         - conda-forge::numpy
         - packaging
+        - libblas * *openblas
+        - openblas
         - {{ pin_subpackage('liblintdb', exact=True) }}
     test:
       requires:

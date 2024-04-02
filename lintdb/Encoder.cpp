@@ -44,23 +44,18 @@ namespace lintdb {
                     raw_residuals.data() + i * dim,
                     coarse_idx[i]);
         }
-        std::vector<code_t> token_coarse_idx;
-        std::transform(
-                coarse_idx.begin(),
-                coarse_idx.end(),
-                std::back_inserter(token_coarse_idx),
-                [](idx_t idx) { return static_cast<code_t>(idx); });
+
         if (use_compression) {
             std::vector<residual_t> residual_codes(num_tokens * (dim / 8 * nbits));
             binarizer->sa_encode(num_tokens, raw_residuals.data(), residual_codes.data());
             
             return std::make_unique<EncodedDocument>(EncodedDocument(
-                token_coarse_idx, residual_codes, num_tokens, doc.id));
+                coarse_idx, residual_codes, num_tokens, doc.id));
         } else {
             std::vector<residual_t> residual_codes(raw_residuals.begin(), raw_residuals.end());
 
             return std::make_unique<EncodedDocument>(EncodedDocument(
-                token_coarse_idx, residual_codes, num_tokens, doc.id));
+                coarse_idx, residual_codes, num_tokens, doc.id));
         }
 
     }

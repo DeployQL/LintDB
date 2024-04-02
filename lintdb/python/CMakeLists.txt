@@ -12,7 +12,6 @@ set(PYTHON_INCLUDE)
 set(CMAKE_CXX_STANDARD 17)
 find_package(SWIG REQUIRED COMPONENTS python)
 find_package(Python REQUIRED COMPONENTS NumPy Development.Module)
-find_package(RocksDB CONFIG REQUIRED)
 include(${SWIG_USE_FILE})
 
 include(UseSWIG)
@@ -39,6 +38,7 @@ set_source_files_properties(${SRC} PROPERTIES
     USE_TARGET_INCLUDE_DIRECTORIES TRUE
 )
 swig_add_library(pylintdb
+    TYPE SHARED
     LANGUAGE python
     SOURCES ${SRC}
 )
@@ -51,6 +51,18 @@ IF(NOT WIN32)
 else()
     target_compile_options(pylintdb PRIVATE /bigobj)
 endif()
+
+if(TARGET lintdb)
+    set(SWIG_MODULE_pylintdb_EXTRA_DEPS)
+    foreach(h ${LINT_DB_HEADERS})
+        list(APPEND SWIG_MODULE_pylintdb_EXTRA_DEPS "${lintdb_SOURCE_DIR}/lintdb/${h}")
+    endforeach()
+else()
+    find_package(lintdb REQUIRED)
+endif()
+
+find_package(Microsoft.GSL CONFIG REQUIRED)
+target_link_libraries(pylintdb PRIVATE Microsoft.GSL::GSL)
 
 find_package(OpenMP REQUIRED)
 
