@@ -49,17 +49,17 @@ outputs:
         - libgomp      # [linux]
         - cmake >=3.23.1
         - make  # [not win]
-        # - openblas
-        - libblas
-        - libcblas
+        - openblas
         - conda-forge::lapack
         - conda-forge::swig >=4.0.2
         - conda-forge::numpy
       host:
         - openblas
+        - conda-forge::lapack
       run:
         - libblas * *openblas
         - openblas 
+        - conda-forge::lapack
     test:
       requires:
         - conda-build
