@@ -60,38 +60,6 @@ target_link_libraries(pylintdb PRIVATE
     OpenMP::OpenMP_CXX
 )
 
-# find_package(OpenBLAS CONFIG REQUIRED)
-# target_link_libraries(pylintdb PRIVATE OpenBLAS::OpenBLAS)
-
-find_package(LAPACK CONFIG REQUIRED)
-target_link_libraries(pylintdb PRIVATE LAPACK::LAPACK)
-find_package(BLAS REQUIRED)
-target_link_libraries(pylintdb PRIVATE ${BLAS_LIBRARIES})
-
-# find_package(LAPACK REQUIRED)
-# target_link_libraries(pylintdb PRIVATE ${LAPACK_LIBRARIES})
-  
-# this is heuristically generated, and may not be correct
-find_package(faiss CONFIG REQUIRED)
-target_link_libraries(pylintdb PRIVATE faiss)
-
-# this is heuristically generated, and may not be correct
-find_package(RocksDB CONFIG REQUIRED)
-target_link_libraries(pylintdb PRIVATE RocksDB::rocksdb)
-
-find_package(flatbuffers CONFIG REQUIRED)
-target_link_libraries(pylintdb PRIVATE flatbuffers::flatbuffers)
-
-find_package(glog CONFIG REQUIRED)
-target_link_libraries(pylintdb PRIVATE glog::glog)
-
-# this is heuristically generated, and may not be correct
-find_package(Microsoft.GSL CONFIG REQUIRED)
-target_link_libraries(pylintdb PRIVATE Microsoft.GSL::GSL)
-
-find_package(jsoncpp CONFIG REQUIRED)
-target_link_libraries(pylintdb PRIVATE JsonCpp::JsonCpp)
-
 target_include_directories(pylintdb PRIVATE ${PROJECT_SOURCE_DIR}/../..)
 
 configure_file(setup.py setup.py COPYONLY)
