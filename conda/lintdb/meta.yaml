@@ -77,11 +77,6 @@ outputs:
     requirements:
       build:
         - {{ compiler('cxx') }}
-        # - {{ compiler('fortran')}}
-        # - conda-forge::fortran-compiler #[linux64]
-        # - conda-forge::gfortran #[linux64]
-        # - conda-forge::libgcc-ng # [linux64]
-        # - conda-forge::libstdcxx-ng # [linux64]
         - llvm-openmp  # [osx]
         - openblas
         - lapack
