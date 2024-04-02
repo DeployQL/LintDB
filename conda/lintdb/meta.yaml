@@ -72,7 +72,7 @@ outputs:
   - name: lintdb
     script: build-pkg.sh  # [x86_64 and linux]
     script: build-pkg-osx.sh  # [x86_64 and osx]
-    script: build-lib-arm64.sh # [arm64 and osx]
+    script: build-pkg-arm64.sh # [arm64 and osx]
     script: build-pkg-arm64.sh # [not x86_64]
     script: build-pkg.bat  # [win]
     build:
