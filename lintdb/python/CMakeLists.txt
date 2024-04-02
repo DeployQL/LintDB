@@ -12,7 +12,7 @@ set(PYTHON_INCLUDE)
 set(CMAKE_CXX_STANDARD 17)
 find_package(SWIG REQUIRED COMPONENTS python)
 find_package(Python REQUIRED COMPONENTS NumPy Development.Module)
-# find_package(RocksDB CONFIG REQUIRED)
+find_package(RocksDB CONFIG REQUIRED)
 include(${SWIG_USE_FILE})
 
 include(UseSWIG)
@@ -24,8 +24,6 @@ set(SRC lintdb.swig)
 
 
 if(UNIX AND NOT APPLE)
-#   list(APPEND CMAKE_SWIG_FLAGS "-DSWIGWORDSIZE64")
-    # list(APPEND SWIG_EXTRA_COMPILE_OPTIONS "-DSWIGWORDSIZE64")
     set_source_files_properties(${SRC} PROPERTIES 
         SWIG_FLAGS -DSWIGWORDSIZE64
     )
@@ -36,7 +34,10 @@ if(WIN32)
     )
 endif()
 
-set_source_files_properties(${SRC} PROPERTIES CPLUSPLUS ON USE_TARGET_INCLUDE_DIRECTORIES TRUE)
+set_source_files_properties(${SRC} PROPERTIES 
+    CPLUSPLUS ON 
+    USE_TARGET_INCLUDE_DIRECTORIES TRUE
+)
 swig_add_library(pylintdb
     LANGUAGE python
     SOURCES ${SRC}
@@ -44,9 +45,8 @@ swig_add_library(pylintdb
 
 set_property(TARGET pylintdb PROPERTY SWIG_COMPILE_OPTIONS -doxygen)
 set_property(TARGET pylintdb PROPERTY SWIG_USE_TARGET_INCLUDE_DIRECTORIES TRUE)
-# set_property(TARGET pylintdb PROPERTY SWIG_COMPILE_OPTIONS -doxygen)
 
-IF(NOT WIND32)
+IF(NOT WIN32)
     set_target_properties(pylintdb PROPERTIES SUFFIX .so)
 else()
     target_compile_options(pylintdb PRIVATE /bigobj)

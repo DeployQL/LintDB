@@ -7,13 +7,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include <faiss/Clustering.h>
-#include <faiss/IndexAdditiveQuantizer.h>
-#include <faiss/IndexFlat.h>
-#include <faiss/IndexLSH.h>
-#include <faiss/invlists/DirectMap.h>
-#include <rocksdb/db.h>
-#include <gsl/span>
+// #include <rocksdb/db.h>
+// #include <gsl/span>
 #include <unordered_set>
 #include "lintdb/EmbeddingBlock.h"
 #include "lintdb/RawPassage.h"
@@ -21,6 +16,12 @@
 #include "lintdb/exception.h"
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/Encoder.h"
+
+namespace rocksdb {
+class DB;
+class ColumnFamilyHandle;
+}
+
 
 namespace lintdb {
 

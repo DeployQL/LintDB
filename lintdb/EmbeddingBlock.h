@@ -28,15 +28,6 @@ struct EmbeddingBlock {
                 const_cast<float*>(embeddings), num_tokens * dimensions);
     }
 
-    // // specific to numpy
-    // EmbeddingBlock(
-    //     float* embeddings,
-    //     int num_tokens,
-    //     int dimensions
-    // ) : num_tokens(num_tokens), dimensions(dimensions) {
-    //     this->embeddings = gsl::span<float>(const_cast<float*>(embeddings),
-    //     num_tokens * dimensions);
-    // }
 };
 } // namespace lintdb
 

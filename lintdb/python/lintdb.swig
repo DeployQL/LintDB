@@ -7,7 +7,6 @@
 
 #include "lintdb/index.h"
 #include "lintdb/RawPassage.h"
-#include "lintdb/EmbeddingBlock.h"
 #include "lintdb/exception.h"
 #include <stdint.h>
 #include <omp.h>
@@ -125,6 +124,5 @@ namespace std {
 }
 
 // Define the C++ class
-%include "lintdb/EmbeddingBlock.h"
 %include "lintdb/RawPassage.h"  
 %include "lintdb/index.h"

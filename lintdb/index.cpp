@@ -1,9 +1,5 @@
 
 #include "lintdb/index.h"
-#include <faiss/impl/FaissException.h>
-#include <faiss/index_io.h>
-#include <faiss/utils/Heap.h>
-#include <faiss/utils/utils.h>
 #include <glog/logging.h>
 #include <omp.h>
 #include <rocksdb/filter_policy.h>
@@ -26,6 +22,8 @@
 #include <json/json.h>
 #include <json/reader.h>
 #include <rocksdb/utilities/optimistic_transaction_db.h>
+#include <rocksdb/db.h>
+#include <gsl/span>
 
 namespace lintdb {
 IndexIVF::IndexIVF(std::string path, bool read_only): path(path), read_only(read_only) {
