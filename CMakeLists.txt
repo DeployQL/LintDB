@@ -45,8 +45,8 @@ endif()
 find_package(OpenBLAS CONFIG REQUIRED)
 target_link_libraries(lintdb PUBLIC OpenBLAS::OpenBLAS)
 
-find_package(LAPACK CONFIG REQUIRED)
-target_link_libraries(lintdb PUBLIC LAPACK::LAPACK)
+# find_package(LAPACK CONFIG REQUIRED)
+# target_link_libraries(lintdb PUBLIC LAPACK::LAPACK)
   
 # this is heuristically generated, and may not be correct
 find_package(faiss CONFIG REQUIRED)
