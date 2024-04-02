@@ -7,6 +7,8 @@ cmake -B _build \
       -DPython_EXECUTABLE=$PYTHON \
       -DPYTHON_INCLUDE_DIR=$(python -c "import sysconfig; print(sysconfig.get_path('include'))")  \
       -DPYTHON_LIBRARY=$(python -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))") \
+      -DBLA_VENDOR=OpenBLAS \
+      -DBUILD_SHARED_LIBS=ON \
       -DCMAKE_BUILD_TYPE=Release .
 
 make -C _build -j$(nproc) lintdb
