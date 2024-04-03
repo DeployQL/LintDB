@@ -126,11 +126,10 @@ jobs:
           overwrite: true
       - name: Packages uploading
         id: packages-uploading
-        if: inputs.upload == 'true'
-        with:
-          overwrite: false
-          token: ${{secrets.ANACONDA_TOKEN}}
-          user: deployql
+        env:
+          SHOULD_OVERWRITE: false
+          UPLOAD_TOKEN: ${{secrets.ANACONDA_TOKEN}}
+          UPLOAD_USER: deployql
         shell: bash -l {0}
         working-directory: conda/lintdb
         run: |
@@ -138,7 +137,7 @@ jobs:
           #cd ${{ steps.packages-compilation.outputs.out_dir }}
           label=""
           force=""
-          if "${{ INPUT_OVERWRITE }}"; then
+          if "$SHOULD_OVERWRITE"; then
             force="--force"
           fi
             if [ "${{github.event.action}}" == "released" ]; then
@@ -149,14 +148,14 @@ jobs:
               echo "The trigger type ${{github.event.action}} is not compatible with `label: auto`"
               exit 1
             fi
-          export ANACONDA_API_TOKEN=${{ INPUT_TOKEN }}
+          export ANACONDA_API_TOKEN=$UPLOAD_TOKEN
           SHORT_SHA="$(git rev-parse --short $GITHUB_SHA)"
           for dirname in ${{ steps.packages-compilation.outputs.out_dir }}/*; do
             if [ -d "$dirname" ]; then
               for filename in $dirname/*; do
                 if [ "${filename: -8}" == ".tar.bz2" ]; then
-                  echo "anaconda upload --user ${{ INPUT_USER }} $force --label $label $filename"
-                  anaconda upload --user ${{ INPUT_USER }} $force --label $label $filename
+                  echo "anaconda upload --user $UPLOAD_USER $force --label $label $filename"
+                  anaconda upload --user $UPLOAD_USER $force --label $label $filename
                 fi
               done
             fi
