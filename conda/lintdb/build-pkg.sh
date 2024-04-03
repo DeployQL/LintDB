@@ -8,7 +8,7 @@ cmake -B _build_python_${PY_VER} \
       -DBUILD_SHARED_LIBS=ON \
       -DBUILD_TESTING=OFF \
       -Dlintdb_ROOT=_liblintdb_stage/ \
-      -DCMAKE_BUILD_TYPE=Debug \
+      -DCMAKE_BUILD_TYPE=Release \
       -DPython_EXECUTABLE=$PYTHON \
       .
 

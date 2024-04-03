@@ -285,8 +285,12 @@ TEST(IndexTest, MergeCorrectly) {
 
     auto opts = lintdb::SearchOptions();
     opts.centroid_score_threshold = 0;
-    opts.expected_id = 1;
-    auto results = index.search(lintdb::kDefaultTenant, block, 250, 5, opts);
+
+    std::vector<float> buf_two(dim * num_tokens);
+
+    faiss::rand_smooth_vectors(num_tokens, dim, buf_two.data(), 1234);
+    lintdb::EmbeddingBlock block_two{buf_two.data(), num_tokens, dim};
+    auto results = index.search(lintdb::kDefaultTenant, block_two, 250, 5, opts);
 
     EXPECT_EQ(results.size(), 2);
 }

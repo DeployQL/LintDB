@@ -272,14 +272,13 @@ def _evaluate_dataset(rankings, dataset:str, query_type: str, split:str='dev', k
 
     num_total_qids = 0
     for line in queries_dataset:
-        print(line)
         qid = int(line["qid"])
         if qid not in rankings:
             # print(f"WARNING: qid {qid} not found in {rankings_path}!", file=sys.stderr)
             continue
 
         num_total_qids += 1
-        answer_pids = set(line["answer_pids"])
+        answer_pids = set(line['answers']["answer_pids"])
 
         if len(set(rankings[qid][:k]).intersection(answer_pids)) > 0:
             success += 1
@@ -292,6 +291,7 @@ def _evaluate_dataset(rankings, dataset:str, query_type: str, split:str='dev', k
         f"[query_type={query_type}, dataset={dataset}] "
         f"Success@{k}: {success / num_total_qids * 100:.1f}"
     )
+    return success_ids, failure_ids
 
 # copied from colbert/util/evaluate
 def evaluate_dataset(query_type, dataset, split, k, data_rootdir, rankings_path):
@@ -311,14 +311,14 @@ def evaluate_dataset(query_type, dataset, split, k, data_rootdir, rankings_path)
             rankings[qid].append(pid)
             assert rank == len(rankings[qid])
 
-    _evaluate_dataset(rankings, data_path, query_type, k)
+    success_ids, failure_ids = _evaluate_dataset(rankings, dataset, split=split, query_type=query_type, k=k)
 
-    # with open(f"{rankings_path}.failures", "w") as f:
-    #     for qid, answer_pids in failure_ids:
-    #         f.write(f"{qid}\t{answer_pids}\n")
-    # print(
-    #     "success ids: ", success_ids
-    # )
-    # print(
-    #     "failure ids: ", failure_ids
-    # )
+    with open(f"{rankings_path}.failures", "w") as f:
+        for qid, answer_pids in failure_ids:
+            f.write(f"{qid}\t{answer_pids}\n")
+    print(
+        "success ids: ", success_ids
+    )
+    print(
+        "failure ids: ", failure_ids
+    )
