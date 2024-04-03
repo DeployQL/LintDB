@@ -105,9 +105,9 @@ namespace lintdb {
         // therefore, we will write our own to do our own matmul.
         quantizer->search(
                 num_query_tok,
-                data,
+                data, 
                 k_top_centroids,
-                distances.data(),
+                distances.data(),// size: (num_query_tok, k_top_centroids)
                 coarse_idx.data());
         // std::vector<float> query_scores(num_query_tok * nlist, 0);
 
@@ -166,21 +166,15 @@ namespace lintdb {
             
         //     for(idx_t k=0; k < k_top_centroids; k++) {
         //         auto top = token_centroid_scores.back();
-        //         centroid_scores.push_back(top);
+        //         float score = top.first;
+        //         idx_t idx = top.second;
+
         //         token_centroid_scores.pop_back();
-        //     }
 
+        //         coarse_idx[i * k_top_centroids + k] = idx;
+        //         distances[i * k_top_centroids + k] = score;
+        //     }
         //     token_centroid_scores.clear();
-        // }
-
-        // // std::sort(centroid_scores.begin(), centroid_scores.end(), comparator);
-
-        // for (int i = 0; i < num_query_tok; i++) {
-        //     for (int j = 0; j < k_top_centroids; j++) {
-        //         auto idx = i * k_top_centroids + j;
-        //         coarse_idx[idx] = centroid_scores[idx].second;
-        //         distances[idx] = centroid_scores[idx].first;
-        //     }
         // }
     }
 

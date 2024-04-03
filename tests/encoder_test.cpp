@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-
+#define private public
 #include "lintdb/index.h"
 #include "lintdb/EmbeddingBlock.h"
 #include "lintdb/RawPassage.h"
@@ -117,17 +117,40 @@ TEST(EncoderTest, SearchingWorksCorrectly) {
     }
 
 
-    std::vector<float> distances(num_tokens * kclusters);
-    std::vector<int64_t> coarse_idx(num_tokens * kclusters);
-    encoder.search(doc.data(), num_tokens, coarse_idx, distances, kclusters, 0.0);
+    std::vector<float> distances(num_tokens * 5);
+    std::vector<int64_t> coarse_idx(num_tokens * 5);
+    encoder.search(doc.data(), num_tokens, coarse_idx, distances, 5, 0.0);
 
     bool all_zero = true;
     for(size_t i=0; i<num_docs * num_tokens; i++) {
-        if (coarse_idx[i] != 0) {
+        if (coarse_idx[i] != int64_t(0)) {
             all_zero = false;
             break;
         }
     }
     EXPECT_EQ(all_zero, false);
 
+    std::vector<float> expected_distances(num_tokens * 5);
+    std::vector<int64_t> expected_coarse_idx(num_tokens * 5);
+    // ensure this is similar to how the quantizer does it.
+    encoder.quantizer->search(
+        num_tokens,
+        doc.data(), 
+        5,
+        expected_distances.data(),// size: (num_query_tok, k_top_centroids)
+        expected_coarse_idx.data());
+
+    for(size_t i=0; i<num_tokens; i++) {
+        std::unordered_set<idx_t> expected_idx;
+        std::unordered_set<idx_t> idx;
+        for(size_t j=0; j<5; j++) {
+            expected_idx.insert(expected_coarse_idx[i*5 + j]);
+            idx.insert(coarse_idx[i*5 + j]);
+        }
+
+        LOG(INFO) << "top idx: " << coarse_idx[i*5];
+        LOG(INFO) << "top score: " << distances[i*5];
+
+        EXPECT_EQ(expected_idx, idx);
+    }
 }

@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <gsl/span>
 #include "lintdb/util.h"
+#include <unordered_set>
 
 // Demonstrate some basic assertions.
 TEST(IndexTest, InitializesCorrectly) {
@@ -58,20 +59,31 @@ TEST(IndexTest, TrainsCorrectly) {
 
     // without knowing what ivf list we assigned the doc to, make sure one document is indexed.
     // this amounts to a full scan.
+    std::unordered_set<idx_t> unique_ids;
     for(idx_t i=0; i<kclusters; i++) {
+        
         lintdb::Key start{0, i, 0, true};
         lintdb::Key end{0, i, std::numeric_limits<idx_t>::max(), false};
+
+        auto options = rocksdb::ReadOptions();
+        rocksdb::Slice end_slice(end.serialize());
+        options.iterate_upper_bound = &end_slice;
         std::string start_string = start.serialize();
-        std::string end_string = end.serialize();
-        lintdb::ReadOnlyRocksDBInvertedList casted = static_cast<lintdb::ReadOnlyRocksDBInvertedList&>(*index.index_);
-        std::unique_ptr<lintdb::Iterator> it = casted.get_iterator(start_string, end_string);
-        for(; it->has_next(); it->next()) {
-            lintdb::Key key = it->get_key();
+        auto it = std::unique_ptr<rocksdb::Iterator>(index.db->NewIterator(
+            options, index.column_families[lintdb::kIndexColumnIndex]));
+
+        rocksdb::Slice prefix(start_string);
+        it->Seek(prefix);
+        for (; it->Valid(); it->Next()) {
+            auto k = it->key().ToString();
+            auto key = lintdb::Key::from_slice(k);
+
             auto id = key.id;
             EXPECT_EQ(id, idx_t(1));
+            unique_ids.insert(id);
         }
     }
-
+    EXPECT_EQ(unique_ids.size(), 1);
 }
 
 
