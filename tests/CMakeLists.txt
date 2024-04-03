@@ -4,6 +4,7 @@ set(
     plaid_test.cpp
     rocksdb_test.cpp
     binarizer_test.cpp
+    encoder_test.cpp
 )
 
 add_executable(

@@ -52,7 +52,8 @@ namespace lintdb {
             return std::make_unique<EncodedDocument>(EncodedDocument(
                 coarse_idx, residual_codes, num_tokens, doc.id));
         } else {
-            std::vector<residual_t> residual_codes(raw_residuals.begin(), raw_residuals.end());
+            const residual_t* byte_ptr = reinterpret_cast<const residual_t*>(raw_residuals.data());
+            std::vector<residual_t> residual_codes(byte_ptr, byte_ptr + sizeof(float) * raw_residuals.size());
 
             return std::make_unique<EncodedDocument>(EncodedDocument(
                 coarse_idx, residual_codes, num_tokens, doc.id));
@@ -66,6 +67,7 @@ namespace lintdb {
             const size_t num_tokens,
             const size_t dim) const {
         std::vector<float> decoded_embeddings(dim * num_tokens);
+
         for (size_t i = 0; i < num_tokens; i++) {
             auto centroid_id = codes[i];
 
@@ -80,7 +82,11 @@ namespace lintdb {
                     decoded_embeddings[i * dim + j] += decoded_residuals[j];
                 }
             } else {
-                std::memcpy(decoded_embeddings.data(), residuals.data(), dim * num_tokens * sizeof(float));
+                const float* residual_ptr = reinterpret_cast<const float*>(residuals.data() + i * dim * sizeof(float));
+
+                for(size_t j = 0; j < dim; j++) {
+                    decoded_embeddings[i * dim + j] += residual_ptr[j];
+                }
             }
         }
         return decoded_embeddings;
