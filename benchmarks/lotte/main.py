@@ -14,7 +14,7 @@ import numpy as np
 import typer
 import random 
 from typing import List, Annotated
-from common import load_lotte, lintdb_indexing, evaluate_dataset
+from common import load_lotte, lintdb_indexing, evaluate_dataset, lintdb_search
 
 app = typer.Typer()
 
@@ -54,11 +54,14 @@ def colbert(dataset, experiment, split='dev', k: int=5, checkpoint: str = "colbe
         '/home/matt/deployql/LintDB/experiments/colbert-lifestyle-full/benchmarks.lotte.main/2024-03/15/15.56.46/colbert-lifestyle-full.ranking.tsv'
     )
 
+"""
+This command only searches a prebuilt index. Use lotte/multiprocess_indexing.py to index
+"""
 @app.command()
 def lintdb(dataset, experiment, split='dev', k=5, checkpoint: str = "colbert-ir/colbertv2.0"):
     d = load_lotte(dataset, split, stop=40000000)
 
-    lintdb_indexing(
+    lintdb_search(
         experiment, 
         'experiments', 
         d, 

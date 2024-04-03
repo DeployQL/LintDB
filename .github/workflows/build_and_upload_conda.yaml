@@ -145,7 +145,7 @@ jobs:
             elif [ "${{github.event.action}}" == "prereleased" ]; then
               label="dev"
             else
-              echo "The trigger type ${{github.event.action}} is not compatible with `label: auto`"
+              echo "The trigger type ${{github.event.action}} is not compatible with uploading conda packages. Either use 'released' or 'prereleased' triggers."
               exit 1
             fi
           export ANACONDA_API_TOKEN=$UPLOAD_TOKEN
