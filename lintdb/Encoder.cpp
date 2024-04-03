@@ -103,89 +103,85 @@ namespace lintdb {
         // we get back the k top centroid matches per token.
         // faiss' quantizer->search() is slightly slower than doing this ourselves.
         // therefore, we will write our own to do our own matmul.
-        // quantizer->search(
-        //         num_query_tok,
-        //         data,
-        //         k_top_centroids,
-        //         distances.data(),
-        //         coarse_idx.data());
-        std::vector<float> query_scores(num_query_tok * nlist, 0);
-
-        cblas_sgemm(
-                CblasRowMajor,
-                CblasNoTrans,
-                CblasTrans,
+        quantizer->search(
                 num_query_tok,
-                nlist,
-                dim,
-                1.0,
-                data, // size: (num_query_tok x dim)
-                dim,
-                quantizer->get_xb(), // size: (nlist x dim)
-                dim,
-                0.0,
-                query_scores.data(), // size: (num_query_tok x nlist)
-                nlist);
+                data,
+                k_top_centroids,
+                distances.data(),
+                coarse_idx.data());
+        // std::vector<float> query_scores(num_query_tok * nlist, 0);
 
-        bool all_zero = true;
-        for(int i =0; i < num_query_tok*nlist; i++) {
-            if(query_scores[i] > 0) {
-                all_zero = false;
-                break;
-            }
-        }
-        if (all_zero) {
-            LOG(WARNING) << "All centroid scores are zero. There is something likely wrong.";
-        }
+        // cblas_sgemm(
+        //         CblasRowMajor,
+        //         CblasNoTrans,
+        //         CblasTrans,
+        //         num_query_tok,
+        //         nlist,
+        //         dim,
+        //         1.0,
+        //         data, // size: (num_query_tok x dim)
+        //         dim,
+        //         quantizer->get_xb(), // size: (nlist x dim)
+        //         dim,
+        //         0.0,
+        //         query_scores.data(), // size: (num_query_tok x nlist)
+        //         nlist);
 
-        auto comparator = [](std::pair<float, idx_t> p1, std::pair<float, idx_t> p2) {
-            return p1.first > p2.first;
-        };
+        // bool all_zero = true;
+        // for(int i =0; i < num_query_tok*nlist; i++) {
+        //     if(query_scores[i] > 0) {
+        //         all_zero = false;
+        //         break;
+        //     }
+        // }
+        // if (all_zero) {
+        //     LOG(WARNING) << "All centroid scores are zero. There is something likely wrong.";
+        // }
 
-        std::vector<std::pair<float, idx_t>> centroid_scores;
-        centroid_scores.reserve(num_query_tok*k_top_centroids);
+        // auto comparator = [](std::pair<float, idx_t> p1, std::pair<float, idx_t> p2) {
+        //     return p1.first > p2.first;
+        // };
 
-        std::vector<std::pair<float, idx_t>> token_centroid_scores;
-        token_centroid_scores.reserve(k_top_centroids);
+        // std::vector<std::pair<float, idx_t>> centroid_scores(num_query_tok*k_top_centroids);
+        // std::vector<std::pair<float, idx_t>> token_centroid_scores(k_top_centroids);
 
-        VLOG(100) << "searching centroids.";
-        VLOG(100) << "nlist: " << nlist;
-        VLOG(100) << "num_query_tok: " << num_query_tok;
+        // for(int i=0; i < num_query_tok; i++) {
+        //     for (int j=0; j < nlist; j++) {
+        //         idx_t key = j;
+        //         float score = query_scores[i * nlist + j];
+        //         if (token_centroid_scores.size() < k_top_centroids) {
+        //             token_centroid_scores.push_back(std::pair<float, idx_t>(score, key));
 
-        for(int i=0; i < num_query_tok; i++) {
-            for (int j=0; j < nlist; j++) {
-                idx_t key = j;
-                float score = query_scores[i * nlist + j];
-                if (token_centroid_scores.size() < k_top_centroids) {
-                    token_centroid_scores.push_back(std::pair<float, idx_t>(score, key));
+        //             if (token_centroid_scores.size() == k_top_centroids) {
+        //                 std::make_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
+        //             }
+        //         } else if (score > token_centroid_scores.front().first) {
+        //             std::pop_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
+        //             token_centroid_scores.front() = std::pair<float, idx_t>(score, key);
+        //             std::push_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
+        //         }
+        //     }
 
-                    if (token_centroid_scores.size() == k_top_centroids) {
-                        std::make_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
-                    }
-                } else if (score > token_centroid_scores.front().first) {
-                    std::pop_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
-                    token_centroid_scores.front() = std::pair<float, idx_t>(score, key);
-                    std::push_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
-                }
-            }
+        //     std::sort_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
             
-            for(idx_t k=0; k < k_top_centroids; k++) {
-                VLOG(100) << "centroid score: " << token_centroid_scores[k].first;
-                centroid_scores.push_back(token_centroid_scores[k]);
-            }
+        //     for(idx_t k=0; k < k_top_centroids; k++) {
+        //         auto top = token_centroid_scores.back();
+        //         centroid_scores.push_back(top);
+        //         token_centroid_scores.pop_back();
+        //     }
 
-            token_centroid_scores.clear();
-        }
+        //     token_centroid_scores.clear();
+        // }
 
-        // std::sort(centroid_scores.begin(), centroid_scores.end(), comparator);
+        // // std::sort(centroid_scores.begin(), centroid_scores.end(), comparator);
 
-        for (int i = 0; i < num_query_tok; i++) {
-            for (int j = 0; j < k_top_centroids; j++) {
-                auto idx = i * k_top_centroids + j;
-                coarse_idx[idx] = centroid_scores[idx].second;
-                distances[idx] = centroid_scores[idx].first;
-            }
-        }
+        // for (int i = 0; i < num_query_tok; i++) {
+        //     for (int j = 0; j < k_top_centroids; j++) {
+        //         auto idx = i * k_top_centroids + j;
+        //         coarse_idx[idx] = centroid_scores[idx].second;
+        //         distances[idx] = centroid_scores[idx].first;
+        //     }
+        // }
     }
 
     void DefaultEncoder::save(std::string path) {
