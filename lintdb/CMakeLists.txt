@@ -79,18 +79,6 @@ find_package(jsoncpp CONFIG REQUIRED)
 target_link_libraries(lintdb PRIVATE JsonCpp::JsonCpp)
 
 
-if(NOT WIN32)
-  target_compile_options(lintdb PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-mavx2 -mfma -mf16c -mpopcnt>)
-else()
-  # MSVC enables FMA with /arch:AVX2; no separate flags for F16C, POPCNT
-  # Ref. FMA (under /arch:AVX2): https://docs.microsoft.com/en-us/cpp/build/reference/arch-x64
-  # Ref. F16C (2nd paragraph): https://walbourn.github.io/directxmath-avx2/
-  # Ref. POPCNT: https://docs.microsoft.com/en-us/cpp/intrinsics/popcnt16-popcnt-popcnt64
-  target_compile_options(lintdb PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/arch:AVX2>)
-  # we need bigobj for the swig wrapper
-  add_compile_options(/bigobj)
-endif()
-
 target_include_directories(lintdb PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)
 

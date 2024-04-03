@@ -1,16 +1,9 @@
   
 cmake_minimum_required(VERSION 3.25)
 
-# had to set the following env variables
-# export C_INCLUDE_PATH=$(llvm-config --includedir)
-# export CPLUS_INCLUDE_PATH=$(llvm-config --includedir)
-# export LIBRARY_PATH=$(llvm-config --libdir)
-
-# need libomp-dev installed. using clang 14. clang can be installed from the llvm website using their script.
-
 include(CMakeFindDependencyMacro)
 
-# allow faiss to build on m1 mac.
+# allow faiss to build on m1 mac even though it's listed as unsupported.
 set(VCPKG_INSTALL_OPTIONS "--allow-unsupported")
 
 # Setup vcpkg script with CMake (note: should be placed before project() call)
@@ -24,7 +17,7 @@ project(lintdb
 include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -march=native -fopenmp -pthread -D_LIBCPP_DISABLE_AVAILABILITY")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -fopenmp -pthread -D_LIBCPP_DISABLE_AVAILABILITY")
 
 # the below is caused by github actions failing to build flatbuffers.
 # therefore, we set this value so that we use a higher sdk version to build it.
@@ -50,6 +43,3 @@ include(CTest)
 if(BUILD_TESTING)
 add_subdirectory(tests)
 endif()
-
-# if(BUILD_TESTING)
-# endif()
