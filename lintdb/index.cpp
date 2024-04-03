@@ -183,7 +183,7 @@ std::vector<std::pair<float, idx_t>> IndexIVF::get_top_centroids(
         auto key = i;
         auto score = high_scores[i];
         // Note(MB): removing the filtering by score enables searching with exact copies.
-        if (score > 0){
+        // if (score > 0){
             if (centroid_scores.size() < n_probe) {
                 centroid_scores.push_back(std::pair<float, idx_t>(score, key));
 
@@ -195,7 +195,7 @@ std::vector<std::pair<float, idx_t>> IndexIVF::get_top_centroids(
                 centroid_scores.front() = std::pair<float, idx_t>(score, key);
                 std::push_heap(centroid_scores.begin(), centroid_scores.end(), comparator);
             }
-        }
+        // }
     }
 
     if(centroid_scores.size() < n_probe) {

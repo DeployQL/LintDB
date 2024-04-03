@@ -84,3 +84,50 @@ TEST(EncoderTest, NoCompressionWorksCorrectly) {
         EXPECT_EQ(decoded_doc[i], fake_doc[i]);
     }
 }
+
+TEST(EncoderTest, SearchingWorksCorrectly) {
+    size_t dim = 128;
+    // we'll generate num_docs * num_tokens random vectors for training.
+    // keep in mind this needs to be larger than the number of dimensions.
+    size_t num_docs = 100;
+    size_t num_tokens = 100;
+
+    size_t kclusters = 250; // number of centroids to calculate.
+
+    size_t binarize_bits = 2;
+
+    std::vector<float> buf(dim * (num_docs * num_tokens));
+    // fake data where every vector is either all 1s,2s...9s. 
+    for(size_t i=0; i<num_docs * num_tokens; i++) {
+        for(size_t j=0; j<dim; j++) {
+            buf[i*dim + j] = i%11 + 1;
+        }
+    }
+
+    lintdb::DefaultEncoder encoder(kclusters, 2, 2, 128, true);
+    encoder.train(buf.data(), num_docs * num_tokens, dim);
+
+
+    std::vector<float> doc(dim * num_tokens);
+    // fake data where every vector is either all 1s,2s...9s. 
+    for(size_t i=0; i<num_tokens; i++) {
+        for(size_t j=0; j<dim; j++) {
+            doc[i*dim + j] = i%11 + 1;
+        }
+    }
+
+
+    std::vector<float> distances(num_tokens * kclusters);
+    std::vector<int64_t> coarse_idx(num_tokens * kclusters);
+    encoder.search(doc.data(), num_tokens, coarse_idx, distances, kclusters, 0.0);
+
+    bool all_zero = true;
+    for(size_t i=0; i<num_docs * num_tokens; i++) {
+        if (coarse_idx[i] != 0) {
+            all_zero = false;
+            break;
+        }
+    }
+    EXPECT_EQ(all_zero, false);
+
+}

@@ -118,7 +118,7 @@ def lintdb_search(
                     results = index.search(
                         0, # tenant
                        converted, # converted, 
-                        k, # nprobe
+                        64, # nprobe
                         100, # k to return
                         opts
                     )
@@ -126,7 +126,7 @@ def lintdb_search(
                 results = index.search(
                     0,
                     converted, 
-                    k, # nprobe
+                    64, # nprobe
                     100, # k to return
                 )
             for rank, result in enumerate(results):
