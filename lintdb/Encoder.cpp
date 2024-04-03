@@ -127,6 +127,17 @@ namespace lintdb {
                 query_scores.data(), // size: (num_query_tok x nlist)
                 nlist);
 
+        bool all_zero = true;
+        for(int i =0; i < num_query_tok*nlist; i++) {
+            if(query_scores[i] > 0) {
+                all_zero = false;
+                break;
+            }
+        }
+        if (all_zero) {
+            LOG(WARNING) << "All scores are zero. There is something likely wrong.";
+        }
+
         auto comparator = [](std::pair<float, idx_t> p1, std::pair<float, idx_t> p2) {
             return p1.first > p2.first;
         };
@@ -136,6 +147,10 @@ namespace lintdb {
 
         std::vector<std::pair<float, idx_t>> token_centroid_scores;
         token_centroid_scores.reserve(k_top_centroids);
+
+        VLOG(100) << "searching centroids.";
+        VLOG(100) << "nlist: " << nlist;
+        VLOG(100) << "num_query_tok: " << num_query_tok;
 
         for(int i=0; i < num_query_tok; i++) {
             for (int j=0; j < nlist; j++) {
@@ -155,7 +170,7 @@ namespace lintdb {
             }
             
             for(idx_t k=0; k < k_top_centroids; k++) {
-                centroid_scores.emplace_back(token_centroid_scores[k]);
+                centroid_scores.push_back(token_centroid_scores[k]);
             }
 
             token_centroid_scores.clear();
