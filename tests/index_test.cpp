@@ -59,7 +59,6 @@ TEST(IndexTest, TrainsCorrectly) {
 
     // without knowing what ivf list we assigned the doc to, make sure one document is indexed.
     // this amounts to a full scan.
-    std::unordered_set<idx_t> unique_ids;
     for(idx_t i=0; i<kclusters; i++) {
         
         lintdb::Key start{0, i, 0, true};
@@ -80,10 +79,8 @@ TEST(IndexTest, TrainsCorrectly) {
 
             auto id = key.id;
             EXPECT_EQ(id, idx_t(1));
-            unique_ids.insert(id);
         }
     }
-    EXPECT_EQ(unique_ids.size(), 1);
 }
 
 

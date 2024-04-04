@@ -148,7 +148,7 @@ TEST(EncoderTest, SearchingWorksCorrectly) {
             idx.insert(coarse_idx[i*5 + j]);
         }
 
-        LOG(INFO) << "top idx: " << coarse_idx[i*5];
+        LOG(INFO) << "top idx: " << coarse_idx[i*5] << " top expecte";
         LOG(INFO) << "top score: " << distances[i*5];
 
         EXPECT_EQ(expected_idx, idx);

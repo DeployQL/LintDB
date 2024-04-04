@@ -38,7 +38,7 @@ format:
 
 valgrind:
 # we need valgrind?-3.20 to process dwarf5
-	valgrind --trace-children=yes --suppressions=debug/valgrind-python.supp env PYTHONPATH="build/lintdb/python" python ./benchmarks/lotte/main.py
+	valgrind -s --trace-children=yes --track-origins=yes --keep-stacktraces=alloc-and-free --suppressions=debug/valgrind-python.supp python tests/test_index.py
 
 callgrind:
 	valgrind --tool=callgrind PYTHONPATH="build/lintdb/python/build/lib" python ./benchmarks/run_lintdb.py

@@ -88,7 +88,7 @@ def comma_separated(raw: str) -> List[int]:
 
 @app.command()
 def run_failures(dataset, experiment, split='dev',  failure: Annotated[list, typer.Option(parser=comma_separated)] = [], checkpoint: str = "colbert-ir/colbertv2.0"):
-    d = load_lotte(dataset, split, stop=40000000)
+    d = load_lotte(dataset, split, stop=40000)
     with open(f"experiments/{experiment}.ranking.tsv.failures", "r") as f:
         failures = {}
         for line in f:
