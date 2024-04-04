@@ -46,9 +46,6 @@ However, unlike Chroma, LintDB offers multi-tenancy support.
 # Documentation
 For detailed documentation on using LintDB, refer to the official documentation.
 
-## Multi-Tenant
-LintDB has support for multitenancy.
-
 # License
 LintDB is licensed under the Apache 2.0 License. See the LICENSE file for details.
 
