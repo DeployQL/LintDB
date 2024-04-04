@@ -8,7 +8,7 @@ cmake -B _build \
       -DBUILD_TESTING=OFF \
       -DENABLE_PYTHON=OFF \
       -DCMAKE_INSTALL_LIBDIR=lib \
-      -DCMAKE_BUILD_TYPE=Debug .
+      -DCMAKE_BUILD_TYPE=Release .
 
 make -C _build -j$(nproc) lintdb
 

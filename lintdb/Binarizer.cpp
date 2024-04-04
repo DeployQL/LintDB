@@ -313,20 +313,22 @@ namespace lintdb {
         }
     }
 
-    void Binarizer::sa_decode(size_t n, const residual_t* codes, float* x) {
+    void Binarizer::sa_decode(size_t n, const residual_t* residuals, float* x) {
         const size_t npacked_vals_per_byte = (8 / nbits);
+
         const size_t packed_dim = (dim / npacked_vals_per_byte);
-        // for each token vector
+        // for each token doc.
         for (size_t i = 0; i < n; ++i) {
-            // for each residual value
+            // for each packed residual value
             for (int k = 0; k < packed_dim; ++k) {
-                uint8_t packed = codes[i * packed_dim + k];
+                uint8_t packed = residuals[i * packed_dim + k];
                 uint8_t reversed_bitmap_val = reverse_bitmap[packed];
 
                 // hydrate each residual value
                 for (int l=0; l < npacked_vals_per_byte; ++l) {
                     const int idx = k * npacked_vals_per_byte + l;
                     const int bucket_weight_idx = decompression_lut[reversed_bitmap_val * npacked_vals_per_byte + l];
+
                     x[i * dim + idx] = bucket_weights[bucket_weight_idx];
                 }
             }

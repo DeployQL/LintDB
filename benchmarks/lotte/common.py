@@ -69,8 +69,11 @@ def lintdb_search(
         use_compression=False,
         failures={}):
     # let's get the same model.
-    checkpoint_config = ColBERTConfig.load_from_checkpoint(checkpoint)
-    config = ColBERTConfig.from_existing(checkpoint_config, None)
+    config = ColBERTConfig.load_from_checkpoint(checkpoint)
+    config.kmeans_niters=4
+    config.ncells = 2
+    config.ndocs=1024
+    config.centroid_score_threshold=.45
 
     from colbert.modeling.checkpoint import Checkpoint
     from colbert import Searcher

@@ -33,7 +33,7 @@ namespace lintdb {
          * the internal representation that we expect to see in the inverted lists.
          */
         virtual std::unique_ptr<EncodedDocument> encode_vectors(
-                const RawPassage& doc) const = 0;
+                const RawPassage& doc) = 0;
 
         /**
          * Decode vectors translates out of our internal representation.
@@ -76,6 +76,21 @@ namespace lintdb {
             const float centroid_threshold=0.45
         ) = 0;
 
+        /**
+         * score_query returns all dot products for each query token against all centroids.
+        */
+        virtual std::vector<float> score_query(
+            const float* data,
+            const int n
+        ) = 0;
+
+        virtual std::vector<std::pair<float,idx_t>> rank_centroids(
+            const float* data,
+            const int n,
+            const size_t k_top_centroids=1,
+            const float centroid_threshold=0.45
+        ) = 0;
+
         virtual void save(std::string path) = 0;
         virtual void train(const float* embeddings, const size_t n, const size_t dim) = 0;
 
@@ -94,6 +109,8 @@ namespace lintdb {
         size_t niter; // number of iterations to use in k-means clustering.
         size_t dim; // number of dimensions per embedding.
         bool use_compression;
+
+        std::unique_ptr<faiss::IndexFlat> quantizer;
         // create a new encoder
         DefaultEncoder(
             size_t nlist, 
@@ -103,7 +120,7 @@ namespace lintdb {
             bool use_compression=false);
 
         std::unique_ptr<EncodedDocument> encode_vectors(
-                const RawPassage& doc) const override;
+                const RawPassage& doc) override;
 
         std::vector<float> decode_vectors(
                 gsl::span<const code_t> codes,
@@ -128,6 +145,18 @@ namespace lintdb {
             const size_t k_top_centroids=1,
             const float centroid_threshold=0.45
         ) override;
+
+        std::vector<float> score_query(
+            const float* data,
+            const int n
+        ) override;
+
+        std::vector<std::pair<float,idx_t>> rank_centroids(
+            const float* data,
+            const int n,
+            const size_t k_top_centroids,
+            const float centroid_threshold
+        ) override;
         
         static std::unique_ptr<Encoder> load(std::string path, EncoderConfig& config);
         void train(const float* embeddings, const size_t n, const size_t dim) override;
@@ -141,7 +170,6 @@ namespace lintdb {
         void set_weights(const std::vector<float>& weights, const std::vector<float>& cutoffs, const float avg_residual) override;
 
         private:
-        std::unique_ptr<faiss::IndexFlat> quantizer;
         std::unique_ptr<Binarizer> binarizer;
         void save(std::string path) override;
     };
