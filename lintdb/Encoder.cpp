@@ -24,7 +24,7 @@ namespace lintdb {
     }
 
     std::unique_ptr<EncodedDocument> DefaultEncoder::encode_vectors(
-            const RawPassage& doc) const {
+            const RawPassage& doc) {
         LINTDB_THROW_IF_NOT(nlist <= std::numeric_limits<code_t>::max());
         auto num_tokens = doc.embedding_block.num_tokens;
 
@@ -75,9 +75,13 @@ namespace lintdb {
             quantizer->reconstruct(
                     centroid_id, decoded_embeddings.data() + i * dim);
 
+
             if (use_compression) {
                 std::vector<float> decoded_residuals(dim);
-                binarizer->sa_decode(1, residuals.data(), decoded_residuals.data());
+                // TODO (mbarta): we can do a better job of hiding this offset information.
+                // if we move the use_compression check above the for loop, we'd have better success at batching this and moving
+                // the offset into the binarizer.
+                binarizer->sa_decode(1, residuals.data()+ i * dim / 8 / nbits, decoded_residuals.data());
                 for (size_t j = 0; j < dim; j++) {
                     decoded_embeddings[i * dim + j] += decoded_residuals[j];
                 }
@@ -100,15 +104,6 @@ namespace lintdb {
             const size_t k_top_centroids,
             const float centroid_threshold
     ) {
-        // we get back the k top centroid matches per token.
-        // faiss' quantizer->search() is slightly slower than doing this ourselves.
-        // therefore, we will write our own to do our own matmul.
-        // quantizer->search(
-        //         num_query_tok,
-        //         data,
-        //         k_top_centroids,
-        //         distances.data(),
-        //         coarse_idx.data());
         std::vector<float> query_scores(num_query_tok * nlist, 0);
 
         cblas_sgemm(
@@ -119,9 +114,9 @@ namespace lintdb {
                 nlist,
                 dim,
                 1.0,
-                data,
+                data, // size: (num_query_tok x dim)
                 dim,
-                quantizer->get_xb(),
+                quantizer->get_xb(), // size: (nlist x dim)
                 dim,
                 0.0,
                 query_scores.data(), // size: (num_query_tok x nlist)
@@ -153,23 +148,123 @@ namespace lintdb {
                     std::push_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
                 }
             }
+
+            std::sort_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
             
             for(idx_t k=0; k < k_top_centroids; k++) {
-                centroid_scores.emplace_back(token_centroid_scores[k]);
-            }
+                auto top = token_centroid_scores.back();
+                float score = top.first;
+                idx_t idx = top.second;
+                auto pair = std::pair<float, idx_t>(score, idx);
+                centroid_scores.push_back(pair);
 
+                token_centroid_scores.pop_back();
+            }
             token_centroid_scores.clear();
         }
 
-        // std::sort(centroid_scores.begin(), centroid_scores.end(), comparator);
-
-        for (int i = 0; i < num_query_tok; i++) {
-            for (int j = 0; j < k_top_centroids; j++) {
-                auto idx = i * k_top_centroids + j;
-                coarse_idx[idx] = centroid_scores[idx].second;
-                distances[idx] = centroid_scores[idx].first;
+        for(int i=0; i < num_query_tok; i++) {
+            for(int j=0; j < k_top_centroids; j++) {
+                auto pair = centroid_scores[i*k_top_centroids + j];
+                distances[i*k_top_centroids + j] = pair.first;
+                coarse_idx[i*k_top_centroids + j] = pair.second;
             }
         }
+    }
+
+    void DefaultEncoder::search_quantizer(
+        const float* data, // size: (num_query_tok, dim)
+        const int num_query_tok,
+        std::vector<idx_t>& coarse_idx,
+        std::vector<float>& distances,
+        const size_t k_top_centroids,
+        const float centroid_threshold
+    ) {
+        // we get back the k top centroid matches per token.
+        // faiss' quantizer->search() is slightly slower than doing this ourselves.
+        // therefore, we will write our own to do our own matmul.
+        quantizer->search(
+                num_query_tok,
+                data, 
+                k_top_centroids,
+                distances.data(),// size: (num_query_tok, k_top_centroids)
+                coarse_idx.data());
+
+    }
+
+    std::vector<float> DefaultEncoder::score_query(
+        const float* data, // size: (num_query_tok, dim)
+        const int num_query_tok
+    ) {
+        std::vector<float> query_scores(num_query_tok * nlist, 0);
+
+        cblas_sgemm(
+                CblasRowMajor,
+                CblasNoTrans,
+                CblasTrans,
+                num_query_tok,
+                nlist,
+                dim,
+                1.0,
+                data, // size: (num_query_tok x dim)
+                dim,
+                quantizer->get_xb(), // size: (nlist x dim)
+                dim,
+                0.0,
+                query_scores.data(), // size: (num_query_tok x nlist)
+                nlist);
+
+        return query_scores;
+    }
+
+    std::vector<std::pair<float,idx_t>> DefaultEncoder::rank_centroids(
+        const float* data,
+        const int n,
+        const size_t k_top_centroids,
+        const float centroid_threshold
+    ) {
+        std::vector<std::pair<float, idx_t>> centroid_scores;
+        centroid_scores.reserve(n*k_top_centroids);
+
+        std::vector<std::pair<float, idx_t>> token_centroid_scores;
+        token_centroid_scores.reserve(k_top_centroids);
+        
+        auto comparator = [](std::pair<float, idx_t> p1, std::pair<float, idx_t> p2) {
+            return p1.first > p2.first;
+        };
+
+        for(int i=0; i < n; i++) {
+            for (int j=0; j < nlist; j++) {
+                idx_t key = j;
+                float score = data[i * nlist + j];
+                if (token_centroid_scores.size() < k_top_centroids) {
+                    token_centroid_scores.push_back(std::pair<float, idx_t>(score, key));
+
+                    if (token_centroid_scores.size() == k_top_centroids) {
+                        std::make_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
+                    }
+                } else if (score > token_centroid_scores.front().first) {
+                    std::pop_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
+                    token_centroid_scores.front() = std::pair<float, idx_t>(score, key);
+                    std::push_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
+                }
+            }
+
+            std::sort_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
+            
+            for(idx_t k=0; k < k_top_centroids; k++) {
+                auto top = token_centroid_scores.back();
+                float score = top.first;
+                idx_t idx = top.second;
+                auto pair = std::pair<float, idx_t>(score, idx);
+                centroid_scores.push_back(pair);
+
+                token_centroid_scores.pop_back();
+            }
+            token_centroid_scores.clear();
+        }
+
+        return centroid_scores;
     }
 
     void DefaultEncoder::save(std::string path) {

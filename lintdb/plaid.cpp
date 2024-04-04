@@ -42,7 +42,7 @@ float colbert_centroid_score(
         std::vector<float>& centroid_scores, // of size nquery_vectors x n_centroids
         size_t nquery_vectors,
         size_t n_centroids,
-        const idx_t expected_id) {
+        const idx_t doc_id) {
     std::vector<float> per_doc_approx_scores(nquery_vectors, -9999);
 
     std::unordered_set<int> seen_codes;

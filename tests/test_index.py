@@ -38,10 +38,8 @@ class TestIndex(unittest.TestCase):
 
         dat = np.full((100, 128), 1).astype('float32')
         normed_dat = normalized(dat)
-
         index.add(0, passages)
         index.search(0, normed_dat, 10, 100)
-
 
         ids = list(range(5))
         index.remove(0, ids)

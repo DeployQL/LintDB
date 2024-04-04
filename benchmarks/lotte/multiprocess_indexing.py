@@ -91,7 +91,7 @@ def consume_task(result_queue, experiment, nbits, use_compression, checkpoint):
         index.add(0, [doc])
 
 @app.command()
-def run(dataset: str, experiment: str, split: str = 'dev', k: int = 5, num_procs:int=10, nbits: int=1, use_compression: bool = True, checkpoint: str = "colbert-ir/colbertv2.0"):
+def run(dataset: str, experiment: str, split: str = 'dev', k: int = 5, start:int=0, stop:int=40000, num_procs:int=10, nbits: int=1, use_compression: bool = True, checkpoint: str = "colbert-ir/colbertv2.0"):
     print("Loading dataset...")
     d = load_lotte(dataset, split, stop=40000)
     print("Dataset loaded.")

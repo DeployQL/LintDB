@@ -17,6 +17,8 @@ project(lintdb
 include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 17)
+#       {"name": "openblas", "features": ["threads"]},
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -fopenmp -pthread -D_LIBCPP_DISABLE_AVAILABILITY")
 
 # the below is caused by github actions failing to build flatbuffers.

@@ -14,7 +14,7 @@ import numpy as np
 import typer
 import random 
 from typing import List, Annotated
-from common import load_lotte, lintdb_indexing, evaluate_dataset
+from common import load_lotte, lintdb_indexing, evaluate_dataset, lintdb_search
 
 app = typer.Typer()
 
@@ -29,15 +29,14 @@ def colbert(dataset, experiment, split='dev', k: int=5, checkpoint: str = "colbe
         # config.kmeans_niters=4
         start = time.perf_counter()
         indexer = Indexer(checkpoint=checkpoint, config=config)
-        indexer.index(name=experiment, collection=d.collection) # "/path/to/MSMARCO/collection.tsv"
+        indexer.index(name=experiment, collection=d.collection)
         index_duration = time.perf_counter() - start
         print(f"Indexing duration: {index_duration:.2f}s")
 
         searcher = Searcher(index=experiment, config=config, collection=d.collection)
-        # print(searcher.ranker.codec.centroids)
-        # print(searcher.ranker.codec.centroids.shape)
+
         mapped_queries = {id: q for id, q in zip(d.qids, d.queries)}
-        queries = Queries(data = mapped_queries) # "/path/to/MSMARCO/queries.dev.small.tsv"
+        queries = Queries(data = mapped_queries) 
         ranking = searcher.search_all(queries, k=100)
         ranking.save(f"{experiment}.ranking.tsv")
 
@@ -51,14 +50,17 @@ def colbert(dataset, experiment, split='dev', k: int=5, checkpoint: str = "colbe
         split,
         int(k),
         'data/lotte/',
-        '/home/matt/deployql/LintDB/experiments/colbert-lifestyle-full/benchmarks.lotte.main/2024-03/15/15.56.46/colbert-lifestyle-full.ranking.tsv'
+        rankings_path
     )
 
+"""
+This command only searches a prebuilt index. Use lotte/multiprocess_indexing.py to index
+"""
 @app.command()
 def lintdb(dataset, experiment, split='dev', k=5, checkpoint: str = "colbert-ir/colbertv2.0"):
-    d = load_lotte(dataset, split, stop=40000000)
+    d = load_lotte(dataset, split, stop=40000)
 
-    lintdb_indexing(
+    lintdb_search(
         experiment, 
         'experiments', 
         d, 
@@ -85,7 +87,7 @@ def comma_separated(raw: str) -> List[int]:
 
 @app.command()
 def run_failures(dataset, experiment, split='dev',  failure: Annotated[list, typer.Option(parser=comma_separated)] = [], checkpoint: str = "colbert-ir/colbertv2.0"):
-    d = load_lotte(dataset, split, stop=40000000)
+    d = load_lotte(dataset, split, stop=40000)
     with open(f"experiments/{experiment}.ranking.tsv.failures", "r") as f:
         failures = {}
         for line in f:
@@ -94,15 +96,17 @@ def run_failures(dataset, experiment, split='dev',  failure: Annotated[list, typ
             if (int(qid) in failure) or not failure:
                 failures[int(qid)] = [int(x) for x in apids.split(",")]
 
-    # failures = {
-    #     5: [5462],
-    #     # 11: [7767],
-    #     # 13: [4176, 4185, 5814, 4174],
-    #     15: [1925],
-    #     # 16: [3701, 3060, 3051, 3437],
-    #     # 19: [5619]
-    # }
-    lintdb_indexing(
+    failures = {
+        # 0: [2466, 2435, 1641, 4619, 1615]
+        # 5: [5462],
+        # 11: [7767],
+        # 13: [4176, 4185, 5814, 4174],
+        # 15: [1925],
+        # 16: [3701, 3060, 3051, 3437],
+        16: [3701]
+        # 19: [5619]
+    }
+    lintdb_search(
         experiment, 
         'experiments', 
         d, 
@@ -120,14 +124,25 @@ def run_failures_colbert(dataset, experiment, split='dev', k:int=5, failure: Ann
 
 
     # these are failures from lintdb
-    with open(f"experiments/{experiment}.ranking.tsv.failures", "r") as f:
-        failures = {}
-        for line in f:
-            qid, apids = line.strip().split("\t")
-            apids = apids.replace("{", "").replace("}", "")
-            failures[int(qid)] = [int(x) for x in apids.split(",")]
+    # with open(f"experiments/{experiment}.ranking.tsv.failures", "r") as f:
+    #     failures = {}
+    #     for line in f:
+    #         qid, apids = line.strip().split("\t")
+    #         apids = apids.replace("{", "").replace("}", "")
+    #         failures[int(qid)] = [int(x) for x in apids.split(",")]
 
-    with Run().context(RunConfig(nranks=1, experiment='colbert-lifestyle-full')):
+    failures = {
+        # 0: [2466, 2435, 1641, 4619, 1615]
+        # 5: [5462],
+        # 11: [7767],
+        # 13: [4176, 4185, 5814, 4174],
+        # 15: [1925],
+        # 16: [3701, 3060, 3051, 3437],
+        16: [3701]
+        # 19: [5619]
+    }
+
+    with Run().context(RunConfig(nranks=1, experiment='colbert-lifestyle-40k-benchmark')):
         config = ColBERTConfig.load_from_checkpoint(checkpoint)
         config.kmeans_niters=4
         config.ncells = 2
@@ -137,7 +152,7 @@ def run_failures_colbert(dataset, experiment, split='dev', k:int=5, failure: Ann
         # indexer.index(name=experiment, collection=dataset.collection) # "/path/to/MSMARCO/collection.tsv"
         from colbert.modeling.checkpoint import Checkpoint
         from colbert import Searcher
-        searcher = Searcher(index='colbert-lifestyle-full', config=config, collection=d.collection)
+        searcher = Searcher(index='colbert-lifestyle-40k-benchmark', config=config, collection=d.collection)
         
         failure = failure if failure else list(failures.keys())
         for id, apids in [(int(x), failures.get(int(x), [])) for x in failure]:
@@ -158,13 +173,18 @@ def run_failures_colbert(dataset, experiment, split='dev', k:int=5, failure: Ann
             print("cells: ", cells)
             print("scores: ", scores)
 
-            pids, scores = searcher.ranker.generate_candidate_pids(Q_, 2)
-            print("num pids non-unique: ", len(pids.tolist()))
-            import torch
-            sorter = pids.sort()
-            pids = sorter.values
-            pids, pids_count = torch.unique_consecutive(pids, return_counts=True)
-            print("num pids unqiue: ", len(pids.tolist()))
+            # top = scores.topk(2, dim=0, sorted=False)
+            # print("top indices: ", top.indices.tolist())
+            # print("top scores: ", top.values.tolist())
+
+            # doing this results in slightly different scores than if I call retrieve directly?
+            # pids, scores = searcher.ranker.generate_candidate_pids(Q_, 2)
+            # print("num pids non-unique: ", len(pids.tolist()))
+            # import torch
+            # sorter = pids.sort()
+            # pids = sorter.values
+            # pids, pids_count = torch.unique_consecutive(pids, return_counts=True)
+            # print("num pids unqiue: ", len(pids.tolist()))
 
             # this is part of searcher.ranker.rank
             pids, centroid_scores = searcher.ranker.retrieve(config, Q)
@@ -194,59 +214,5 @@ def run_failures_colbert(dataset, experiment, split='dev', k:int=5, failure: Ann
                     print("pid not found: ", pid)
                     continue
 
-            reverse_bitmap = searcher.ranker.codec.reversed_bit_map
-            print(reverse_bitmap)
-
-
-
-def main():
-    dataset = 'lifestyle'
-    datasplit = 'dev'
-    runtime = 'colbert' # lintdb
-
-    d = load_lotte(dataset, datasplit, max_id=40000)
-
-    if runtime == 'colbert':
-        colbert_indexing('colbert-lifestyle-40k-benchmark', '/tmp', d)
-        rankings_path = f"/home/matt/deployql/LintDB/experiments/colbert-lifestyle-full/benchmarks.lotte.main/2024-03/04/17.37.19/colbert.ranking.tsv"
-    elif runtime == 'lintdb':
-        # these are failures when we do our own clustering.
-        # If we use the centroids from the colbert model,
-        # we only fail on 15, which is parity with colbert.
-        failures = {
-            5: [5462],
-            # 11: [7767],
-            # 13: [4176, 4185, 5814, 4174],
-            15: [1925],
-            # 16: [3701, 3060, 3051, 3437],
-            # 19: [5619]
-        }
-        # 
-        # failures from run without compression. I changed how the  floats are stored and read back.
-        # i.e. we didn't cast ebfore, but we are now.
-        #failure ids:  [(5, {5462}), (11, {7767}), (13, {4176, 4185, 5814, 4174}), (15, {1925}), (16, {3701, 3050, 3051, 3437}), (19, {5619})]
-        experiment = 'colbert-full'
-        lintdb_indexing(
-            experiment, 
-            'experiments', 
-            d, 
-            2, 
-            nbits=2,
-            reuse_centroids=True,
-            use_compression=True,
-            # failures=failures
-        )
-        rankings_path = f'experiments/{experiment}.ranking.tsv'
-
-    evaluate_dataset(
-        'search', 
-        dataset,
-        datasplit,
-        5,
-        'data/lotte/',
-        rankings_path
-    )
-
 if __name__ == "__main__":
     app()
-    # main()

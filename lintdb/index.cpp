@@ -183,7 +183,7 @@ std::vector<std::pair<float, idx_t>> IndexIVF::get_top_centroids(
         auto key = i;
         auto score = high_scores[i];
         // Note(MB): removing the filtering by score enables searching with exact copies.
-        // if (score > 0){
+        if (score > 0){
             if (centroid_scores.size() < n_probe) {
                 centroid_scores.push_back(std::pair<float, idx_t>(score, key));
 
@@ -195,7 +195,7 @@ std::vector<std::pair<float, idx_t>> IndexIVF::get_top_centroids(
                 centroid_scores.front() = std::pair<float, idx_t>(score, key);
                 std::push_heap(centroid_scores.begin(), centroid_scores.end(), comparator);
             }
-        // }
+        }
     }
 
     if(centroid_scores.size() < n_probe) {
@@ -257,7 +257,7 @@ std::vector<SearchResult> IndexIVF::search(
 
     std::vector<idx_t> coarse_idx(n*total_centroids_to_calculate);
     std::vector<float> distances(n*total_centroids_to_calculate);
-    encoder->search(
+    encoder->search_quantizer(
         data,
         n,
         coarse_idx,
@@ -265,13 +265,16 @@ std::vector<SearchResult> IndexIVF::search(
         total_centroids_to_calculate,
         centroid_score_threshold
     );
+
     // well, to get to the other side of this, we reorder the distances
     // in order of the centroids.
     std::vector<float> reordered_distances(n*total_centroids_to_calculate);
+
     for(int i=0; i < n; i++) {
         for(int j=0; j < total_centroids_to_calculate; j++) {
             auto current_code = coarse_idx[i*total_centroids_to_calculate+j];
-            reordered_distances[i*total_centroids_to_calculate+current_code] = distances[i*total_centroids_to_calculate+j];
+            float dis = distances[i*total_centroids_to_calculate+j];
+            reordered_distances[i*total_centroids_to_calculate+current_code] = dis;
         }
     }
 
@@ -284,9 +287,25 @@ std::vector<SearchResult> IndexIVF::search(
         k_top_centroids,
         n_probe
     );
+
+    // auto reordered_distances = encoder->score_query(
+    //     data,
+    //     n
+    // );
+
+    // auto centroid_scores = encoder->rank_centroids(
+    //     reordered_distances.data(),
+    //     n,
+    //     k_top_centroids,
+    //     centroid_score_threshold
+    // );
+    
+
     auto num_centroids_to_eval = std::min<size_t>(n_probe, centroid_scores.size());
 
     if (opts.expected_id != -1) {
+        LOG(INFO) << "expected id: " << opts.expected_id;
+        LOG(INFO) << "centroid score size: " << centroid_scores.size();
         auto mapping = index_->get_mapping(tenant, opts.expected_id);
         std::unordered_set<idx_t> mapping_set(mapping.begin(), mapping.end());
         for(int i = 0; i < centroid_scores.size(); i++) {
@@ -351,7 +370,7 @@ std::vector<SearchResult> IndexIVF::search(
             reordered_distances,
             n,
             total_centroids_to_calculate,
-            opts.expected_id
+            doc_codes[i]->id
         );
         pid_scores[i] = std::pair<float, idx_t>(score, doc_codes[i]->id);
     }
@@ -444,7 +463,7 @@ std::vector<SearchResult> IndexIVF::search(
                 });
         if (it != actual_scores.end()) {
             auto pos = it - actual_scores.begin();
-            LOG(INFO) << "expected id found in residual scores: " << pos;
+            LOG(INFO) << "expected id found in residual scores: " << pos << " with score: " << it->first;
             if (pos > num_rerank) {
                 LOG(INFO) << "top 25 cutoff: " << num_rerank << ". expected id has been dropped";
             }
@@ -486,7 +505,6 @@ void IndexIVF::add(const uint64_t tenant, const std::vector<RawPassage>& docs) {
 
 void IndexIVF::add_single(const uint64_t tenant, const RawPassage& doc) {
     auto encoded = encoder->encode_vectors(doc);
-    int i = 0;
 
     index_->add(tenant, std::move(encoded));
 }

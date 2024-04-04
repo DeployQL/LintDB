@@ -41,16 +41,13 @@ def single_search(experiment='colbert-lifestyle-40k-benchmark', dataset:str='lif
         for id, query in zip(d.qids, d.queries):
             embeddings = searcher.encode([query])
 
-            # embeddings = embeddings.squeeze()
-            # print(embeddings.shape)
-
             start = time.perf_counter()
-            # searcher.dense_search(embeddings, k=100)
             results = searcher._search_all_Q(Queries.cast({1: query}), embeddings, k=100)
             latencies.append(time.perf_counter() - start)
             memory.append(get_memory_usage())
-            for k, v in results.toDict():
-                rankings[id] = v
+
+            for k, v in results.todict().items():
+                rankings[id] = [x[0] for x in v]
 
         _evaluate_dataset(rankings, dataset, 'search', k=5)
 

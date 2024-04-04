@@ -22,7 +22,7 @@ from lotte.common import _evaluate_dataset, load_lotte
 app = typer.Typer()
 
 @app.command()
-def single_search(dataset:str='lifestyle', split:str='dev', checkpoint:str='colbert-ir/colbertv2.0', index_path:str='experiments/py_index_bench_colbert-lifestyle-40k-benchmark'):
+def single_search(dataset:str='lifestyle', split:str='dev', checkpoint:str='colbert-ir/colbertv2.0', index_path:str='experiments/py_index_bench_colbert-lifestyle-2024-04-03'):
     checkpoint_config = ColBERTConfig.load_from_checkpoint(checkpoint)
     config = ColBERTConfig.from_existing(checkpoint_config, None)
 

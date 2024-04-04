@@ -58,6 +58,84 @@ def colbert_indexing(experiment: str, exp_path: str, dataset: LoTTeDataset, nbit
         ranking = searcher.search_all(queries, k=100)
         ranking.save(f"{experiment}.ranking.tsv")
 
+def lintdb_search(
+        experiment: str, 
+        exp_path: str, 
+        dataset:LoTTeDataset, 
+        k, 
+        nbits=2,  
+        checkpoint: str = "colbert-ir/colbertv2.0", 
+        reuse_centroids=True, 
+        use_compression=False,
+        failures={}):
+    # let's get the same model.
+    config = ColBERTConfig.load_from_checkpoint(checkpoint)
+    config.kmeans_niters=4
+    config.ncells = 2
+    config.ndocs=1024
+    config.centroid_score_threshold=.45
+
+    from colbert.modeling.checkpoint import Checkpoint
+    from colbert import Searcher
+    checkpoint = Checkpoint(checkpoint, config)
+
+    index_path = f"{exp_path}/py_index_bench_{experiment}"
+    if not os.path.exists(index_path):
+        print("index not found. exiting")
+        return
+    else:
+        print("Loading index")
+        index = ldb.IndexIVF(index_path)
+        if reuse_centroids:
+            print("the index exists, but we are reusing centroids.",
+                  "This isn't supported, because the index relies on the centroids.",
+                  "Please delete the index and rerun.")
+    
+    print("Running search")
+    with open(f"{exp_path}/{experiment}.ranking.tsv", "w") as f:
+        failure_ids=set()
+        if failures:
+            failure_ids = set(failures.keys())
+        for id, query in zip(dataset.qids, dataset.queries):
+            if failures and id not in failure_ids:
+                continue
+            
+            # I want only the query and no padding.
+            # obj = checkpoint.query_tokenizer.tok(query, padding=False, truncation=True, return_tensors='pt')
+            # ids, mask = obj['input_ids'], obj['attention_mask']
+            # embeddings = checkpoint.query(ids, mask)
+            embeddings = checkpoint.queryFromText([query])
+            converted = np.squeeze(embeddings.numpy().astype('float32'))
+            
+            expected_pids = failures.get(id, [])
+
+            # it looks like  nprobe should instead of be num tokens * ncells. we use ncells=2.
+            k = np.shape(converted)[0] * 2
+
+            if expected_pids:
+                print("query id: ", id)
+                for pid in expected_pids:
+                    print("Searching for pid: ", pid)
+                    opts = ldb.SearchOptions()
+                    opts.expected_id = pid
+                    results = index.search(
+                        0, # tenant
+                       converted, # converted, 
+                        64, # nprobe
+                        100, # k to return
+                        opts
+                    )
+            else:
+                results = index.search(
+                    0,
+                    converted, 
+                    64, # nprobe
+                    100, # k to return
+                )
+            for rank, result in enumerate(results):
+                # qid, pid, rank
+                f.write(f"{id}\t{result.id}\t{rank+1}\t{result.score}\n")
+
 def lintdb_indexing(
         experiment: str, 
         exp_path: str, 
@@ -197,14 +275,13 @@ def _evaluate_dataset(rankings, dataset:str, query_type: str, split:str='dev', k
 
     num_total_qids = 0
     for line in queries_dataset:
-        print(line)
         qid = int(line["qid"])
         if qid not in rankings:
             # print(f"WARNING: qid {qid} not found in {rankings_path}!", file=sys.stderr)
             continue
 
         num_total_qids += 1
-        answer_pids = set(line["answer_pids"])
+        answer_pids = set(line['answers']["answer_pids"])
 
         if len(set(rankings[qid][:k]).intersection(answer_pids)) > 0:
             success += 1
@@ -217,6 +294,7 @@ def _evaluate_dataset(rankings, dataset:str, query_type: str, split:str='dev', k
         f"[query_type={query_type}, dataset={dataset}] "
         f"Success@{k}: {success / num_total_qids * 100:.1f}"
     )
+    return success_ids, failure_ids
 
 # copied from colbert/util/evaluate
 def evaluate_dataset(query_type, dataset, split, k, data_rootdir, rankings_path):
@@ -236,14 +314,14 @@ def evaluate_dataset(query_type, dataset, split, k, data_rootdir, rankings_path)
             rankings[qid].append(pid)
             assert rank == len(rankings[qid])
 
-    _evaluate_dataset(rankings, data_path, query_type, k)
+    success_ids, failure_ids = _evaluate_dataset(rankings, dataset, split=split, query_type=query_type, k=k)
 
-    # with open(f"{rankings_path}.failures", "w") as f:
-    #     for qid, answer_pids in failure_ids:
-    #         f.write(f"{qid}\t{answer_pids}\n")
-    # print(
-    #     "success ids: ", success_ids
-    # )
-    # print(
-    #     "failure ids: ", failure_ids
-    # )
+    with open(f"{rankings_path}.failures", "w") as f:
+        for qid, answer_pids in failure_ids:
+            f.write(f"{qid}\t{answer_pids}\n")
+    print(
+        "success ids: ", success_ids
+    )
+    print(
+        "failure ids: ", failure_ids
+    )

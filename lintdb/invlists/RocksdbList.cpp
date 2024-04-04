@@ -33,8 +33,9 @@ void RocksDBInvertedList<DBType>::add(const uint64_t tenant, std::unique_ptr<Enc
     std::unordered_set<idx_t> unique_coarse_idx(
             doc->codes.begin(), doc->codes.end());
     VLOG(100) << "Unique coarse indexes: " << unique_coarse_idx.size();
+
     // store ivf -> doc mapping.
-    for (code_t idx : unique_coarse_idx) {
+    for (const code_t& idx : unique_coarse_idx) {
         Key key = Key{tenant, idx, doc->id};
         std::string k_string = key.serialize();
 
@@ -346,6 +347,9 @@ void WritableRocksDBInvertedList::add(const uint64_t tenant, std::unique_ptr<Enc
     try {
         // store ivf -> doc mapping.
         for (code_t idx : unique_coarse_idx) {
+            VLOG(100) << "Adding document with id: " << doc->id
+                      << " to inverted list " << idx;
+                      
             Key key = Key{tenant, idx, doc->id};
             std::string k_string = key.serialize();
 
@@ -377,7 +381,6 @@ void WritableRocksDBInvertedList::add(const uint64_t tenant, std::unique_ptr<Enc
                                 mapping_ptr->GetSize()));
         assert(mapping_status.ok());
 
-        VLOG(100) << "codes size: " << doc->codes.size();
         auto doc_ptr = create_inverted_index_document(
                 doc->codes.data(), doc->codes.size());
         auto* ptr = doc_ptr->GetBufferPointer();
@@ -391,7 +394,6 @@ void WritableRocksDBInvertedList::add(const uint64_t tenant, std::unique_ptr<Enc
         LINTDB_THROW_IF_NOT(code_status.ok());
 
         assert(doc->residuals.size() > 0);
-        VLOG(100) << "Residuals size: " << doc->residuals.size();
         // store document data.
         auto forward_doc_ptr = create_forward_index_document(
                 doc->num_tokens,
@@ -415,8 +417,6 @@ void WritableRocksDBInvertedList::add(const uint64_t tenant, std::unique_ptr<Enc
         txn->Rollback();
         throw e;
     }
-
-    VLOG(100) << "Added document with id: " << doc->id << " to index.";
 };
 
 
