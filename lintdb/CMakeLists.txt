@@ -78,6 +78,11 @@ target_link_libraries(lintdb PRIVATE Microsoft.GSL::GSL)
 find_package(jsoncpp CONFIG REQUIRED)
 target_link_libraries(lintdb PRIVATE JsonCpp::JsonCpp)
 
+string(FIND "${CMAKE_CXX_FLAGS}" "FINTEGER" finteger_idx)
+if (${finteger_idx} EQUAL -1)
+  target_compile_definitions(lintdb PRIVATE FINTEGER=int)
+endif()
+
 
 target_include_directories(lintdb PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)
