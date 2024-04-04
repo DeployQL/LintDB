@@ -67,6 +67,15 @@ namespace lintdb {
             const float centroid_threshold=0.45
         ) = 0;
 
+        virtual void search_quantizer(
+            const float* data,
+            const int n,
+            std::vector<idx_t>& coarse_idx,
+            std::vector<float>& distances,
+            const size_t k_top_centroids=1,
+            const float centroid_threshold=0.45
+        ) = 0;
+
         virtual void save(std::string path) = 0;
         virtual void train(const float* embeddings, const size_t n, const size_t dim) = 0;
 
@@ -103,6 +112,15 @@ namespace lintdb {
                 size_t dim) const override;
 
         void search(
+            const float* data,
+            const int n,
+            std::vector<idx_t>& coarse_idx,
+            std::vector<float>& distances,
+            const size_t k_top_centroids=1,
+            const float centroid_threshold=0.45
+        ) override;
+
+        void search_quantizer(
             const float* data,
             const int n,
             std::vector<idx_t>& coarse_idx,
