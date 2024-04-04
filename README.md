@@ -1,5 +1,3 @@
-![logo image](docs/source/_static/logo.jpg)
-
 LintDB
 =========
 
