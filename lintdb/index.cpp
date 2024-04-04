@@ -183,7 +183,7 @@ std::vector<std::pair<float, idx_t>> IndexIVF::get_top_centroids(
         auto key = i;
         auto score = high_scores[i];
         // Note(MB): removing the filtering by score enables searching with exact copies.
-        // if (score > 0){
+        if (score > 0){
             if (centroid_scores.size() < n_probe) {
                 centroid_scores.push_back(std::pair<float, idx_t>(score, key));
 
@@ -195,7 +195,7 @@ std::vector<std::pair<float, idx_t>> IndexIVF::get_top_centroids(
                 centroid_scores.front() = std::pair<float, idx_t>(score, key);
                 std::push_heap(centroid_scores.begin(), centroid_scores.end(), comparator);
             }
-        // }
+        }
     }
 
     if(centroid_scores.size() < n_probe) {
@@ -265,7 +265,6 @@ std::vector<SearchResult> IndexIVF::search(
         total_centroids_to_calculate,
         centroid_score_threshold
     );
-    LOG(INFO) << "after centroid search";
     // well, to get to the other side of this, we reorder the distances
     // in order of the centroids.
     std::vector<float> reordered_distances(n*total_centroids_to_calculate);
@@ -285,7 +284,6 @@ std::vector<SearchResult> IndexIVF::search(
         k_top_centroids,
         n_probe
     );
-    LOG(INFO) << "top centroids";
     auto num_centroids_to_eval = std::min<size_t>(n_probe, centroid_scores.size());
 
     if (opts.expected_id != -1) {

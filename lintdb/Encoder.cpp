@@ -118,23 +118,15 @@ namespace lintdb {
                 query_scores.data(), // size: (num_query_tok x nlist)
                 nlist);
 
-        bool all_zero = true;
-        for(int i =0; i < num_query_tok*nlist; i++) {
-            if(query_scores[i] > 0) {
-                all_zero = false;
-                break;
-            }
-        }
-        if (all_zero) {
-            LOG(WARNING) << "All centroid scores are zero. There is something likely wrong.";
-        }
-
         auto comparator = [](std::pair<float, idx_t> p1, std::pair<float, idx_t> p2) {
             return p1.first > p2.first;
         };
 
-        std::vector<std::pair<float, idx_t>> centroid_scores(num_query_tok*k_top_centroids);
-        std::vector<std::pair<float, idx_t>> token_centroid_scores(k_top_centroids);
+        std::vector<std::pair<float, idx_t>> centroid_scores;
+        centroid_scores.reserve(num_query_tok*k_top_centroids);
+
+        std::vector<std::pair<float, idx_t>> token_centroid_scores;
+        token_centroid_scores.reserve(k_top_centroids);
 
         for(int i=0; i < num_query_tok; i++) {
             for (int j=0; j < nlist; j++) {
@@ -163,15 +155,16 @@ namespace lintdb {
                 centroid_scores.push_back(pair);
 
                 token_centroid_scores.pop_back();
-
-                coarse_idx[i * k_top_centroids + k] = idx;
-                distances[i * k_top_centroids + k] = score;
             }
             token_centroid_scores.clear();
         }
 
-        for(auto pair : centroid_scores) {
-            LOG(INFO) << "Centroid score: " << pair.first << " idx: " << pair.second;
+        for(int i=0; i < num_query_tok; i++) {
+            for(int j=0; j < k_top_centroids; j++) {
+                auto pair = centroid_scores[i*k_top_centroids + j];
+                distances[i*k_top_centroids + j] = pair.first;
+                coarse_idx[i*k_top_centroids + j] = pair.second;
+            }
         }
     }
 

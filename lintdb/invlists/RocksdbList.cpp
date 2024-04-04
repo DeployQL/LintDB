@@ -33,6 +33,7 @@ void RocksDBInvertedList<DBType>::add(const uint64_t tenant, std::unique_ptr<Enc
     std::unordered_set<idx_t> unique_coarse_idx(
             doc->codes.begin(), doc->codes.end());
     VLOG(100) << "Unique coarse indexes: " << unique_coarse_idx.size();
+
     // store ivf -> doc mapping.
     for (code_t idx : unique_coarse_idx) {
         Key key = Key{tenant, idx, doc->id};
@@ -340,6 +341,11 @@ void WritableRocksDBInvertedList::add(const uint64_t tenant, std::unique_ptr<Enc
     std::unordered_set<idx_t> unique_coarse_idx(
             doc->codes.begin(), doc->codes.end());
     VLOG(100) << "Unique coarse indexes: " << unique_coarse_idx.size();
+
+    for(auto idx : unique_coarse_idx) {
+        VLOG(100) << "Unique coarse index: " << idx;
+    }
+    
 
     std::unique_ptr<rocksdb::Transaction> txn = std::unique_ptr<rocksdb::Transaction>(db_->BeginTransaction(wo));
 

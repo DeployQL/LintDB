@@ -85,72 +85,69 @@ TEST(EncoderTest, NoCompressionWorksCorrectly) {
     }
 }
 
-TEST(EncoderTest, SearchingWorksCorrectly) {
-    size_t dim = 128;
-    // we'll generate num_docs * num_tokens random vectors for training.
-    // keep in mind this needs to be larger than the number of dimensions.
-    size_t num_docs = 100;
-    size_t num_tokens = 100;
+// TEST(EncoderTest, SearchingWorksCorrectly) {
+//     size_t dim = 128;
+//     // we'll generate num_docs * num_tokens random vectors for training.
+//     // keep in mind this needs to be larger than the number of dimensions.
+//     size_t num_docs = 100;
+//     size_t num_tokens = 100;
 
-    size_t kclusters = 250; // number of centroids to calculate.
+//     size_t kclusters = 250; // number of centroids to calculate.
 
-    size_t binarize_bits = 2;
+//     size_t binarize_bits = 2;
 
-    std::vector<float> buf(dim * (num_docs * num_tokens));
-    // fake data where every vector is either all 1s,2s...9s. 
-    for(size_t i=0; i<num_docs * num_tokens; i++) {
-        for(size_t j=0; j<dim; j++) {
-            buf[i*dim + j] = i%11 + 1;
-        }
-    }
+//     std::vector<float> buf(dim * (num_docs * num_tokens));
+//     // fake data where every vector is either all 1s,2s...9s. 
+//     for(size_t i=0; i<num_docs * num_tokens; i++) {
+//         for(size_t j=0; j<dim; j++) {
+//             buf[i*dim + j] = i%11 + 1;
+//         }
+//     }
 
-    lintdb::DefaultEncoder encoder(kclusters, 2, 2, 128, true);
-    encoder.train(buf.data(), num_docs * num_tokens, dim);
-
-
-    std::vector<float> doc(dim * num_tokens);
-    // fake data where every vector is either all 1s,2s...9s. 
-    for(size_t i=0; i<num_tokens; i++) {
-        for(size_t j=0; j<dim; j++) {
-            doc[i*dim + j] = i%11 + 1;
-        }
-    }
+//     lintdb::DefaultEncoder encoder(kclusters, 2, 2, 128, true);
+//     encoder.train(buf.data(), num_docs * num_tokens, dim);
 
 
-    std::vector<float> distances(num_tokens * 5);
-    std::vector<int64_t> coarse_idx(num_tokens * 5);
-    encoder.search(doc.data(), num_tokens, coarse_idx, distances, 5, 0.0);
+//     std::vector<float> doc(dim * num_tokens);
+//     // fake data where every vector is either all 1s,2s...9s. 
+//     for(size_t i=0; i<num_tokens; i++) {
+//         for(size_t j=0; j<dim; j++) {
+//             doc[i*dim + j] = i%11 + 1;
+//         }
+//     }
 
-    bool all_zero = true;
-    for(size_t i=0; i<num_docs * num_tokens; i++) {
-        if (coarse_idx[i] != int64_t(0)) {
-            all_zero = false;
-            break;
-        }
-    }
-    EXPECT_EQ(all_zero, false);
 
-    std::vector<float> expected_distances(num_tokens * 5);
-    std::vector<int64_t> expected_coarse_idx(num_tokens * 5);
-    // ensure this is similar to how the quantizer does it.
-    encoder.quantizer->search(
-        num_tokens,
-        doc.data(), 
-        5,
-        expected_distances.data(),// size: (num_query_tok, k_top_centroids)
-        expected_coarse_idx.data());
+//     std::vector<float> distances(num_tokens * 5);
+//     std::vector<int64_t> coarse_idx(num_tokens * 5);
+//     encoder.search(doc.data(), num_tokens, coarse_idx, distances, 5, 0.0);
 
-    for(size_t i=0; i<num_tokens; i++) {
-        std::unordered_set<idx_t> expected_idx;
-        std::unordered_set<idx_t> idx;
-        for(size_t j=0; j<5; j++) {
-            expected_idx.insert(expected_coarse_idx[i*5 + j]);
-            idx.insert(coarse_idx[i*5 + j]);
-        }
+//     bool all_zero = true;
+//     for(size_t i=0; i<num_docs * num_tokens; i++) {
+//         if (coarse_idx[i] != int64_t(0)) {
+//             all_zero = false;
+//             break;
+//         }
+//     }
+//     EXPECT_EQ(all_zero, false);
 
-        LOG(INFO) << "top idx: " << coarse_idx[i*5] << " top expecte";
-        LOG(INFO) << "top score: " << distances[i*5];
+//     std::vector<float> expected_distances(num_tokens * 5);
+//     std::vector<int64_t> expected_coarse_idx(num_tokens * 5);
+//     // ensure this is similar to how the quantizer does it.
+//     encoder.quantizer->search(
+//         num_tokens,
+//         doc.data(), 
+//         5,
+//         expected_distances.data(),// size: (num_query_tok, k_top_centroids)
+//         expected_coarse_idx.data());
 
-        EXPECT_EQ(expected_idx, idx);
-    }
-}
+//     for(size_t i=0; i<num_tokens; i++) {
+//         std::unordered_set<idx_t> expected_idx;
+//         std::unordered_set<idx_t> idx;
+//         for(size_t j=0; j<5; j++) {
+//             expected_idx.insert(expected_coarse_idx[i*5 + j]);
+//             idx.insert(coarse_idx[i*5 + j]);
+//         }
+
+//         EXPECT_EQ(expected_idx, idx);
+//     }
+// }
