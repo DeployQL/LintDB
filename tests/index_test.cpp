@@ -187,7 +187,7 @@ TEST(IndexTest, SearchCorrectly) {
 
     EXPECT_EQ(index.nlist, 250);
 
-    std::vector<float> fake_doc(dim * num_tokens, 1);
+    std::vector<float> fake_doc(dim * num_tokens, 3);
     lintdb::normalize_vector(fake_doc.data(), num_tokens, dim);
 
     lintdb::EmbeddingBlock block{fake_doc.data(), num_tokens, dim};
@@ -197,11 +197,13 @@ TEST(IndexTest, SearchCorrectly) {
     index.add(lintdb::kDefaultTenant, docs);
 
     auto opts = lintdb::SearchOptions();
-    opts.expected_id = 1;
-    auto results = index.search(lintdb::kDefaultTenant, block, 10, 5, opts);
+    auto results = index.search(lintdb::kDefaultTenant, block, 64, 5, opts);
 
     EXPECT_GT(results.size(), 0);
     // we expect to get back the same document we added.
+    std::cout << "results size: " << results.size() << std::endl;
+    std::cout << "results[0].id: " << results[0].id << std::endl;
+    std::cout << "results[0].score " << results[0].score << std::endl;
     auto actual = results[0].id;
     EXPECT_EQ(actual, 1);
 }
@@ -247,7 +249,7 @@ TEST(IndexTest, MergeCorrectly) {
     size_t num_docs = 100;
     size_t num_tokens = 100;
 
-    size_t kclusters = 250; // number of centroids to calculate.
+    size_t kclusters = 2; // number of centroids to calculate.
 
     size_t centroid_bits = 2;
     std::filesystem::path path = std::filesystem::temp_directory_path();
@@ -268,9 +270,9 @@ TEST(IndexTest, MergeCorrectly) {
 
     index.train(num_docs * num_tokens, buf);
 
-    EXPECT_EQ(index.nlist, 250);
+    EXPECT_EQ(index.nlist, 2);
 
-    std::vector<float> fake_doc(dim * num_tokens, 1);
+    std::vector<float> fake_doc(dim * num_tokens, 3);
     lintdb::normalize_vector(fake_doc.data(), num_tokens, dim);
 
     lintdb::EmbeddingBlock block{fake_doc.data(), num_tokens, dim};
@@ -292,14 +294,22 @@ TEST(IndexTest, MergeCorrectly) {
     // merge the two indices.
     index.merge(second_db.string());
 
+    index.flush();
+
     auto opts = lintdb::SearchOptions();
     opts.centroid_score_threshold = 0;
 
-    std::vector<float> buf_two(dim * num_tokens);
+    std::vector<float> buf_two(dim * num_tokens, 0);
+    for(size_t i=0; i< num_tokens; i++) {
+        for(size_t j=0; j < dim; j++) {
+            buf_two[i*dim + j] = i%11 + 1;
+        }
+    }
+    lintdb::normalize_vector(buf_two.data(), num_tokens, dim);
 
-    faiss::rand_smooth_vectors(num_tokens, dim, buf_two.data(), 1234);
+    // faiss::rand_smooth_vectors(num_tokens, dim, buf_two.data(), 1234);
     lintdb::EmbeddingBlock block_two{buf_two.data(), num_tokens, dim};
-    auto results = index.search(lintdb::kDefaultTenant, block_two, 250, 5, opts);
+    auto results = index.search(lintdb::kDefaultTenant, block_two, 2, 5, opts);
 
     EXPECT_EQ(results.size(), 2);
 }

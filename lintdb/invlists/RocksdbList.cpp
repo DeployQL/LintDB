@@ -35,7 +35,7 @@ void RocksDBInvertedList<DBType>::add(const uint64_t tenant, std::unique_ptr<Enc
     VLOG(100) << "Unique coarse indexes: " << unique_coarse_idx.size();
 
     // store ivf -> doc mapping.
-    for (code_t idx : unique_coarse_idx) {
+    for (const code_t& idx : unique_coarse_idx) {
         Key key = Key{tenant, idx, doc->id};
         std::string k_string = key.serialize();
 
@@ -347,6 +347,9 @@ void WritableRocksDBInvertedList::add(const uint64_t tenant, std::unique_ptr<Enc
     try {
         // store ivf -> doc mapping.
         for (code_t idx : unique_coarse_idx) {
+            VLOG(100) << "Adding document with id: " << doc->id
+                      << " to inverted list " << idx;
+                      
             Key key = Key{tenant, idx, doc->id};
             std::string k_string = key.serialize();
 

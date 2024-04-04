@@ -505,7 +505,6 @@ void IndexIVF::add(const uint64_t tenant, const std::vector<RawPassage>& docs) {
 
 void IndexIVF::add_single(const uint64_t tenant, const RawPassage& doc) {
     auto encoded = encoder->encode_vectors(doc);
-    int i = 0;
 
     index_->add(tenant, std::move(encoded));
 }
