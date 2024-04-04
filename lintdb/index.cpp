@@ -266,8 +266,8 @@ std::vector<SearchResult> IndexIVF::search(
         centroid_score_threshold
     );
 
-    // well, to get to the other side of this, we reorder the distances
-    // in order of the centroids.
+    // // well, to get to the other side of this, we reorder the distances
+    // // in order of the centroids.
     std::vector<float> reordered_distances(n*total_centroids_to_calculate);
 
     for(int i=0; i < n; i++) {
@@ -287,19 +287,6 @@ std::vector<SearchResult> IndexIVF::search(
         k_top_centroids,
         n_probe
     );
-
-    // auto reordered_distances = encoder->score_query(
-    //     data,
-    //     n
-    // );
-
-    // auto centroid_scores = encoder->rank_centroids(
-    //     reordered_distances.data(),
-    //     n,
-    //     k_top_centroids,
-    //     centroid_score_threshold
-    // );
-    
 
     auto num_centroids_to_eval = std::min<size_t>(n_probe, centroid_scores.size());
 

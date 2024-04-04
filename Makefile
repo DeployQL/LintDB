@@ -8,6 +8,7 @@ build-debug:
 	CC=clang CXX=clang++ cmake -Wall -S . -B build -DCMAKE_MAKE_PROGRAM=make -DCMAKE_BUILD_TYPE=Debug -DLLDB_EXPORT_ALL_SYMBOLS=ON -DBUILD_SHARED_LIBS=ON
 	cmake --build build -j12
 
+
 build-python:
 	cmake --build build -j12
 	cd build/lintdb/python && python setup.py build
@@ -38,7 +39,7 @@ format:
 
 valgrind:
 # we need valgrind?-3.20 to process dwarf5
-	valgrind -s --trace-children=yes --track-origins=yes --keep-stacktraces=alloc-and-free --suppressions=debug/valgrind-python.supp python tests/test_index.py
+	valgrind -s --trace-children=yes --track-origins=yes --keep-stacktraces=alloc-and-free --suppressions=debug/valgrind-python.supp env PYTHONPATH="build/lintdb/python/build/lib" python tests/test_index.py
 
 callgrind:
 	valgrind --tool=callgrind PYTHONPATH="build/lintdb/python/build/lib" python ./benchmarks/run_lintdb.py
