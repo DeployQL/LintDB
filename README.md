@@ -14,7 +14,7 @@ for efficient storage and lookup of token level embeddings.
 LintDB relies on OpenBLAS for accerlated matrix multiplication. To smooth the process of installation, we only support conda.
 
 ```
-conda install lintdb
+conda install lintdb -c deployql
 ```
 
 # Roadmap
@@ -35,7 +35,7 @@ LintDB is one of two databases that support token level embeddings. The other be
 
 ### Vespa
 Vespa is a robust, mature search engine with many features. However, the learning curve to get started and operate Vespa is high.
-With embedded LintDB, there's no setup required. `conda install lintdb` and get started.
+With embedded LintDB, there's no setup required. `conda install lintdb -c deployql` and get started.
 
 ## Embedded
 ### Chroma
