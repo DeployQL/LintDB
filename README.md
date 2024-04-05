@@ -5,7 +5,7 @@ LintDB
 
 # Key Features
 - **Multi vector support**: LintDB stores multiple vectors per document id and calculates the max similarity across vectors to determine relevance. 
-- **Bit-level Compression**: LintDB fully implements PLAID's bit compression, storing 128 dimension embeddings in as low as 32 bytes.  
+- **Bit-level Compression**: LintDB fully implements PLAID's bit compression, storing 128 dimension embeddings in as low as 16 bytes.  
 - **Embedded**: LintDB can be embedded directly into your Python application. No need to setup a separate database.  
 - **Full Support for PLAID and ColBERT**: LintDB is built around PLAID and colbert
 for efficient storage and lookup of token level embeddings.
