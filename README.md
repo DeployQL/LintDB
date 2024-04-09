@@ -1,3 +1,5 @@
+![icon](icon.svg)
+
 LintDB
 =========
 
