@@ -9,6 +9,7 @@ set(
     invlists/RocksdbList.cpp
     invlists/util.cpp
     invlists/EncodedDocument.cpp
+    retriever/PlaidRetriever.cpp
     schema/util.cpp
 )
 
@@ -25,12 +26,15 @@ set(
     EmbeddingBlock.h
     Binarizer.h
     Encoder.h
+    SearchResult.h
     util.h
     invlists/InvertedList.h
     invlists/Iterator.h
     invlists/EncodedDocument.h
     invlists/RocksdbList.h
     invlists/util.h
+    retriever/Retriever.h
+    retriever/PlaidRetriever.h
     schema/forward_index_generated.h
     schema/inverted_index_generated.h
     schema/mapping_generated.h

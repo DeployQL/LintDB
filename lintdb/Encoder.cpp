@@ -64,8 +64,8 @@ namespace lintdb {
     std::vector<float> DefaultEncoder::decode_vectors(
             const gsl::span<const code_t> codes,
             const gsl::span<const residual_t> residuals,
-            const size_t num_tokens,
-            const size_t dim) const {
+            const size_t num_tokens
+        ) const {
         std::vector<float> decoded_embeddings(dim * num_tokens);
 
         for (size_t i = 0; i < num_tokens; i++) {

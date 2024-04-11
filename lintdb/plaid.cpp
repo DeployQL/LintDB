@@ -38,10 +38,10 @@ float score_documents_by_codes(
 }
 
 float colbert_centroid_score(
-        std::vector<code_t>& doc_codes, // of size num_doc_tokens. one code per token.
-        std::vector<float>& centroid_scores, // of size nquery_vectors x n_centroids
-        size_t nquery_vectors,
-        size_t n_centroids,
+        const std::vector<code_t>& doc_codes, // of size num_doc_tokens. one code per token.
+        const std::vector<float>& centroid_scores, // of size nquery_vectors x n_centroids
+        const size_t nquery_vectors,
+        const size_t n_centroids,
         const idx_t doc_id) {
     std::vector<float> per_doc_approx_scores(nquery_vectors, -9999);
 
