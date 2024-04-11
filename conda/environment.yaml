@@ -1,4 +1,4 @@
-name: lintdb-build
+name: lintdb-cmake
 channels:
   - pytorch
   - conda-forge
@@ -9,5 +9,6 @@ dependencies:
   - faiss-cpu
   - pytorch::pytorch
   - conda-forge::numpy
+  - pytest
   - pip:
     - chardet
