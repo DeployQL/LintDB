@@ -19,23 +19,6 @@ jobs:
           # Do not use if not needed, since it slows down the checkout of sources.
           fetch-depth: 0
 
-      - name: Conda environment creation and activation
-        uses: conda-incubator/setup-miniconda@v3
-        with:
-          activate-environment: lintdb-cmake
-          environment-files: conda/environment.yaml
-          python-version: 3.10
-          use-mamba: true
-          mamba-version: "*"
-          channels: conda-forge,pytorch,defaults
-          auto-update-conda: false
-          auto-activate-base: false
-          show-channel-urls: true
-      - name: Get Date
-        id: install pytest
-        run: echo "today=$(/bin/date -u '+%Y%m%d')" >> $GITHUB_OUTPUT
-        shell: bash
-
       - uses: lukka/get-cmake@latest
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
