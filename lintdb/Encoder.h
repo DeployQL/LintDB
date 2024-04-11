@@ -28,6 +28,7 @@ namespace lintdb {
         virtual ~Encoder() = default;
 
         bool is_trained = false;
+        size_t dim;
             /**
          * Encode vectors translates the embeddings given to us in RawPassage to
          * the internal representation that we expect to see in the inverted lists.
@@ -44,8 +45,8 @@ namespace lintdb {
         virtual std::vector<float> decode_vectors(
                 const gsl::span<const code_t> codes,
                 const gsl::span<const residual_t> residuals,
-                const size_t num_tokens,
-                const size_t dim) const = 0;
+                const size_t num_tokens
+            ) const = 0;
 
         /**
          * Given a query, search for the nearest centroids.
@@ -125,8 +126,8 @@ namespace lintdb {
         std::vector<float> decode_vectors(
                 gsl::span<const code_t> codes,
                 gsl::span<const residual_t> residuals,
-                size_t num_tokens,
-                size_t dim) const override;
+                size_t num_tokens
+        ) const override;
 
         void search(
             const float* data,

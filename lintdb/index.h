@@ -7,7 +7,6 @@
 #include <unordered_map>
 #include <vector>
 
-// #include <rocksdb/db.h>
 #include <unordered_set>
 #include "lintdb/EmbeddingBlock.h"
 #include "lintdb/RawPassage.h"
@@ -15,6 +14,9 @@
 #include "lintdb/exception.h"
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/Encoder.h"
+#include "lintdb/SearchResult.h"
+#include "lintdb/SearchOptions.h"
+#include "lintdb/retriever/PlaidRetriever.h"
 
 // forward declare these classes and avoid including the rocksdb headers.
 namespace rocksdb {
@@ -26,15 +28,6 @@ namespace rocksdb {
 namespace lintdb {
 
 static const std::string METADATA_FILENAME = "_lintdb_metadata.json";
-
-/**
- * SearchResult is a simple struct to hold the results of a search.
- * 
-*/
-struct SearchResult {
-    idx_t id; 
-    float score;
-};
 
 /**
  * Configuration of the Index. 
@@ -54,27 +47,6 @@ struct Configuration {
             dim == other.dim && 
             use_compression == other.use_compression;
     }
-};
-
-/**
- * SearchOptions enables custom searching behavior. 
- * 
- * These options expose ways to tradeoff recall and latency at different levels of retrieval.
- * Searching more centroids:
- * - decrease centroid_score_threshold and increase k_top_centroids.
- * - increase n_probe in search()
- * 
- * Decreasing latency:
- * - increase centroid_score_threshold and decrease k_top_centroids.
- * - decrease n_probe in search()
-*/
-struct SearchOptions {
-    idx_t expected_id = -1; /// expects a document id in the return result. prints additional information during execution. useful for debugging.
-    float centroid_score_threshold = 0.45; /// the threshold for centroid scores. 
-    size_t k_top_centroids = 2; /// the number of top centroids to consider. 
-    size_t num_second_pass = 1024; /// the number of second pass candidates to consider. 
-
-    SearchOptions(): expected_id(-1) {};
 };
 
 /**
@@ -221,7 +193,8 @@ struct IndexIVF {
     std::shared_ptr<rocksdb::DB> db;
     std::vector<rocksdb::ColumnFamilyHandle*> column_families;
 
-    std::unique_ptr<Encoder> encoder;
+    std::shared_ptr<Encoder> encoder;
+    std::unique_ptr<PlaidRetriever> retriever;
 
     size_t dim; /// number of dimensions per embedding.
 
@@ -229,7 +202,7 @@ struct IndexIVF {
     void initialize_inverted_list();
 
     /// the inverted list data structure.
-    std::unique_ptr<ForwardIndex> index_;
+    std::shared_ptr<ForwardIndex> index_;
     std::unordered_set<idx_t> get_pids(const idx_t ivf_id) const;
     std::vector<std::pair<float, idx_t>> get_top_centroids( 
         const std::vector<idx_t>& coarse_idx,

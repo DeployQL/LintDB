@@ -45,6 +45,7 @@ IndexIVF::IndexIVF(std::string path, bool read_only): path(path), read_only(read
 
     initialize_inverted_list();
 
+    this->retriever = std::make_unique<PlaidRetriever>(PlaidRetriever(this->index_, this->encoder));
 }
 
 IndexIVF::IndexIVF(std::string path, Configuration& config)
@@ -76,6 +77,8 @@ IndexIVF::IndexIVF(
     );
 
     initialize_inverted_list();
+
+    this->retriever = std::make_unique<PlaidRetriever>(PlaidRetriever(this->index_, this->encoder));
 }
 
 IndexIVF::IndexIVF(const IndexIVF& other, const std::string path) {
@@ -96,6 +99,8 @@ IndexIVF::IndexIVF(const IndexIVF& other, const std::string path) {
     this->encoder = DefaultEncoder::load(other.path, config);
 
     initialize_inverted_list();
+
+    this->retriever = std::make_unique<PlaidRetriever>(PlaidRetriever(this->index_, this->encoder));
 
     this->save();
 }
@@ -332,143 +337,26 @@ std::vector<SearchResult> IndexIVF::search(
         return std::vector<SearchResult>();
     }
 
-    /**
-     * score by passage codes
-     */
-    std::vector<idx_t> pid_list(global_pids.begin(), global_pids.end());
-    auto doc_codes = index_->get_codes(tenant, pid_list);
+    auto pid_list = std::vector<idx_t>(global_pids.begin(), global_pids.end());
 
-    // create a mapping from pid to the index. we'll need this to hydrate
-    // residuals.
-    std::unordered_map<idx_t, size_t> pid_to_index;
-    for (size_t i = 0; i < pid_list.size(); i++) {
-        auto id = doc_codes[i]->id;
-        pid_to_index[id] = i;
-    }
+    gsl::span<const float> query_span = gsl::span(data, n);
+    PlaidOptions plaid_options = PlaidOptions{
+        .num_second_pass = opts.num_second_pass,
+        .total_centroids_to_calculate = nlist,
+        .expected_id = opts.expected_id
+    };
 
-    std::vector<std::pair<float, idx_t>> pid_scores(pid_list.size());
-
-    #pragma omp for
-    for (int i = 0; i < pid_list.size(); i++) {
-        auto codes = doc_codes[i]->codes;
-
-        float score = colbert_centroid_score(
-            codes,
-            reordered_distances,
-            n,
-            total_centroids_to_calculate,
-            doc_codes[i]->id
-        );
-        pid_scores[i] = std::pair<float, idx_t>(score, doc_codes[i]->id);
-    }
-
-
-    VLOG(10) << "number of passages to evaluate: " << pid_scores.size();
-    assert(pid_scores.size() == pid_list.size());
-    // according to the paper, we take the top 25%.
-    std::sort(
-            pid_scores.begin(),
-            pid_scores.end(),
-            std::greater<std::pair<float, idx_t>>());
-
-    // colBERT has a ndocs param which limits the number of documents to score.
-    size_t cutoff = pid_scores.size();
-    if (num_second_pass != 0 ) {
-        cutoff = num_second_pass;
-    }
-    auto num_rerank = std::max(size_t(1), cutoff / 4);
-    num_rerank = std::min(num_rerank, pid_scores.size());
-
-    if (opts.expected_id != -1) {
-        auto it = std::find_if(
-                pid_scores.begin(),
-                pid_scores.end(),
-                [opts](std::pair<float, idx_t> p) {
-                    return p.second == opts.expected_id;
-                });
-        if (it != pid_scores.end()) {
-            auto pos = it - pid_scores.begin();
-            LOG(INFO) << "found expected id in pid code scores at position: " << pos << " score: " << it->first;
-            if (pos > num_rerank) {
-                LOG(INFO) << "top 25 cutoff: " << num_rerank << ". expected id is not being reranked";
-            }
-        }
-    }
-
-    VLOG(10) << "num to rerank: " << num_rerank;
-    std::vector<std::pair<float, idx_t>> top_25_scores(
-            pid_scores.begin(), pid_scores.begin() + num_rerank);
-
-    /**
-     * score by passage residuals
-     */
-    std::vector<idx_t> top_25_ids;
-    std::transform(
-            top_25_scores.begin(),
-            top_25_scores.end(),
-            std::back_inserter(top_25_ids),
-            [](std::pair<float, idx_t> p) { return p.second; });
-    auto doc_residuals = index_->get_residuals(tenant, top_25_ids);
-
-    std::vector<std::pair<float, idx_t>> actual_scores(top_25_ids.size());
-#pragma omp for
-    for (int i = 0; i < top_25_ids.size(); i++) {
-        auto residuals = doc_residuals[i]->residuals;
-
-        auto codes = doc_codes[pid_to_index[doc_residuals[i]->id]]->codes;
-
-        std::vector<float> decompressed = encoder->decode_vectors(
-            gsl::span<code_t>(codes),
-            gsl::span<residual_t>(residuals),
-            doc_residuals[i]->num_tokens,
-            dim);
-
-        const auto data_span = gsl::span(data, n * dim);
-        float score = score_document_by_residuals(
-            data_span,
-            n,
-            decompressed.data(),
-            doc_residuals[i]->num_tokens,
-            dim,
-            true);
-
-        actual_scores[i] = std::pair<float, idx_t>(score, top_25_ids[i]);
-    }
-    // according to the paper, we take the top 25%.
-    std::sort(
-        actual_scores.begin(),
-        actual_scores.end(),
-        std::greater<std::pair<float, idx_t>>()
+    auto results = this->retriever->retrieve(
+        tenant,
+        pid_list,
+        reordered_distances,
+        query_span,
+        n,
+        k,
+        plaid_options
     );
 
-    if (opts.expected_id != -1) {
-        auto it = std::find_if(
-                actual_scores.begin(),
-                actual_scores.end(),
-                [opts](std::pair<float, idx_t> p) {
-                    return p.second == opts.expected_id;
-                });
-        if (it != actual_scores.end()) {
-            auto pos = it - actual_scores.begin();
-            LOG(INFO) << "expected id found in residual scores: " << pos << " with score: " << it->first;
-            if (pos > num_rerank) {
-                LOG(INFO) << "top 25 cutoff: " << num_rerank << ". expected id has been dropped";
-            }
-        }
-    }
-
-    size_t num_to_return = std::min<size_t>(actual_scores.size(), k);
-    std::vector<std::pair<float, idx_t>> top_k_scores(
-            actual_scores.begin(), actual_scores.begin() + num_to_return);
-
-    std::vector<SearchResult> results;
-    std::transform(
-            top_k_scores.begin(),
-            top_k_scores.end(),
-            std::back_inserter(results),
-            [](std::pair<float, idx_t> p) {
-                return SearchResult{p.second, p.first};
-            });
+    
 
     return results;
 }

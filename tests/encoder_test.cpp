@@ -75,7 +75,7 @@ TEST(EncoderTest, NoCompressionWorksCorrectly) {
     // our encoded residuals should be the same size they were before encoding, taking the float size into account.
     EXPECT_EQ(encoded_doc->residuals.size(), num_tokens * dim * sizeof(float));
 
-    auto decoded_doc = encoder.decode_vectors(encoded_doc->codes, encoded_doc->residuals, num_tokens, dim);
+    auto decoded_doc = encoder.decode_vectors(encoded_doc->codes, encoded_doc->residuals, num_tokens);
     
     // our decoded doc gives us back the same token embedding size.
     EXPECT_EQ(decoded_doc.size(), num_tokens*dim);

@@ -11,10 +11,12 @@ build:
 
 about:
   home: https://github.com/DeployQL/lintdb
-  license: MIT
-  license_family: MIT
+  license: Apache 2
+  license_family: Apache
   license_file: LICENSE
   summary: A multi-vector database for token level interaction.
+  description: |
+    LintDB is a multi-vector database meant for Gen AI. LintDB natively supports late interaction like colBERT and PLAID. 
 
 source:
   git_url: ../../
