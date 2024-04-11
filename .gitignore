@@ -54,6 +54,7 @@ Cargo.lock
 
 vcpkg_installed
 build
+builds
 .vscode
 
 data
