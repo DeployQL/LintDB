@@ -32,11 +32,11 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
 
-option(LINTDB_ENABLE_PYTHON "Build Python extension." ON)
+option(ENABLE_PYTHON "Build Python extension." ON)
 
 add_subdirectory(lintdb)
 
-if (LINTDB_ENABLE_PYTHON)
+if (ENABLE_PYTHON)
   add_subdirectory(lintdb/python)
 endif()
 
