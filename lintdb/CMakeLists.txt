@@ -55,11 +55,6 @@ target_link_libraries(lintdb PRIVATE OpenBLAS::OpenBLAS)
 
 find_package(LAPACK CONFIG REQUIRED)
 target_link_libraries(lintdb PRIVATE LAPACK::LAPACK)
-# find_package(BLAS REQUIRED)
-# target_link_libraries(lintdb PRIVATE ${BLAS_LIBRARIES})
-
-# find_package(LAPACK REQUIRED)
-# target_link_libraries(lintdb PRIVATE ${LAPACK_LIBRARIES})
   
 # this is heuristically generated, and may not be correct
 find_package(faiss CONFIG REQUIRED)
@@ -87,6 +82,12 @@ if (${finteger_idx} EQUAL -1)
   target_compile_definitions(lintdb PRIVATE FINTEGER=int)
 endif()
 
+
+if(MSVC)
+  target_compile_options(lintdb PRIVATE /W4 /WX)
+else()
+  target_compile_options(lintdb PRIVATE -Wall -Wpedantic)
+endif()
 
 target_include_directories(lintdb PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)

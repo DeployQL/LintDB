@@ -28,7 +28,7 @@ struct RawPassage {
             const float* block, /// the embeddings for the document.
             int num_tokens, /// the number of tokens in the document.
             int dim, /// dimensions of the embeddings.
-            int64_t id): id(id), embedding_block(block, num_tokens, dim){}
+            int64_t id): embedding_block(block, num_tokens, dim), id(id){}
 };
 } /// namespace lintdb
 

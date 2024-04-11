@@ -17,7 +17,6 @@ project(lintdb
 include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 17)
-#       {"name": "openblas", "features": ["threads"]},
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O2 -fopenmp -pthread -D_LIBCPP_DISABLE_AVAILABILITY")
 
@@ -33,11 +32,11 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
 
-option(LINTDB_ENABLE_PYTHON "Build Python extension." ON)
+option(ENABLE_PYTHON "Build Python extension." ON)
 
 add_subdirectory(lintdb)
 
-if (LINTDB_ENABLE_PYTHON)
+if (ENABLE_PYTHON)
   add_subdirectory(lintdb/python)
 endif()
 

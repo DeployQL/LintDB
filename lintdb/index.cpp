@@ -27,7 +27,7 @@
 #include <gsl/span>
 
 namespace lintdb {
-IndexIVF::IndexIVF(std::string path, bool read_only): path(path), read_only(read_only) {
+IndexIVF::IndexIVF(std::string path, bool read_only): read_only(read_only), path(path) {
     LOG(INFO) << "loading LintDB from path: " << path;
 
     // set all of our individual attributes.
@@ -69,7 +69,7 @@ IndexIVF::IndexIVF(
         size_t niter,
         bool use_compression,
         bool read_only
-    ) : path(path), nlist(nlist), dim(dim), nbits(binarize_nbits), niter(niter), use_compression(use_compression), read_only(read_only){
+    ) : nlist(nlist), nbits(binarize_nbits), niter(niter), use_compression(use_compression), read_only(read_only), path(path), dim(dim){
     // for now, we can only handle 32 bit coarse codes.
     LINTDB_THROW_IF_NOT(nlist <= std::numeric_limits<code_t>::max());
 
@@ -158,7 +158,6 @@ std::vector<std::pair<float, idx_t>> IndexIVF::get_top_centroids(
     const std::vector<float>& distances, 
     const size_t n, // num_tokens
     const size_t total_centroids_to_calculate,
-    const float centroid_score_threshold,
     const size_t k_top_centroids,
     const size_t n_probe) const {
 
@@ -233,7 +232,7 @@ std::vector<SearchResult> IndexIVF::search(
         const size_t n_probe,
         const size_t k,
         const SearchOptions& opts) const {
-    return search(tenant, block.embeddings.data(), block.num_tokens, block.dimensions, n_probe, k);
+    return search(tenant, block.embeddings.data(), block.num_tokens, block.dimensions, n_probe, k, opts);
 }
 
 /**
@@ -259,7 +258,6 @@ std::vector<SearchResult> IndexIVF::search(
     const float centroid_score_threshold = opts.centroid_score_threshold;
     const size_t total_centroids_to_calculate = nlist;
     const size_t k_top_centroids = opts.k_top_centroids;
-    const size_t num_second_pass = opts.num_second_pass;
 
     std::vector<idx_t> coarse_idx(n*total_centroids_to_calculate);
     std::vector<float> distances(n*total_centroids_to_calculate);
@@ -289,7 +287,6 @@ std::vector<SearchResult> IndexIVF::search(
         distances,
         n,
         total_centroids_to_calculate,
-        centroid_score_threshold,
         k_top_centroids,
         n_probe
     );
@@ -342,8 +339,8 @@ std::vector<SearchResult> IndexIVF::search(
 
     gsl::span<const float> query_span = gsl::span(data, n);
     RetrieverOptions plaid_options = RetrieverOptions{
-        .num_second_pass = opts.num_second_pass,
         .total_centroids_to_calculate = nlist,
+        .num_second_pass = opts.num_second_pass,
         .expected_id = opts.expected_id
     };
 

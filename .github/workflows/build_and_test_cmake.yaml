@@ -1,0 +1,41 @@
+name: Build and Test Cmake
+on: 
+  - pull_request
+
+jobs:
+  cmake-build:
+    name: Run Cmake
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          # This is useful to avoid https://github.com/microsoft/vcpkg/issues/25349
+          # which is caused by missing Git history on the vcpkg submodule which ports 
+          # try to access. 
+          # Do not use if not needed, since it slows down the checkout of sources.
+          fetch-depth: 0
+
+      - uses: lukka/get-cmake@latest
+      - name: Setup vcpkg
+        uses: lukka/run-vcpkg@v11
+        id: runvcpkg
+        with:
+          # This one is not needed, as it is the default value anyway.
+          vcpkgDirectory: '${{ github.workspace }}/tools/vcpkg'
+          vcpkgJsonGlob: '**/cmakepresets/vcpkg.json'
+
+      - name: Prints output of run-vcpkg's action.
+        run: echo "root='${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}', triplet='${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_DEFAULT_TRIPLET_OUT }}' "
+      - name: Run CMake+vcpkg+Ninja
+        uses: lukka/run-cmake@v10
+        id: runcmake
+        with:
+          cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
+          configurePreset: 'debug'
+          buildPreset: 'debug'
+          testPreset: 'debug'
+

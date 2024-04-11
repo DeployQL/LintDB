@@ -144,7 +144,7 @@ namespace lintdb {
         binarizer->reverse_bitmap = reverse_bitmap;
         binarizer->decompression_lut = decompression_lut;
 
-        return std::move(binarizer);
+        return binarizer;
     }
 
     void Binarizer::calculate_quantiles(const std::vector<float>& heldout_avg_residual) {

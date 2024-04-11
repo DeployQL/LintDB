@@ -8,8 +8,8 @@
 
 namespace lintdb {
 std::string Key::serialize() const {
-    size_t key_size = sizeof(this->tenant) + sizeof(this->inverted_list_id) +
-            (exclude_id ? 0 : sizeof(this->id));
+    // size_t key_size = sizeof(this->tenant) + sizeof(this->inverted_list_id) +
+    //         (exclude_id ? 0 : sizeof(this->id));
     std::vector<unsigned char> serialized_str;
 
     store_bigendian(this->tenant, serialized_str);
@@ -40,7 +40,7 @@ Key Key::from_slice(const rocksdb::Slice& slice) {
 }
 
 std::string ForwardIndexKey::serialize() const {
-    size_t key_size = sizeof(this->tenant) + sizeof(this->id);
+    // size_t key_size = sizeof(this->tenant) + sizeof(this->id);
     std::vector<unsigned char> serialized_str;
 
     store_bigendian(this->tenant, serialized_str);

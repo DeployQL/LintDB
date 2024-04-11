@@ -210,7 +210,6 @@ struct IndexIVF {
         const std::vector<float>& distances, 
         const size_t n,
         const size_t total_centroids_to_calculate,
-        const float centroid_score_threshold,
         const size_t k_top_centroids,
         const size_t n_probe) const;
 

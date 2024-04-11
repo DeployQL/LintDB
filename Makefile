@@ -1,13 +1,15 @@
 
 
 build-release:
-	CC=clang CXX=clang++ cmake -S . -B build -DCMAKE_MAKE_PROGRAM=make -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_LIBDIR=lib -DBUILD_SHARED_LIBS=ON
-	cmake --build build -j12
+
+# CC=clang CXX=clang++ cmake -S . -B build -DCMAKE_MAKE_PROGRAM=make -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_LIBDIR=lib -DBUILD_SHARED_LIBS=ON
+	cmake --preset release
+	cmake --build -j12 --preset release
 
 build-debug:
-	CC=clang CXX=clang++ cmake -Wall -S . -B build -DCMAKE_MAKE_PROGRAM=make -DCMAKE_BUILD_TYPE=Debug -DLLDB_EXPORT_ALL_SYMBOLS=ON -DBUILD_SHARED_LIBS=ON
-	cmake --build build -j12
-
+# CC=clang CXX=clang++ cmake -Wall -S . -B build -DCMAKE_MAKE_PROGRAM=make -DCMAKE_BUILD_TYPE=Debug -DLLDB_EXPORT_ALL_SYMBOLS=ON -DBUILD_SHARED_LIBS=ON
+	cmake --preset debug
+	cmake --build build -j12 --preset debug
 
 build-python:
 	cmake --build build -j12
