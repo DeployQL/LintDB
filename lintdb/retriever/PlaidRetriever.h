@@ -5,17 +5,11 @@
 #include "lintdb/SearchResult.h"
 #include "lintdb/Encoder.h"
 #include "lintdb/invlists/InvertedList.h"
+#include "lintdb/retriever/Retriever.h"
 #include <stddef.h>
 #include <gsl/span>
 
-namespace lintdb {
-    struct PlaidOptions {
-        const size_t total_centroids_to_calculate;
-        const size_t num_second_pass;
-        const idx_t expected_id;
-        
-    };
-    
+namespace lintdb {    
     /**
      * PlaidRetriever implements the Plaid Engine from: https://arxiv.org/pdf/2205.09707.pdf
      * 
@@ -24,7 +18,7 @@ namespace lintdb {
      * Implementation Note: Retrievers depend on both the encoder and the forward index in order to 
      * get codes and residuals. There's probably a missing abstraction.
     */
-    struct PlaidRetriever {
+    struct PlaidRetriever: public Retriever {
         public:
         PlaidRetriever(std::shared_ptr<ForwardIndex> index, std::shared_ptr<Encoder> encoder);
         std::vector<SearchResult> retrieve(
@@ -34,7 +28,7 @@ namespace lintdb {
             const gsl::span<const float> query_data,
             const size_t n, // num tokens
             const size_t k, // num to return
-            const PlaidOptions& opts
+            const RetrieverOptions& opts
         );
 
         private:
@@ -45,7 +39,7 @@ namespace lintdb {
              const std::vector<std::unique_ptr<DocumentCodes>>&,
             const std::vector<float>& reordered_distances,
             const size_t n,
-            const PlaidOptions& opts
+            const RetrieverOptions& opts
         );
 
         std::vector<std::pair<float, idx_t>> rank_phase_two(
@@ -55,7 +49,7 @@ namespace lintdb {
             const std::unordered_map<idx_t, size_t>& pid_to_index,
             const gsl::span<const float> query_data,
             const size_t n,
-            const PlaidOptions& opts
+            const RetrieverOptions& opts
         );
     };
 }

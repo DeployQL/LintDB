@@ -17,6 +17,7 @@
 #include "lintdb/invlists/RocksdbList.h"
 #include "lintdb/plaid.h"
 #include "lintdb/schema/util.h"
+#include "lintdb/retriever/Retriever.h"
 #include <stdio.h>
 #include <json/writer.h>
 #include <json/json.h>
@@ -340,7 +341,7 @@ std::vector<SearchResult> IndexIVF::search(
     auto pid_list = std::vector<idx_t>(global_pids.begin(), global_pids.end());
 
     gsl::span<const float> query_span = gsl::span(data, n);
-    PlaidOptions plaid_options = PlaidOptions{
+    RetrieverOptions plaid_options = RetrieverOptions{
         .num_second_pass = opts.num_second_pass,
         .total_centroids_to_calculate = nlist,
         .expected_id = opts.expected_id

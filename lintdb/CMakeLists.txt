@@ -33,6 +33,7 @@ set(
     invlists/EncodedDocument.h
     invlists/RocksdbList.h
     invlists/util.h
+    retriever/Retriever.h
     retriever/PlaidRetriever.h
     schema/forward_index_generated.h
     schema/inverted_index_generated.h

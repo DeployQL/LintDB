@@ -1,5 +1,6 @@
 #include <omp.h>
 #include "lintdb/retriever/PlaidRetriever.h"
+#include "lintdb/retriever/Retriever.h"
 #include "lintdb/plaid.h"
 #include "lintdb/SearchOptions.h"
 #include "lintdb/invlists/EncodedDocument.h"
@@ -17,7 +18,7 @@ namespace lintdb {
         const std::vector<std::unique_ptr<DocumentCodes>>& doc_codes,
         const std::vector<float>& reordered_distances,
         const size_t n,
-        const PlaidOptions& opts
+        const RetrieverOptions& opts
     ) {
         /**
          * score by passage codes
@@ -58,7 +59,7 @@ namespace lintdb {
         const std::unordered_map<idx_t, size_t>& pid_to_index,
         const gsl::span<const float> query_data,
         const size_t n,
-        const PlaidOptions& opts
+        const RetrieverOptions& opts
     ) {
 
         std::vector<std::pair<float, idx_t>> actual_scores(top_25_ids.size());
@@ -103,7 +104,7 @@ namespace lintdb {
         const gsl::span<const float> query_data,
         const size_t n, // num tokens
         const size_t k, // num to return
-        const PlaidOptions& opts
+        const RetrieverOptions& opts
         ) {
 
     auto doc_codes = index_->get_codes(tenant, pid_list);

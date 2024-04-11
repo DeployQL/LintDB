@@ -16,6 +16,7 @@
 #include "lintdb/Encoder.h"
 #include "lintdb/SearchResult.h"
 #include "lintdb/SearchOptions.h"
+#include "lintdb/retriever/Retriever.h"
 #include "lintdb/retriever/PlaidRetriever.h"
 
 // forward declare these classes and avoid including the rocksdb headers.
@@ -194,7 +195,7 @@ struct IndexIVF {
     std::vector<rocksdb::ColumnFamilyHandle*> column_families;
 
     std::shared_ptr<Encoder> encoder;
-    std::unique_ptr<PlaidRetriever> retriever;
+    std::unique_ptr<Retriever> retriever;
 
     size_t dim; /// number of dimensions per embedding.
 
