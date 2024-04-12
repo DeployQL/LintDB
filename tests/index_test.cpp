@@ -125,7 +125,7 @@ TEST(IndexTest, TrainsWithCompressionCorrectly) {
         std::string start_string = start.serialize();
         std::string end_string = end.serialize();
         lintdb::ReadOnlyRocksDBInvertedList casted = static_cast<lintdb::ReadOnlyRocksDBInvertedList&>(*index.index_);
-        std::unique_ptr<lintdb::Iterator> it = casted.get_iterator(start_string, end_string);
+        std::unique_ptr<lintdb::Iterator> it = casted.get_iterator(0, i);
         for(; it->has_next(); it->next()) {
             lintdb::Key key = it->get_key();
             auto id = key.id;
@@ -197,6 +197,8 @@ TEST(IndexTest, SearchCorrectly) {
     index.add(lintdb::kDefaultTenant, docs);
 
     auto opts = lintdb::SearchOptions();
+    opts.centroid_score_threshold = 0;
+    opts.k_top_centroids = 250;
     auto results = index.search(lintdb::kDefaultTenant, block, 64, 5, opts);
 
     EXPECT_GT(results.size(), 0);

@@ -12,6 +12,29 @@
 #include <rocksdb/slice.h>
 
 namespace lintdb {
+RocksDBIterator::RocksDBIterator(
+        std::shared_ptr<rocksdb::DB> db,
+        rocksdb::ColumnFamilyHandle* column_family,
+        const uint64_t tenant,
+        const idx_t inverted_list)
+        : Iterator(), tenant(tenant), inverted_index(inverted_list) {
+
+    cf = column_family->GetID();
+    prefix = Key{tenant, inverted_list, 0, true}.serialize();
+    // end_key = Key{tenant, inverted_list, std::numeric_limits<idx_t>::max(), true}.serialize();
+            
+    prefix_slice = rocksdb::Slice(this->prefix);
+    // upper_bound = std::make_unique<rocksdb::Slice>(rocksdb::Slice(this->end_key));
+
+    auto options = rocksdb::ReadOptions();
+    // options.iterate_upper_bound = upper_bound.get();
+
+    this->it = std::unique_ptr<rocksdb::Iterator>(
+            db->NewIterator(options, column_family));
+    it->Seek(this->prefix);
+}
+
+
 template<typename DBType>
 RocksDBInvertedList<DBType>::RocksDBInvertedList(
         std::shared_ptr<DBType> db,
@@ -20,10 +43,10 @@ RocksDBInvertedList<DBType>::RocksDBInvertedList(
 
 template<typename DBType>
 std::unique_ptr<Iterator> RocksDBInvertedList<DBType>::get_iterator(
-        const std::string& start,
-        const std::string& end) const {
+        const uint64_t tenant,
+        const idx_t inverted_list) const {
     return std::make_unique<RocksDBIterator>(RocksDBIterator(
-            db_, column_families[kIndexColumnIndex], start, end));
+            db_, column_families[kIndexColumnIndex], tenant, inverted_list));
 }
 
 template<typename DBType>
@@ -126,8 +149,6 @@ void RocksDBInvertedList<DBType>::remove(const uint64_t tenant, std::vector<idx_
         // delete from all of the forward indices.
         for (size_t i = 1; i < column_families.size(); i++) {
             // ignore the default cf at position 0 since we don't use it.
-            auto cf = column_families[i];
-
             ForwardIndexKey key = ForwardIndexKey{tenant, id};
             auto serialized_key = key.serialize();
             rocksdb::WriteOptions wo;

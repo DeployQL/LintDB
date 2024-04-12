@@ -2,7 +2,6 @@
 set(
     LINT_DB_SRC
     index.cpp
-    plaid.cpp
     Binarizer.cpp
     Encoder.cpp
     util.cpp
@@ -10,6 +9,7 @@ set(
     invlists/util.cpp
     invlists/EncodedDocument.cpp
     retriever/PlaidRetriever.cpp
+    retriever/plaid.cpp
     schema/util.cpp
 )
 
@@ -19,7 +19,6 @@ set(
     api.h
     assert.h
     exception.h
-    plaid.h
     constants.h
     cf.h
     RawPassage.h
@@ -35,6 +34,7 @@ set(
     invlists/util.h
     retriever/Retriever.h
     retriever/PlaidRetriever.h
+    retriever/plaid.h
     schema/forward_index_generated.h
     schema/inverted_index_generated.h
     schema/mapping_generated.h

@@ -5,7 +5,7 @@
 #include <faiss/utils/random.h>
 #include <vector>
 #include <iostream>
-#include "lintdb/plaid.h"
+#include "lintdb/retriever/plaid.h"
 #include <filesystem>
 #include <faiss/utils/hamming.h>
 #include <iostream>

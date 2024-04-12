@@ -1,4 +1,4 @@
-#include "lintdb/plaid.h"
+#include "lintdb/retriever/plaid.h"
 #include <faiss/utils/hamming.h>
 #include <glog/logging.h>
 #include <iostream>
@@ -7,6 +7,7 @@
 #include "lintdb/util.h"
 #include <numeric>
 #include <algorithm>
+#include <gsl/span>
 
 namespace lintdb {
 

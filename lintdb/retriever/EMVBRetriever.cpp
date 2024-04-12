@@ -1,5 +1,5 @@
 #include <omp.h>
-#include "lintdb/retriever/PlaidRetriever.h"
+#include "lintdb/retriever/EMVBRetriever.h"
 #include "lintdb/retriever/Retriever.h"
 #include "lintdb/retriever/plaid.h"
 #include "lintdb/SearchOptions.h"
@@ -7,7 +7,7 @@
 #include <glog/logging.h>
 
 namespace lintdb {
-    PlaidRetriever::PlaidRetriever(
+    EMVBRetriever::EMVBRetriever(
         std::shared_ptr<InvertedList> inverted_list,
         std::shared_ptr<ForwardIndex> index,
         std::shared_ptr<Encoder> encoder
@@ -15,26 +15,56 @@ namespace lintdb {
 
     }
 
-    std::vector<idx_t> PlaidRetriever::top_passages(
+    // called find_candidate_docs
+    std::vector<idx_t> EMVBRetriever::top_passages(
         const idx_t tenant, 
         const gsl::span<const float> query_data, 
-        const size_t n, 
-        const RetrieverOptions& opts,
-        std::vector<float>& reordered_distances
+        const size_t n, // num query tokens
+        const RetrieverOptions& opts
         ) {
-        std::vector<idx_t> coarse_idx(n*opts.total_centroids_to_calculate);
-        std::vector<float> distances(n*opts.total_centroids_to_calculate);
-        encoder_->search_quantizer(
-            query_data.data(),
-            n,
-            coarse_idx,
-            distances,
-            opts.total_centroids_to_calculate,
-            opts.centroid_threshold
-        );
+        
+        std::vector<float> query_scores(n * encoder_->nlist, 0);
+
+        cblas_sgemm(
+                CblasRowMajor,
+                CblasNoTrans,
+                CblasTrans,
+                n,
+                encoder_->nlist,
+                encoder_->dim,
+                1.0,
+                query_data.data(), // size: (num_query_tok x dim)
+                encoder_->dim,
+                encoder_->get_centroids(), // size: (nlist x dim)
+                encoder_->dim,
+                0.0,
+                query_scores.data(), // size: (num_query_tok x nlist)
+                encoder_->nlist);
+
+
+        std::vector<size_t> start_sorted(50000);
+
+        std::vector<size_t> closest_centroid_ids;
+        closest_centroid_ids.reserve(opts.n_probe * n)
+
+        for ( size_t i =0; i < n; i++) {
+            
+        }
+
+        // std::vector<idx_t> coarse_idx(n*opts.total_centroids_to_calculate);
+        // std::vector<float> distances(n*opts.total_centroids_to_calculate);
+        // encoder_->search_quantizer(
+        //     query_data.data(),
+        //     n,
+        //     coarse_idx,
+        //     distances,
+        //     opts.total_centroids_to_calculate,
+        //     opts.centroid_threshold
+        // );
 
         // // well, to get to the other side of this, we reorder the distances
         // // in order of the centroids.
+        std::vector<float> reordered_distances(n*opts.total_centroids_to_calculate);
 
         for(int i=0; i < n; i++) {
             for(int j=0; j < opts.total_centroids_to_calculate; j++) {
@@ -84,7 +114,7 @@ namespace lintdb {
                     continue;
                 }
                 local_pids = lookup_pids(tenant, idx);
-                VLOG(100) << "centroid: " << idx << " number of local pids: " << local_pids.size();
+                VLOG(100) << "number of local pids: " << local_pids.size();
                 #pragma omp critical
                 {
                     global_pids.insert(local_pids.begin(), local_pids.end());
@@ -102,7 +132,7 @@ namespace lintdb {
         return pid_list;
     }
 
-    std::vector<std::pair<float, idx_t>> PlaidRetriever::rank_phase_one(
+    std::vector<std::pair<float, idx_t>> EMVBRetriever::rank_phase_one(
         const std::vector<std::unique_ptr<DocumentCodes>>& doc_codes,
         const std::vector<float>& reordered_distances,
         const size_t n,
@@ -140,7 +170,7 @@ namespace lintdb {
         return pid_scores;
     }
 
-     std::vector<std::pair<float, idx_t>> PlaidRetriever::rank_phase_two(
+     std::vector<std::pair<float, idx_t>> EMVBRetriever::rank_phase_two(
         const std::vector<idx_t>& top_25_ids,
         const std::vector<std::unique_ptr<DocumentCodes>>& doc_codes,
         const std::vector<std::unique_ptr<DocumentResiduals>>& doc_residuals,
@@ -164,13 +194,13 @@ namespace lintdb {
             doc_residuals[i]->num_tokens
         );
 
-        const auto data_span = gsl::span(query_data.data(), n * encoder_->get_dim());
+        const auto data_span = gsl::span(query_data.data(), n * encoder_->dim);
         float score = score_document_by_residuals(
             data_span,
             n,
             decompressed.data(),
             doc_residuals[i]->num_tokens,
-            encoder_->get_dim(),
+            encoder_->dim,
             true);
 
         actual_scores[i] = std::pair<float, idx_t>(score, top_25_ids[i]);
@@ -185,16 +215,15 @@ namespace lintdb {
     return actual_scores;
     }
 
-    std::vector<SearchResult> PlaidRetriever::retrieve(
+    std::vector<SearchResult> EMVBRetriever::retrieve(
         const idx_t tenant, 
         const gsl::span<const float> query_data,
         const size_t n, // num tokens
         const size_t k, // num to return
         const RetrieverOptions& opts
         ) {
-    
-    std::vector<float> distances(n*opts.total_centroids_to_calculate);
-    auto pid_list = top_passages(tenant, query_data, n, opts, distances);
+
+    auto pid_list = top_passages(tenant, query_data, n, opts);
 
     auto doc_codes = index_->get_codes(tenant, pid_list);
     
@@ -206,7 +235,7 @@ namespace lintdb {
         pid_to_index[id] = i;
     }
 
-    auto pid_scores = rank_phase_one(doc_codes, distances, n, opts);
+    auto pid_scores = rank_phase_one(doc_codes, reordered_distances, n, opts);
 
     // colBERT has a ndocs param which limits the number of documents to score.
     size_t cutoff = pid_scores.size();
@@ -282,7 +311,7 @@ namespace lintdb {
 
     }
 
-std::vector<idx_t> PlaidRetriever::lookup_pids(const uint64_t tenant, const idx_t idx) const {
+std::vector<idx_t> EMVBRetriever::lookup_pids(const uint64_t tenant, const idx_t idx) const {
     auto it = inverted_list_->get_iterator(tenant, idx);
     std::vector<idx_t> local_pids;
     for (; it->has_next(); it->next()) {
@@ -295,7 +324,7 @@ std::vector<idx_t> PlaidRetriever::lookup_pids(const uint64_t tenant, const idx_
 }
 
 
-std::vector<std::pair<float, idx_t>> PlaidRetriever::get_top_centroids(
+std::vector<std::pair<float, idx_t>> EMVBRetriever::get_top_centroids(
     const std::vector<idx_t>& coarse_idx,
     const std::vector<float>& distances, 
     const size_t n, // num_tokens
@@ -305,7 +334,7 @@ std::vector<std::pair<float, idx_t>> PlaidRetriever::get_top_centroids(
 
     
     // we're finding the highest centroid scores per centroid.
-    std::vector<float> high_scores(encoder_->get_num_centroids(), 0);
+    std::vector<float> high_scores(encoder_->nlist, 0);
     for (size_t i = 0; i < n; i++) {
         for (size_t j = 0; j < k_top_centroids; j++) {
             auto centroid_of_interest = coarse_idx[i*total_centroids_to_calculate+j];

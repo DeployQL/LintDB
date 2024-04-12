@@ -11,16 +11,12 @@
 
 namespace lintdb {    
     /**
-     * PlaidRetriever implements the Plaid Engine from: https://arxiv.org/pdf/2205.09707.pdf
+     * EMVBRetriever implements the optimizations in: https://arxiv.org/pdf/2404.02805.pdf
      * 
-     * This is a two-pass retrieval engine that uses a combination of centroid scores and residual scores.
-     * 
-     * Implementation Note: Retrievers depend on both the encoder and the forward index in order to 
-     * get codes and residuals. There's probably a missing abstraction.
     */
-    struct PlaidRetriever: public Retriever {
+    struct EMVBRetriever: public Retriever {
         public:
-        PlaidRetriever(
+        EMVBRetriever(
             std::shared_ptr<InvertedList> inverted_list,
             std::shared_ptr<ForwardIndex> index, 
             std::shared_ptr<Encoder> encoder
@@ -43,8 +39,7 @@ namespace lintdb {
             const idx_t tenant, 
             const gsl::span<const float> query_data, 
             const size_t n, 
-            const RetrieverOptions& opts,
-            std::vector<float>& distances
+            const RetrieverOptions& opts
         );
 
         std::vector<std::pair<float, idx_t>> rank_phase_one(

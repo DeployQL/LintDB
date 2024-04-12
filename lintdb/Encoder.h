@@ -29,6 +29,10 @@ namespace lintdb {
 
         bool is_trained = false;
         size_t dim;
+        size_t nlist;
+
+        virtual size_t get_dim() const =0;
+        virtual size_t get_num_centroids() const =0;
             /**
          * Encode vectors translates the embeddings given to us in RawPassage to
          * the internal representation that we expect to see in the inverted lists.
@@ -67,30 +71,16 @@ namespace lintdb {
             const size_t k_top_centroids=1,
             const float centroid_threshold=0.45
         ) = 0;
-
         virtual void search_quantizer(
-            const float* data,
-            const int n,
+            const float* data, // size: (num_query_tok, dim)
+            const int num_query_tok,
             std::vector<idx_t>& coarse_idx,
             std::vector<float>& distances,
-            const size_t k_top_centroids=1,
-            const float centroid_threshold=0.45
-        ) = 0;
+            const size_t k_top_centroids,
+            const float centroid_threshold
+        ) =0;
 
-        /**
-         * score_query returns all dot products for each query token against all centroids.
-        */
-        virtual std::vector<float> score_query(
-            const float* data,
-            const int n
-        ) = 0;
-
-        virtual std::vector<std::pair<float,idx_t>> rank_centroids(
-            const float* data,
-            const int n,
-            const size_t k_top_centroids=1,
-            const float centroid_threshold=0.45
-        ) = 0;
+        virtual float* get_centroids() const = 0;
 
         virtual void save(std::string path) = 0;
         virtual void train(const float* embeddings, const size_t n, const size_t dim) = 0;
@@ -120,6 +110,13 @@ namespace lintdb {
             size_t dim,
             bool use_compression=false);
 
+        size_t get_dim() const override {
+            return dim;
+        }
+        size_t get_num_centroids() const override {
+            return nlist;
+        }
+
         std::unique_ptr<EncodedDocument> encode_vectors(
                 const RawPassage& doc) override;
 
@@ -139,26 +136,16 @@ namespace lintdb {
         ) override;
 
         void search_quantizer(
-            const float* data,
-            const int n,
+            const float* data, // size: (num_query_tok, dim)
+            const int num_query_tok,
             std::vector<idx_t>& coarse_idx,
             std::vector<float>& distances,
-            const size_t k_top_centroids=1,
-            const float centroid_threshold=0.45
-        ) override;
-
-        std::vector<float> score_query(
-            const float* data,
-            const int n
-        ) override;
-
-        std::vector<std::pair<float,idx_t>> rank_centroids(
-            const float* data,
-            const int n,
             const size_t k_top_centroids,
             const float centroid_threshold
         ) override;
-        
+
+        float* get_centroids() const override;
+
         static std::unique_ptr<Encoder> load(std::string path, EncoderConfig& config);
         void train(const float* embeddings, const size_t n, const size_t dim) override;
 

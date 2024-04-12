@@ -14,7 +14,11 @@ pylintdb_lib = f"{prefix}_pylintdb{ext}"
 
 print(f"Copying {pylintdb_lib}")
 shutil.copyfile("lintdb.py", "lintdb/lintdb.py")
-shutil.copyfile(pylintdb_lib, f"lintdb/_pylintdb{ext}") # we use pylintdb as cmake's python target.
+try:
+    shutil.copyfile(pylintdb_lib, f"lintdb/_pylintdb{ext}") # we use pylintdb as cmake's python target.
+except:
+    # if using cmake presets, we still put the library in the Release directory.
+    shutil.copyfile("Release/"+pylintdb_lib, f"lintdb/_pylintdb{ext}")
 
 long_description="""
 PylintDB is a library for efficient late interaction similarity search. It

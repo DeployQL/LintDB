@@ -172,6 +172,10 @@ namespace lintdb {
         }
     }
 
+    float* DefaultEncoder::get_centroids() const {
+        return quantizer->get_xb();
+    }
+
     void DefaultEncoder::search_quantizer(
         const float* data, // size: (num_query_tok, dim)
         const int num_query_tok,
@@ -192,80 +196,80 @@ namespace lintdb {
 
     }
 
-    std::vector<float> DefaultEncoder::score_query(
-        const float* data, // size: (num_query_tok, dim)
-        const int num_query_tok
-    ) {
-        std::vector<float> query_scores(num_query_tok * nlist, 0);
+    // std::vector<float> DefaultEncoder::score_query(
+    //     const float* data, // size: (num_query_tok, dim)
+    //     const int num_query_tok
+    // ) {
+    //     std::vector<float> query_scores(num_query_tok * nlist, 0);
 
-        cblas_sgemm(
-                CblasRowMajor,
-                CblasNoTrans,
-                CblasTrans,
-                num_query_tok,
-                nlist,
-                dim,
-                1.0,
-                data, // size: (num_query_tok x dim)
-                dim,
-                quantizer->get_xb(), // size: (nlist x dim)
-                dim,
-                0.0,
-                query_scores.data(), // size: (num_query_tok x nlist)
-                nlist);
+    //     cblas_sgemm(
+    //             CblasRowMajor,
+    //             CblasNoTrans,
+    //             CblasTrans,
+    //             num_query_tok,
+    //             nlist,
+    //             dim,
+    //             1.0,
+    //             data, // size: (num_query_tok x dim)
+    //             dim,
+    //             quantizer->get_xb(), // size: (nlist x dim)
+    //             dim,
+    //             0.0,
+    //             query_scores.data(), // size: (num_query_tok x nlist)
+    //             nlist);
 
-        return query_scores;
-    }
+    //     return query_scores;
+    // }
 
-    std::vector<std::pair<float,idx_t>> DefaultEncoder::rank_centroids(
-        const float* data,
-        const int n,
-        const size_t k_top_centroids,
-        const float centroid_threshold
-    ) {
-        std::vector<std::pair<float, idx_t>> centroid_scores;
-        centroid_scores.reserve(n*k_top_centroids);
+    // std::vector<std::pair<float,idx_t>> DefaultEncoder::rank_centroids(
+    //     const float* data,
+    //     const int n,
+    //     const size_t k_top_centroids,
+    //     const float centroid_threshold
+    // ) {
+    //     std::vector<std::pair<float, idx_t>> centroid_scores;
+    //     centroid_scores.reserve(n*k_top_centroids);
 
-        std::vector<std::pair<float, idx_t>> token_centroid_scores;
-        token_centroid_scores.reserve(k_top_centroids);
+    //     std::vector<std::pair<float, idx_t>> token_centroid_scores;
+    //     token_centroid_scores.reserve(k_top_centroids);
         
-        auto comparator = [](std::pair<float, idx_t> p1, std::pair<float, idx_t> p2) {
-            return p1.first > p2.first;
-        };
+    //     auto comparator = [](std::pair<float, idx_t> p1, std::pair<float, idx_t> p2) {
+    //         return p1.first > p2.first;
+    //     };
 
-        for(int i=0; i < n; i++) {
-            for (int j=0; j < nlist; j++) {
-                idx_t key = j;
-                float score = data[i * nlist + j];
-                if (token_centroid_scores.size() < k_top_centroids) {
-                    token_centroid_scores.push_back(std::pair<float, idx_t>(score, key));
+    //     for(int i=0; i < n; i++) {
+    //         for (int j=0; j < nlist; j++) {
+    //             idx_t key = j;
+    //             float score = data[i * nlist + j];
+    //             if (token_centroid_scores.size() < k_top_centroids) {
+    //                 token_centroid_scores.push_back(std::pair<float, idx_t>(score, key));
 
-                    if (token_centroid_scores.size() == k_top_centroids) {
-                        std::make_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
-                    }
-                } else if (score > token_centroid_scores.front().first) {
-                    std::pop_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
-                    token_centroid_scores.front() = std::pair<float, idx_t>(score, key);
-                    std::push_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
-                }
-            }
+    //                 if (token_centroid_scores.size() == k_top_centroids) {
+    //                     std::make_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
+    //                 }
+    //             } else if (score > token_centroid_scores.front().first) {
+    //                 std::pop_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
+    //                 token_centroid_scores.front() = std::pair<float, idx_t>(score, key);
+    //                 std::push_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
+    //             }
+    //         }
 
-            std::sort_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
+    //         std::sort_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
             
-            for(idx_t k=0; k < k_top_centroids; k++) {
-                auto top = token_centroid_scores.back();
-                float score = top.first;
-                idx_t idx = top.second;
-                auto pair = std::pair<float, idx_t>(score, idx);
-                centroid_scores.push_back(pair);
+    //         for(idx_t k=0; k < k_top_centroids; k++) {
+    //             auto top = token_centroid_scores.back();
+    //             float score = top.first;
+    //             idx_t idx = top.second;
+    //             auto pair = std::pair<float, idx_t>(score, idx);
+    //             centroid_scores.push_back(pair);
 
-                token_centroid_scores.pop_back();
-            }
-            token_centroid_scores.clear();
-        }
+    //             token_centroid_scores.pop_back();
+    //         }
+    //         token_centroid_scores.clear();
+    //     }
 
-        return centroid_scores;
-    }
+    //     return centroid_scores;
+    // }
 
     void DefaultEncoder::save(std::string path) {
         auto quantizer_path = path + "/"+ QUANTIZER_FILENAME;

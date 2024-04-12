@@ -6,7 +6,7 @@
 
 namespace lintdb {
 struct Iterator {
-    virtual bool has_next() const = 0;
+    virtual bool has_next() = 0;
     virtual void next() = 0;
     virtual Key get_key() const = 0;
 

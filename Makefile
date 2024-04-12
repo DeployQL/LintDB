@@ -9,16 +9,15 @@ build-release:
 build-debug:
 # CC=clang CXX=clang++ cmake -Wall -S . -B build -DCMAKE_MAKE_PROGRAM=make -DCMAKE_BUILD_TYPE=Debug -DLLDB_EXPORT_ALL_SYMBOLS=ON -DBUILD_SHARED_LIBS=ON
 	cmake --preset debug
-	cmake --build build -j12 --preset debug
+	cmake --build -j12 --preset debug
 
-build-python:
-	cmake --build build -j12
-	cd build/lintdb/python && python setup.py build
+build-python: 
+	cmake --preset python
+	cmake --build --preset python -j12
+	cd builds/python/lintdb/python && python setup.py build
 
-test: build
-	export AF_PRINT_ERRORS=1
-	export AF_TRACE=all
-	cd build && cmake -E env GLOG_v=100 GLOG_logtostderr=1 ctest --output-on-failure
+test:
+	cd builds/debug && cmake -E env GLOG_v=100 GLOG_logtostderr=1 ctest --output-on-failure
 
 test-python: build-python
 # had to fix up conda to make this work--

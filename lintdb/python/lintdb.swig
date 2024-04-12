@@ -125,4 +125,6 @@ namespace std {
 
 // Define the C++ class
 %include "lintdb/RawPassage.h"  
+%include "lintdb/SearchOptions.h"
+%include "lintdb/SearchResult.h"
 %include "lintdb/index.h"

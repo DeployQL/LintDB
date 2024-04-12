@@ -203,16 +203,9 @@ struct IndexIVF {
     void initialize_inverted_list();
 
     /// the inverted list data structure.
+    std::shared_ptr<InvertedList> inverted_list_;
     std::shared_ptr<ForwardIndex> index_;
-    std::unordered_set<idx_t> get_pids(const idx_t ivf_id) const;
-    std::vector<std::pair<float, idx_t>> get_top_centroids( 
-        const std::vector<idx_t>& coarse_idx,
-        const std::vector<float>& distances, 
-        const size_t n,
-        const size_t total_centroids_to_calculate,
-        const size_t k_top_centroids,
-        const size_t n_probe) const;
-
+   
     /**
      * Flush data to disk.
      * 
@@ -220,11 +213,7 @@ struct IndexIVF {
     */
     void flush();
 
-    /**
-     * lookup_pids accesses the inverted list for a given ivf_id and returns the passage ids.
-     * 
-    */
-    std::vector<idx_t> lookup_pids(const uint64_t tenant, const idx_t ivf_id) const;
+
 
     /**
      * Write_metadata (and read) are helper methods to persist metadata attributes.
