@@ -10,17 +10,30 @@
 #include "lintdb/util.h"
 #include <cassert>
 #include <cblas.h>
+#include "lintdb/quantizers/io.h"
+#include "lintdb/SearchOptions.h"
 
 namespace lintdb {
-    DefaultEncoder::DefaultEncoder(size_t nlist, size_t nbits, size_t niter, size_t dim, bool use_compression)
-        : Encoder(), nlist(nlist), nbits(nbits), niter(niter), dim(dim), use_compression(use_compression) {
+    DefaultEncoder::DefaultEncoder(
+        size_t nlist, 
+        size_t nbits, 
+        size_t niter, 
+        size_t dim, 
+        size_t num_subquantizers, 
+        IndexEncoding type)
+        : Encoder(), nlist(nlist), nbits(nbits), niter(niter), dim(dim), num_subquantizers(num_subquantizers), quantizer_type(type) {
         
         // colBERT uses L2 during clustering.
         // for normalized vectors, this should be the same as IP.
-        this->quantizer = std::make_unique<faiss::IndexFlatIP>(dim);
-        if(use_compression) {
-            this->binarizer = std::make_unique<Binarizer>(nbits, dim);
-        }
+        this->coarse_quantizer = std::make_unique<faiss::IndexFlatIP>(dim);
+        auto quantizer_config = QuantizerConfig{
+            .nlist = nlist,
+            .nbits = nbits,
+            .niter = niter,
+            .dim = dim,
+            .num_subquantizers = num_subquantizers,
+        };
+        this->quantizer = create_quantizer(type, quantizer_config);
     }
 
     std::unique_ptr<EncodedDocument> DefaultEncoder::encode_vectors(
@@ -32,22 +45,22 @@ namespace lintdb {
 
         // get the centroids closest to each token.
         std::vector<idx_t> coarse_idx(num_tokens, 0);
-        quantizer->assign(num_tokens, data_ptr, coarse_idx.data());
+        coarse_quantizer->assign(num_tokens, data_ptr, coarse_idx.data());
 
         assert(coarse_idx.size() == num_tokens);
 
         // compute residual
         std::vector<float> raw_residuals(num_tokens * dim);
         for (size_t i = 0; i < num_tokens; i++) {
-            quantizer->compute_residual(
+            coarse_quantizer->compute_residual(
                     data_ptr + i * dim,
                     raw_residuals.data() + i * dim,
                     coarse_idx[i]);
         }
 
-        if (use_compression) {
+        if (quantizer != nullptr) {
             std::vector<residual_t> residual_codes(num_tokens * (dim / 8 * nbits));
-            binarizer->sa_encode(num_tokens, raw_residuals.data(), residual_codes.data());
+            quantizer->sa_encode(num_tokens, raw_residuals.data(), residual_codes.data());
             
             return std::make_unique<EncodedDocument>(EncodedDocument(
                 coarse_idx, residual_codes, num_tokens, doc.id));
@@ -72,16 +85,16 @@ namespace lintdb {
             auto centroid_id = codes[i];
 
             // add the centroid to the decoded embedding.
-            quantizer->reconstruct(
+            coarse_quantizer->reconstruct(
                     centroid_id, decoded_embeddings.data() + i * dim);
 
 
-            if (use_compression) {
+            if (quantizer != nullptr) {
                 std::vector<float> decoded_residuals(dim);
                 // TODO (mbarta): we can do a better job of hiding this offset information.
                 // if we move the use_compression check above the for loop, we'd have better success at batching this and moving
                 // the offset into the binarizer.
-                binarizer->sa_decode(1, residuals.data()+ i * dim / 8 / nbits, decoded_residuals.data());
+                quantizer->sa_decode(1, residuals.data()+ i * dim / 8 / nbits, decoded_residuals.data());
                 for (size_t j = 0; j < dim; j++) {
                     decoded_embeddings[i * dim + j] += decoded_residuals[j];
                 }
@@ -116,7 +129,7 @@ namespace lintdb {
                 1.0,
                 data, // size: (num_query_tok x dim)
                 dim,
-                quantizer->get_xb(), // size: (nlist x dim)
+                coarse_quantizer->get_xb(), // size: (nlist x dim)
                 dim,
                 0.0,
                 query_scores.data(), // size: (num_query_tok x nlist)
@@ -173,7 +186,7 @@ namespace lintdb {
     }
 
     float* DefaultEncoder::get_centroids() const {
-        return quantizer->get_xb();
+        return coarse_quantizer->get_xb();
     }
 
     void DefaultEncoder::search_quantizer(
@@ -187,7 +200,7 @@ namespace lintdb {
         // we get back the k top centroid matches per token.
         // faiss' quantizer->search() is slightly slower than doing this ourselves.
         // therefore, we will write our own to do our own matmul.
-        quantizer->search(
+        coarse_quantizer->search(
                 num_query_tok,
                 data, 
                 k_top_centroids,
@@ -196,114 +209,48 @@ namespace lintdb {
 
     }
 
-    // std::vector<float> DefaultEncoder::score_query(
-    //     const float* data, // size: (num_query_tok, dim)
-    //     const int num_query_tok
-    // ) {
-    //     std::vector<float> query_scores(num_query_tok * nlist, 0);
-
-    //     cblas_sgemm(
-    //             CblasRowMajor,
-    //             CblasNoTrans,
-    //             CblasTrans,
-    //             num_query_tok,
-    //             nlist,
-    //             dim,
-    //             1.0,
-    //             data, // size: (num_query_tok x dim)
-    //             dim,
-    //             quantizer->get_xb(), // size: (nlist x dim)
-    //             dim,
-    //             0.0,
-    //             query_scores.data(), // size: (num_query_tok x nlist)
-    //             nlist);
-
-    //     return query_scores;
-    // }
-
-    // std::vector<std::pair<float,idx_t>> DefaultEncoder::rank_centroids(
-    //     const float* data,
-    //     const int n,
-    //     const size_t k_top_centroids,
-    //     const float centroid_threshold
-    // ) {
-    //     std::vector<std::pair<float, idx_t>> centroid_scores;
-    //     centroid_scores.reserve(n*k_top_centroids);
-
-    //     std::vector<std::pair<float, idx_t>> token_centroid_scores;
-    //     token_centroid_scores.reserve(k_top_centroids);
-        
-    //     auto comparator = [](std::pair<float, idx_t> p1, std::pair<float, idx_t> p2) {
-    //         return p1.first > p2.first;
-    //     };
-
-    //     for(int i=0; i < n; i++) {
-    //         for (int j=0; j < nlist; j++) {
-    //             idx_t key = j;
-    //             float score = data[i * nlist + j];
-    //             if (token_centroid_scores.size() < k_top_centroids) {
-    //                 token_centroid_scores.push_back(std::pair<float, idx_t>(score, key));
-
-    //                 if (token_centroid_scores.size() == k_top_centroids) {
-    //                     std::make_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
-    //                 }
-    //             } else if (score > token_centroid_scores.front().first) {
-    //                 std::pop_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
-    //                 token_centroid_scores.front() = std::pair<float, idx_t>(score, key);
-    //                 std::push_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
-    //             }
-    //         }
-
-    //         std::sort_heap(token_centroid_scores.begin(), token_centroid_scores.end(), comparator);
-            
-    //         for(idx_t k=0; k < k_top_centroids; k++) {
-    //             auto top = token_centroid_scores.back();
-    //             float score = top.first;
-    //             idx_t idx = top.second;
-    //             auto pair = std::pair<float, idx_t>(score, idx);
-    //             centroid_scores.push_back(pair);
-
-    //             token_centroid_scores.pop_back();
-    //         }
-    //         token_centroid_scores.clear();
-    //     }
-
-    //     return centroid_scores;
-    // }
-
     void DefaultEncoder::save(std::string path) {
-        auto quantizer_path = path + "/"+ QUANTIZER_FILENAME;
-        faiss::write_index(quantizer.get(), quantizer_path.c_str());
+        auto quantizer_path = path + "/"+ ENCODER_FILENAME;
+        faiss::write_index(coarse_quantizer.get(), quantizer_path.c_str());
 
-        if (use_compression) {
-            binarizer->save(path);
-        }
+        save_quantizer(path, quantizer.get());
     }
 
     std::unique_ptr<Encoder> DefaultEncoder::load(std::string path, EncoderConfig& config) {
-        std::unique_ptr<faiss::IndexFlat> quantizer;
+        std::unique_ptr<faiss::IndexFlat> coarse_quantizer;
 
-        if (FILE *file = fopen((path + "/" + QUANTIZER_FILENAME).c_str(), "r")) {
+        if (FILE *file = fopen((path + "/" + ENCODER_FILENAME).c_str(), "r")) {
             fclose(file);
-            auto qptr = std::unique_ptr<faiss::Index>(faiss::read_index((path + "/" + QUANTIZER_FILENAME).c_str()));
-            quantizer = std::unique_ptr<faiss::IndexFlat>(static_cast<faiss::IndexFlat*>(qptr.release()));
+            auto qptr = std::unique_ptr<faiss::Index>(faiss::read_index((path + "/" + ENCODER_FILENAME).c_str()));
+            coarse_quantizer = std::unique_ptr<faiss::IndexFlat>(static_cast<faiss::IndexFlat*>(qptr.release()));
         } else {
-            throw LintDBException("Quantizer not found at path: " + path);
+            throw LintDBException("coarse_quantizer not found at path: " + path);
         }
 
-        auto encoder = std::make_unique<DefaultEncoder>(
-                DefaultEncoder(config.nlist, config.nbits, config.niter, config.dim));
-        encoder->quantizer = std::move(quantizer);
+        auto encoder = std::make_unique<DefaultEncoder>(DefaultEncoder(
+            config.nlist, 
+            config.nbits, 
+            config.niter, 
+            config.dim, 
+            config.num_subquantizers, 
+            config.type));
+        encoder->coarse_quantizer = std::move(coarse_quantizer);
 
-        if(config.use_compression) {
-            encoder->binarizer = Binarizer::load(path);
-        }
-        encoder->use_compression = config.use_compression;
+        auto quantizer_config = QuantizerConfig{
+            .nlist = config.nlist,
+            .nbits = config.nbits,
+            .niter = config.niter,
+            .dim = config.dim,
+            .num_subquantizers = config.num_subquantizers,
+        };
+        encoder->quantizer = load_quantizer(path, config.type, quantizer_config);
         encoder->nlist = config.nlist;
         encoder->nbits = config.nbits;
         encoder->niter = config.niter;
         encoder->dim = config.dim;
         encoder->is_trained = true;
+        encoder->quantizer_type = config.type;
+
         return std::move(encoder);
     }
 
@@ -322,18 +269,20 @@ namespace lintdb {
 
             normalize_vector(clus.centroids.data(), nlist, dim);
 
-            quantizer->add(nlist, clus.centroids.data());
+            coarse_quantizer->add(nlist, clus.centroids.data());
 
-            if (use_compression) {
+            if (quantizer != nullptr) {
+                // residual quantizers are trained on residuals. we aren't supporting training
+                // directly on embeddings.
                 LOG(INFO) << "Training binarizer with " << n << " embeddings.";
                 //train binarizer on residuals.
                 std::vector<idx_t> assign(n);
-                quantizer->assign(n, embeddings, assign.data());
+                coarse_quantizer->assign(n, embeddings, assign.data());
 
                 std::vector<float> residuals(n * dim);
-                quantizer->compute_residual_n(n, embeddings, residuals.data(), assign.data());
+                coarse_quantizer->compute_residual_n(n, embeddings, residuals.data(), assign.data());
 
-                binarizer->train(n, residuals.data(), dim);
+                quantizer->train(n, residuals.data(), dim);
             }
 
             this->is_trained = true;
@@ -347,13 +296,16 @@ namespace lintdb {
         LINTDB_THROW_IF_NOT(n == nlist);
         LINTDB_THROW_IF_NOT(dim == this->dim);
 
-        quantizer->reset();
-        quantizer->add(n, data);
+        coarse_quantizer->reset();
+        coarse_quantizer->add(n, data);
 
         this->is_trained = true;
     }
 
     void DefaultEncoder::set_weights(const std::vector<float>& weights, const std::vector<float>& cutoffs, const float avg_residual) {
-        binarizer->set_weights(weights, cutoffs, avg_residual);
+        if (this->quantizer_type == IndexEncoding::BINARIZER) {
+            auto binarizer = dynamic_cast<Binarizer*>(quantizer.get());
+            binarizer->set_weights(weights, cutoffs, avg_residual);
+        }
     }
 }

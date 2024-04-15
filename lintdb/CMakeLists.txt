@@ -2,8 +2,10 @@
 set(
     LINT_DB_SRC
     index.cpp
-    Binarizer.cpp
+    quantizers/Binarizer.cpp
     Encoder.cpp
+    quantizers/ProductEncoder.cpp
+    quantizers/io.cpp
     util.cpp
     invlists/RocksdbList.cpp
     invlists/util.cpp
@@ -23,8 +25,12 @@ set(
     cf.h
     RawPassage.h
     EmbeddingBlock.h
-    Binarizer.h
     Encoder.h
+    quantizers/Binarizer.h
+    quantizers/Quantizer.h
+    quantizers/ProductEncoder.h
+    quantizers/io.h
+    SearchOptions.h
     SearchResult.h
     util.h
     invlists/InvertedList.h

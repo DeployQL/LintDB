@@ -14,6 +14,7 @@ namespace lintdb {
         const float centroid_threshold;
         const size_t k_top_centroids;
         const size_t n_probe;
+        const size_t num_docs_to_score = 4000;
     };
     
     struct Retriever {

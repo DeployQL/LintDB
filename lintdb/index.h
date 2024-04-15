@@ -39,14 +39,16 @@ struct Configuration {
     size_t nbits = 2; /// the number of bits to use in residual compression. 
     size_t niter = 10; /// the number of iterations to use during training. 
     size_t dim; /// the dimensions expected for incoming vectors. 
-    bool use_compression = true; /// whether to compress residuals. 
+    size_t num_subquantizers = 16; /// the number of subquantizers to use in the product quantizer.
+    IndexEncoding quantizer_type = IndexEncoding::BINARIZER; /// whether to compress residuals. 
 
     inline bool operator==(const Configuration& other) const {
         return nlist == other.nlist && 
             nbits == other.nbits && 
             niter == other.niter && 
             dim == other.dim && 
-            use_compression == other.use_compression;
+            quantizer_type == other.quantizer_type &&
+            num_subquantizers == other.num_subquantizers;
     }
 };
 
@@ -58,11 +60,7 @@ struct Configuration {
  * 
  */
 struct IndexIVF {
-    size_t nlist; /// number of centroids to use in L1 quantizing.
-    size_t nbits; /// number of bits used in binarizing the residuals.
-    size_t niter; /// number of iterations to use in k-means clustering.
-    bool use_ivf; /// whether to use the inverted file structure.
-    bool use_compression; /// whether to use the LSH encoding for residuals.
+    Configuration config;
     bool read_only; /// whether to open the index in read-only mode.
 
     /// load an existing index.
@@ -76,7 +74,8 @@ struct IndexIVF {
             size_t dim,       /// number of dimensions per embedding.
             size_t binarize_nbits=2, /// nbits used in the LSH encoding for esiduals.
             size_t niter = 10,
-            bool use_compression = true,
+            size_t num_subquantizers = 16,
+            IndexEncoding quantizer_type = IndexEncoding::BINARIZER,
             bool read_only = false
     );
 
@@ -196,8 +195,6 @@ struct IndexIVF {
 
     std::shared_ptr<Encoder> encoder;
     std::unique_ptr<Retriever> retriever;
-
-    size_t dim; /// number of dimensions per embedding.
 
     // helper to initialize the inverted list.
     void initialize_inverted_list();

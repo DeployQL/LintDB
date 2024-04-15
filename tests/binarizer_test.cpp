@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 #include <vector>
 #define private public
-#include "lintdb/Binarizer.h"
+#include "lintdb/quantizers/Binarizer.h"
 #include <cmath>
 #include "lintdb/invlists/util.h"
 

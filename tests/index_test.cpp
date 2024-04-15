@@ -2,6 +2,7 @@
 // TODO(mbarta): we introspect the invlists during tests. We can fix this with better abstractions.
 #define private public
 #include "lintdb/index.h"
+#include "lintdb/SearchOptions.h"
 #include "lintdb/EmbeddingBlock.h"
 #include "lintdb/invlists/RocksdbList.h"
 #include <faiss/utils/random.h>
@@ -21,7 +22,7 @@ TEST(IndexTest, InitializesCorrectly) {
 
     lintdb::IndexIVF index(temp_db.string(), 5, 128, 2);
 
-    EXPECT_EQ(index.nlist, 5);
+    EXPECT_EQ(index.config.nlist, 5);
 }
 
 TEST(IndexTest, TrainsCorrectly) {
@@ -33,7 +34,7 @@ TEST(IndexTest, TrainsCorrectly) {
 
     size_t kclusters = 250; // number of centroids to calculate.
 
-    size_t centroid_bits = 32;
+    size_t centroid_bits = 1;
     std::filesystem::path path = std::filesystem::temp_directory_path();
     auto temp_db = path.append("test_index");
     // buffer for the randomly created vectors.
@@ -42,10 +43,10 @@ TEST(IndexTest, TrainsCorrectly) {
 
     faiss::rand_smooth_vectors(num_docs * num_tokens, dim, buf.data(), 1234);
 
-    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, false);
+    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, 16, lintdb::IndexEncoding::BINARIZER);
 
     index.train(num_docs * num_tokens, buf);
-    EXPECT_EQ(index.nlist, 250);
+    EXPECT_EQ(index.config.nlist, 250);
 
     std::vector<float> fake_doc(dim * num_tokens);
 
@@ -102,10 +103,10 @@ TEST(IndexTest, TrainsWithCompressionCorrectly) {
 
     faiss::rand_smooth_vectors(num_docs * num_tokens, dim, buf.data(), 1234);
 
-    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, true);
+    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, 16, lintdb::IndexEncoding::BINARIZER);
 
     index.train(num_docs * num_tokens, buf);
-    EXPECT_EQ(index.nlist, 250);
+    EXPECT_EQ(index.config.nlist, 250);
 
     std::vector<float> fake_doc(dim * num_tokens);
 
@@ -185,7 +186,7 @@ TEST(IndexTest, SearchCorrectly) {
 
     index.train(num_docs * num_tokens, buf);
 
-    EXPECT_EQ(index.nlist, 250);
+    EXPECT_EQ(index.config.nlist, 250);
 
     std::vector<float> fake_doc(dim * num_tokens, 3);
     lintdb::normalize_vector(fake_doc.data(), num_tokens, dim);
@@ -268,11 +269,11 @@ TEST(IndexTest, MergeCorrectly) {
     // normalize before training. ColBERT returns normalized embeddings.
     lintdb::normalize_vector(buf.data(), num_docs * num_tokens, dim);
 
-    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits);
+    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, 0, lintdb::IndexEncoding::BINARIZER, false);
 
     index.train(num_docs * num_tokens, buf);
 
-    EXPECT_EQ(index.nlist, 2);
+    EXPECT_EQ(index.config.nlist, 2);
 
     std::vector<float> fake_doc(dim * num_tokens, 3);
     lintdb::normalize_vector(fake_doc.data(), num_tokens, dim);
@@ -293,6 +294,7 @@ TEST(IndexTest, MergeCorrectly) {
     std::vector<lintdb::RawPassage> docs_two = { doc_two };
     index_two.add(lintdb::kDefaultTenant, docs_two);
 
+    std::cout << "added to second db" << std::endl;
     // merge the two indices.
     index.merge(second_db.string());
 

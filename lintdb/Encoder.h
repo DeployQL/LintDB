@@ -9,17 +9,19 @@
 #include <memory>
 #include <faiss/Index.h>
 #include <faiss/IndexFlat.h>
-#include "lintdb/Binarizer.h"
+#include "lintdb/quantizers/Quantizer.h"
+#include "lintdb/SearchOptions.h"
 
 namespace lintdb {
-    static const std::string QUANTIZER_FILENAME = "_quantizer.bin";
+    static const std::string ENCODER_FILENAME = "_encoder.bin";
 
     struct EncoderConfig {
         size_t nlist;
         size_t nbits;
         size_t niter;
         size_t dim;
-        bool use_compression;
+        IndexEncoding type;
+        size_t num_subquantizers; // used in ProductEncoder
     };
 
     struct Encoder {
@@ -30,10 +32,12 @@ namespace lintdb {
         bool is_trained = false;
         size_t dim;
         size_t nlist;
+        IndexEncoding quantizer_type;
 
         virtual size_t get_dim() const =0;
         virtual size_t get_num_centroids() const =0;
-            /**
+        virtual size_t get_nbits() const =0;
+        /**
          * Encode vectors translates the embeddings given to us in RawPassage to
          * the internal representation that we expect to see in the inverted lists.
          */
@@ -99,22 +103,29 @@ namespace lintdb {
         size_t nbits; // number of bits used in binarizing the residuals.
         size_t niter; // number of iterations to use in k-means clustering.
         size_t dim; // number of dimensions per embedding.
-        bool use_compression;
+        size_t num_subquantizers; // used in ProductEncoder
+        IndexEncoding quantizer_type; // the type of quantizer we encode the residuals with.
 
-        std::unique_ptr<faiss::IndexFlat> quantizer;
+        std::unique_ptr<faiss::IndexFlat> coarse_quantizer;
         // create a new encoder
         DefaultEncoder(
             size_t nlist, 
             size_t nbits, 
             size_t niter, 
-            size_t dim,
-            bool use_compression=false);
+            size_t dim, 
+            size_t num_subquantizers, 
+            IndexEncoding type= IndexEncoding::BINARIZER);
 
         size_t get_dim() const override {
             return dim;
         }
+
         size_t get_num_centroids() const override {
             return nlist;
+        }
+
+        size_t get_nbits() const override {
+            return nbits;
         }
 
         std::unique_ptr<EncodedDocument> encode_vectors(
@@ -158,7 +169,7 @@ namespace lintdb {
         void set_weights(const std::vector<float>& weights, const std::vector<float>& cutoffs, const float avg_residual) override;
 
         private:
-        std::unique_ptr<Binarizer> binarizer;
+        std::unique_ptr<Quantizer> quantizer;
         void save(std::string path) override;
     };
 }

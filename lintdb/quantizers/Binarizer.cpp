@@ -1,4 +1,4 @@
-#include "lintdb/Binarizer.h"
+#include "lintdb/quantizers/Binarizer.h"
 #include <algorithm>
 #include "lintdb/assert.h"
 #include <faiss/utils/hamming.h>
@@ -12,9 +12,9 @@
 #include <numeric>
 
 namespace lintdb {
-    Binarizer::Binarizer(size_t nbits, size_t dim): nbits(nbits), dim(dim) {
-        LINTDB_THROW_IF_NOT(dim % 8 == 0);
-        LINTDB_THROW_IF_NOT(dim % (nbits * 8) == 0);
+    Binarizer::Binarizer(size_t nbits, size_t dim): Quantizer(), nbits(nbits), dim(dim) {
+        LINTDB_THROW_IF_NOT_FMT(dim % 8 == 0, "Dimension must be a multiple of 8, got %d", dim);
+        LINTDB_THROW_IF_NOT_FMT(dim % (nbits * 8) == 0, "Dimension must be a multiple of %d, got %d", nbits * 8, dim);
     }
 
     void Binarizer::train(size_t n, const float* x, size_t dim) {
@@ -53,6 +53,10 @@ namespace lintdb {
         this->decompression_lut = create_decompression_lut();
     }
 
+    QuantizerType Binarizer::get_type() {
+        return QuantizerType::BINARIZER;
+    }
+
     void Binarizer::save(std::string path) {
         Json::Value root;
 
@@ -82,21 +86,21 @@ namespace lintdb {
         }
 
         // Write JSON object to file
-        std::ofstream out(path + "/" + BINARIZER_FILENAME);
+        std::ofstream out(path + "/" + QUANTIZER_FILENAME);
         Json::StyledWriter writer;
         if (out.is_open()) {
             out << writer.write(root);
             out.close();
         } else {
-            LOG(ERROR) << "Unable to open file for writing: " << path + "/" + BINARIZER_FILENAME;
+            LOG(ERROR) << "Unable to open file for writing: " << path + "/" + QUANTIZER_FILENAME;
         }
     }
 
     std::unique_ptr<Binarizer> Binarizer::load(std::string path) {
         // Read JSON file
-        std::ifstream file(path + "/" + BINARIZER_FILENAME);
+        std::ifstream file(path + "/" + QUANTIZER_FILENAME);
         if (!file.is_open()) {
-            LOG(ERROR) << "Unable to open file for writing: " << path + "/" + BINARIZER_FILENAME;
+            LOG(ERROR) << "Unable to open file for writing: " << path + "/" + QUANTIZER_FILENAME;
             return nullptr;
         }
 
@@ -286,7 +290,6 @@ namespace lintdb {
     std::vector<uint8_t> Binarizer::create_decompression_lut() {
         size_t keys_per_byte = 8 / nbits;
         size_t num_keys = bucket_weights.size();
-        size_t num_entries = num_keys * keys_per_byte;
 
         std::vector<uint8_t> initial_pool(num_keys, 0);
         std::iota(initial_pool.begin(), initial_pool.end(), 0);

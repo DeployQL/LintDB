@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <tuple>
+#include "lintdb/SearchOptions.h"
 
 namespace lintdb {
     /**
@@ -15,7 +16,6 @@ namespace lintdb {
  * https://stackoverflow.com/questions/57469359/how-to-efficiently-normalize-vector-c
 */
 void normalize_vector(float* doc_residuals, const size_t num_doc_tokens, const size_t dim);
-}
 
 template<typename T>
 void product_helper(const std::vector<std::vector<T>>& pools, std::vector<T>& result, size_t index, std::vector<T>& current) {
@@ -46,6 +46,10 @@ std::vector<T> product(const std::vector<std::vector<T>>& args, size_t repeat = 
     std::vector<T> current;
     product_helper(pools, result, 0, current);
     return result;
+}
+
+std::string serialize_encoding(IndexEncoding type);
+IndexEncoding deserialize_encoding(const std::string& str);
 }
 
 #endif
