@@ -91,16 +91,35 @@ def consume_task(result_queue, experiment, nbits, use_compression, checkpoint):
         index.add(0, [doc])
 
 @app.command()
-def run(dataset: str, experiment: str, split: str = 'dev', k: int = 5, start:int=0, stop:int=40000, num_procs:int=10, nbits: int=1, use_compression: bool = True, checkpoint: str = "colbert-ir/colbertv2.0"):
+def run(
+    dataset: str, 
+    experiment: str, 
+    split: str = 'dev', 
+    k: int = 5, 
+    start:int=0, 
+    stop:int=40000, 
+    num_procs:int=10, 
+    nbits: int=1, 
+    index_type="binarizer",
+    checkpoint: str = "colbert-ir/colbertv2.0"):
     print("Loading dataset...")
     d = load_lotte(dataset, split, stop=40000)
     print("Dataset loaded.")
 
     index_path = f"experiments/py_index_bench_{experiment}"
     assert not os.path.exists(index_path)
+
+    index_type_enum = ldb.IndexEncoding_BINARIZER
+    if index_type == "binarizer":
+        index_type_enum = ldb.IndexEncoding_BINARIZER
+    elif index_type == 'pq':
+        index_type_enum = ldb.IndexEncoding_PRODUCT_QUANTIZATION
+    elif index_type == 'none':
+        index_type_enum = ldb.IndexEncoding_NONE
+
         # lifestyle full centroids == 65536
         #lifestyle-40k-benchmark centroids == 32768
-    index = ldb.IndexIVF(index_path, 32768, 128, nbits, 4, use_compression)
+    index = ldb.IndexIVF(index_path, 32768, 128, nbits, 6, 16)
     # in multiprocessing, we only allow for reuse of centroids.
     with Run().context(RunConfig(nranks=1, experiment='colbert-lifestyle-40k-benchmark')):
         checkpoint_config = ColBERTConfig.load_from_checkpoint(checkpoint)

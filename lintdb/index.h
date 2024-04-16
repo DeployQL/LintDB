@@ -50,6 +50,7 @@ struct Configuration {
             quantizer_type == other.quantizer_type &&
             num_subquantizers == other.num_subquantizers;
     }
+
 };
 
 /**

@@ -18,6 +18,8 @@ namespace lintdb {
                 throw LintDBException("Quantizer type not valid.");
             }
             return ProductEncoder::load(path, config);
+        } else if (FILE *file = fopen((path + "/" + LEGACY_QUANTIZER_FILENAME).c_str(), "r")) {
+            return Binarizer::load(path);
         } else {
             throw LintDBException("Quantizer not found at path: " + path);
         }
@@ -48,7 +50,7 @@ namespace lintdb {
         {
         case IndexEncoding::NONE:
             return nullptr;
-            
+
         case IndexEncoding::BINARIZER:
             return std::make_unique<Binarizer>(config.nbits, config.dim);
         

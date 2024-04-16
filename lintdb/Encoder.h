@@ -13,7 +13,7 @@
 #include "lintdb/SearchOptions.h"
 
 namespace lintdb {
-    static const std::string ENCODER_FILENAME = "_encoder.bin";
+    static const std::string ENCODER_FILENAME = "_quantizer.bin";
 
     struct EncoderConfig {
         size_t nlist;
@@ -85,6 +85,7 @@ namespace lintdb {
         ) =0;
 
         virtual float* get_centroids() const = 0;
+        virtual Quantizer* get_quantizer() const = 0;
 
         virtual void save(std::string path) = 0;
         virtual void train(const float* embeddings, const size_t n, const size_t dim) = 0;
@@ -126,6 +127,10 @@ namespace lintdb {
 
         size_t get_nbits() const override {
             return nbits;
+        }
+
+        Quantizer* get_quantizer() const override {
+            return quantizer.get();
         }
 
         std::unique_ptr<EncodedDocument> encode_vectors(

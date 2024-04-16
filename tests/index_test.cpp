@@ -14,18 +14,32 @@
 #include "lintdb/util.h"
 #include <unordered_set>
 
+using ::testing::TestWithParam;
+using ::testing::Values;
+
+class IndexTest : public TestWithParam<lintdb::IndexEncoding> {
+ public:
+  ~IndexTest() override {}
+  void SetUp() override { type = GetParam(); }
+  void TearDown() override {
+  }
+
+ protected:
+  lintdb::IndexEncoding type;
+};
+
 // Demonstrate some basic assertions.
-TEST(IndexTest, InitializesCorrectly) {
+TEST_P(IndexTest, InitializesCorrectly) {
     size_t nbits = 4; // the number of bits to encode residual codes into.
     std::filesystem::path path = std::filesystem::temp_directory_path();
     auto temp_db = path.append("test_index");
 
-    lintdb::IndexIVF index(temp_db.string(), 5, 128, 2);
+    lintdb::IndexIVF index(temp_db.string(), 5, 128, 2, 4, 16, type);
 
     EXPECT_EQ(index.config.nlist, 5);
 }
 
-TEST(IndexTest, TrainsCorrectly) {
+TEST_P(IndexTest, TrainsCorrectly) {
     size_t dim = 128;
     // we'll generate num_docs * num_tokens random vectors for training.
     // keep in mind this needs to be larger than the number of dimensions.
@@ -43,7 +57,7 @@ TEST(IndexTest, TrainsCorrectly) {
 
     faiss::rand_smooth_vectors(num_docs * num_tokens, dim, buf.data(), 1234);
 
-    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, 16, lintdb::IndexEncoding::BINARIZER);
+    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
 
     index.train(num_docs * num_tokens, buf);
     EXPECT_EQ(index.config.nlist, 250);
@@ -85,7 +99,7 @@ TEST(IndexTest, TrainsCorrectly) {
 }
 
 
-TEST(IndexTest, TrainsWithCompressionCorrectly) {
+TEST_P(IndexTest, TrainsWithCompressionCorrectly) {
     size_t dim = 128;
     // we'll generate num_docs * num_tokens random vectors for training.
     // keep in mind this needs to be larger than the number of dimensions.
@@ -103,7 +117,7 @@ TEST(IndexTest, TrainsWithCompressionCorrectly) {
 
     faiss::rand_smooth_vectors(num_docs * num_tokens, dim, buf.data(), 1234);
 
-    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, 16, lintdb::IndexEncoding::BINARIZER);
+    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
 
     index.train(num_docs * num_tokens, buf);
     EXPECT_EQ(index.config.nlist, 250);
@@ -158,7 +172,7 @@ TEST(IndexTest, EmbeddingBlocksAreRowMajor) {
     }
 }
 
-TEST(IndexTest, SearchCorrectly) {
+TEST_P(IndexTest, SearchCorrectly) {
     size_t dim = 128;
     // we'll generate num_docs * num_tokens random vectors for training.
     // keep in mind this needs to be larger than the number of dimensions.
@@ -182,7 +196,7 @@ TEST(IndexTest, SearchCorrectly) {
     // normalize before training. ColBERT returns normalized embeddings.
     lintdb::normalize_vector(buf.data(), num_docs * num_tokens, dim);
 
-    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits);
+    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
 
     index.train(num_docs * num_tokens, buf);
 
@@ -203,15 +217,12 @@ TEST(IndexTest, SearchCorrectly) {
     auto results = index.search(lintdb::kDefaultTenant, block, 64, 5, opts);
 
     EXPECT_GT(results.size(), 0);
-    // we expect to get back the same document we added.
-    std::cout << "results size: " << results.size() << std::endl;
-    std::cout << "results[0].id: " << results[0].id << std::endl;
-    std::cout << "results[0].score " << results[0].score << std::endl;
+
     auto actual = results[0].id;
     EXPECT_EQ(actual, 1);
 }
 
-TEST(IndexTest, LoadsCorrectly) {
+TEST_P(IndexTest, LoadsCorrectly) {
     size_t dim = 128;
     // we'll generate num_docs * num_tokens random vectors for training.
     // keep in mind this needs to be larger than the number of dimensions.
@@ -233,7 +244,7 @@ TEST(IndexTest, LoadsCorrectly) {
         }
     }
 
-    lintdb::IndexIVF* index = new lintdb::IndexIVF(temp_db.string(), kclusters, dim, centroid_bits);
+    lintdb::IndexIVF* index = new lintdb::IndexIVF(temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
 
     index->train(num_docs * num_tokens, buf);
 
@@ -245,7 +256,7 @@ TEST(IndexTest, LoadsCorrectly) {
     loaded_index.search(lintdb::kDefaultTenant, query.data(), num_tokens, dim, 10, 5);
 }
 
-TEST(IndexTest, MergeCorrectly) {
+TEST_P(IndexTest, MergeCorrectly) {
     size_t dim = 128;
     // we'll generate num_docs * num_tokens random vectors for training.
     // keep in mind this needs to be larger than the number of dimensions.
@@ -269,7 +280,7 @@ TEST(IndexTest, MergeCorrectly) {
     // normalize before training. ColBERT returns normalized embeddings.
     lintdb::normalize_vector(buf.data(), num_docs * num_tokens, dim);
 
-    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, 0, lintdb::IndexEncoding::BINARIZER, false);
+    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
 
     index.train(num_docs * num_tokens, buf);
 
@@ -294,7 +305,6 @@ TEST(IndexTest, MergeCorrectly) {
     std::vector<lintdb::RawPassage> docs_two = { doc_two };
     index_two.add(lintdb::kDefaultTenant, docs_two);
 
-    std::cout << "added to second db" << std::endl;
     // merge the two indices.
     index.merge(second_db.string());
 
@@ -317,6 +327,17 @@ TEST(IndexTest, MergeCorrectly) {
 
     EXPECT_EQ(results.size(), 2);
 }
+
+INSTANTIATE_TEST_SUITE_P(IndexTest, IndexTest, Values(
+    lintdb::IndexEncoding::NONE, 
+    lintdb::IndexEncoding::BINARIZER, 
+    lintdb::IndexEncoding::PRODUCT_QUANTIZER
+    ),
+    [](const testing::TestParamInfo<IndexTest::ParamType>& info) {
+        auto serialized = lintdb::serialize_encoding(info.param);
+        return serialized;
+    }
+);
 
 
 int main(int argc, char **argv) {

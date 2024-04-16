@@ -8,6 +8,10 @@
 #include "lintdb/retriever/emvb.h"
 #include "lintdb/retriever/emvb_util.h"
 #include <unordered_set>
+#include "lintdb/quantizers/Quantizer.h"
+#include "lintdb/quantizers/ProductEncoder.h"
+#include "lintdb/assert.h"
+#include <numeric>
 
 namespace lintdb {
     EMVBRetriever::EMVBRetriever(
@@ -15,12 +19,8 @@ namespace lintdb {
         std::shared_ptr<ForwardIndex> index,
         std::shared_ptr<Encoder> encoder,
         size_t num_subquantizers
-    ) : inverted_list_(inverted_list), index_(index), encoder_(encoder) {
-        pq = std::make_unique<faiss::ProductQuantizer>(
-            encoder_->get_dim(),
-            num_subquantizers,
-            encoder_->get_nbits()
-        );
+    ) : inverted_list_(inverted_list), index_(index), encoder_(encoder), num_subquantizers(num_subquantizers) {
+        LINTDB_THROW_IF_NOT_MSG(encoder_->get_quantizer()->get_type() == QuantizerType::PRODUCT_ENCODER, "encoder must be a product encoder");
     }
 
     // called find_candidate_docs
@@ -101,13 +101,15 @@ namespace lintdb {
         
         std::unordered_set<idx_t> global_pids;
 
+        std::vector<idx_t> closest_centroid_list(closest_centroid_ids.begin(), closest_centroid_ids.end());
+
     #pragma omp parallel
         {
             std::vector<idx_t> local_pids;
             #pragma omp for nowait
-            for (auto idx = closest_centroid_ids.begin(); idx != closest_centroid_ids.end(); idx++) {
-                local_pids = lookup_pids(tenant, *idx);
-                VLOG(100) << "centroid: " << *idx << " number of local pids: " << local_pids.size();
+            for (const auto& idx : closest_centroid_list) {
+                local_pids = lookup_pids(tenant, idx);
+                VLOG(100) << "centroid: " << idx << " number of local pids: " << local_pids.size();
                 #pragma omp critical
                 {
                     global_pids.insert(local_pids.begin(), local_pids.end());
@@ -134,7 +136,11 @@ namespace lintdb {
     ) {
         std::vector<DocCandidate<size_t>> pid_scores(doc_codes.size());
 
-        #pragma omp for
+#ifdef __AVX2__
+#pragma omp parallel for simd schedule(static, 8)
+#else
+#pragma omp parallel for
+#endif
         for (int i = 0; i < doc_codes.size(); i++) {
             auto codes = doc_codes[i]->codes;
 
@@ -152,10 +158,14 @@ namespace lintdb {
         VLOG(10) << "number of passages to evaluate: " << pid_scores.size();
         assert(pid_scores.size() == doc_codes.size());
 
+        auto comparator = [](DocCandidate<size_t> p1, DocCandidate<size_t> p2) {
+            return p1.score > p2.score;
+        };
+                
         std::sort(
                 pid_scores.begin(),
                 pid_scores.end(),
-                std::greater<DocCandidate<size_t>>());
+                comparator);
 
         return std::vector<DocCandidate<size_t>>(pid_scores.begin(), pid_scores.begin() + opts.num_docs_to_score);
     }
@@ -169,7 +179,11 @@ namespace lintdb {
     ) {
         std::vector<DocCandidate<float>> pid_scores(doc_codes.size());
 
-        #pragma omp for simd schedule(static, 16)
+#ifdef __AVX2__
+#pragma omp parallel for simd schedule(static, 8)
+#else
+#pragma omp parallel for
+#endif
         for (int i = 0; i < candidates.size(); i++) {
             auto index = candidates[i].index_position;
             auto codes = doc_codes[index]->codes;
@@ -193,11 +207,16 @@ namespace lintdb {
         VLOG(10) << "number of passages to evaluate: " << pid_scores.size();
         assert(pid_scores.size() == doc_codes.size());
 
+        auto comparator = [](DocCandidate<float> p1, DocCandidate<float> p2) {
+            return p1.score > p2.score;
+        };
+
         // according to the paper, we take the top 25%.
         std::sort(
-                pid_scores.begin(),
-                pid_scores.end(),
-                std::greater<std::pair<size_t, idx_t>>());
+            pid_scores.begin(),
+            pid_scores.end(),
+            comparator
+        );
 
 
         size_t cutoff = pid_scores.size();
@@ -217,15 +236,115 @@ namespace lintdb {
         const std::vector<std::unique_ptr<DocumentCodes>>& doc_codes,
         // doc residuals are only looked up for the existing candidates, and because of this, won't match the candidate index position.
         const std::vector<std::unique_ptr<DocumentResiduals>>& doc_residuals,
+        const std::vector<float>& distances, // shape: (num_centroids x num_query_tok)
         const gsl::span<const float> query_data,
-        const size_t n,
+        const size_t num_query_tokens,
+        const size_t num_to_return,
         const RetrieverOptions& opts
     ) {
-        auto dsub = encoder_->get_dim() / n;
+        // auto dsub = encoder_->get_dim() / num_subquantizers;
         auto ksub = 1 << encoder_->get_nbits();
-        auto M = candidates.size(); // ProductQuantizer has a variable M that EMVB specifies as the number of residuals. 
-        std::vector<float> distance_table(n * ksub * M);
-        pq->compute_inner_prod_tables(n, query_data.data(), distance_table.data());
+
+        Quantizer* quantizer = encoder_->get_quantizer();
+        auto product_quantizer = dynamic_cast<ProductEncoder*>(quantizer);
+        // I would like to use the following at some point, but distance computers aren't thread safe.
+        // It also won't precompute all of the tables without extending it. The benefit is that we 
+        // can take advantage of faiss' optimizations.
+        // auto computer = product_quantizer->pq->get_FlatCodesDistanceComputer();
+        // computer->set_query(query_data.data());
+
+        std::vector<float> distance_table(num_query_tokens * ksub * this->num_subquantizers);
+        product_quantizer->pq->pq.compute_inner_prod_tables(
+            num_query_tokens,
+            query_data.data(),
+            distance_table.data()
+        );
+
+        std::vector<DocCandidate<float>> final_scores;
+        final_scores.reserve(num_to_return);
+            // lets prepare a min heap comparator.
+        auto comparator = [](DocCandidate<float> p1, DocCandidate<float> p2) {
+            return p1.score > p2.score;
+        };
+#ifdef __AVX2__
+#pragma omp parallel for simd schedule(static, 8)
+#else
+#pragma omp parallel for
+#endif
+        for (size_t doc=0; doc < candidates.size(); doc++) {
+
+            std::vector<float> maxes(num_query_tokens, 0);
+            
+            auto candidate = candidates[doc];
+            auto doc_tokens = doc_residuals.at(doc)->num_tokens;
+
+            for(size_t i=0; i < num_query_tokens; i++) {
+                std::vector<float> current_distance(num_query_tokens * doc_tokens);
+                for(size_t j=0; j < doc_tokens; j++) {
+                    current_distance[i*doc_tokens+j] = distances[j*num_query_tokens+i];
+                }
+
+                auto filtered_centroids = filter_centroids_in_scoring(
+                    opts.centroid_threshold,
+                    distances.data(),
+                    doc_tokens
+                );
+
+                for (size_t idx=0; idx < filtered_centroids.size(); idx++) {                    
+                    auto distance = compute_distances_one_qt_one_doc(
+                        i,
+                        idx,
+                        distance_table,
+                        ksub,
+                        num_subquantizers,
+                        num_query_tokens,
+                        doc_residuals.at(doc)->residuals
+                    );
+
+                    current_distance[i*doc_tokens+idx] += distance;
+                }
+
+                maxes[i] = *std::max_element(current_distance.begin(), current_distance.end());
+            }
+            float score = std::accumulate(maxes.begin(), maxes.end(), 0.0);
+
+            #pragma omp critical
+            {
+                if (final_scores.size() < num_to_return) {
+                    final_scores.push_back(DocCandidate<float>{score, candidate.doc_id, candidate.index_position});
+
+                    if (final_scores.size() == num_to_return) {
+                        std::make_heap(final_scores.begin(), final_scores.end(), comparator);
+                    }
+                } else if (score > final_scores.front().score) {
+                    if (opts.expected_id == final_scores.front().doc_id) {
+                        LOG(INFO) << "expected id being dropped from phase two results. score: " << score;
+                    }
+                        
+                    std::pop_heap(final_scores.begin(), final_scores.end(), comparator);
+                    final_scores.front() = DocCandidate<float>{score, candidate.doc_id, candidate.index_position};
+                    std::push_heap(final_scores.begin(), final_scores.end(), comparator);
+                }
+            } // end omp critical
+
+        }
+
+        if(final_scores.size() < num_to_return) {
+            std::sort(
+                final_scores.begin(),
+                final_scores.end(),
+                comparator
+            );
+        } else {
+            std::sort_heap(
+                final_scores.begin(),
+                final_scores.end(),
+                comparator
+            );
+        }
+
+        return final_scores;
+
     }
 
     std::vector<SearchResult> EMVBRetriever::retrieve(
@@ -252,8 +371,8 @@ namespace lintdb {
         auto it = std::find_if(
                 candidates_centroid_ranked.begin(),
                 candidates_centroid_ranked.end(),
-                [opts](std::pair<float, idx_t> p) {
-                    return p.second == opts.expected_id;
+                [opts](DocCandidate<float> p) {
+                    return p.doc_id == opts.expected_id;
                 });
         if (it != candidates_centroid_ranked.end()) {
             auto pos = it - candidates_centroid_ranked.begin();
@@ -271,38 +390,18 @@ namespace lintdb {
             candidates_centroid_ranked.begin(),
             candidates_centroid_ranked.end(),
             std::back_inserter(top_25_ids),
-            [](std::pair<float, idx_t> p) { return p.second; });
+            [](DocCandidate<float> p) { return p.doc_id; });
     auto doc_residuals = index_->get_residuals(tenant, top_25_ids);
 
-    auto actual_scores = rank_phase_two(candidates_centroid_ranked, doc_codes, doc_residuals, query_data, n, opts);
-
-    if (opts.expected_id != -1) {
-        auto it = std::find_if(
-                actual_scores.begin(),
-                actual_scores.end(),
-                [opts](std::pair<float, idx_t> p) {
-                    return p.second == opts.expected_id;
-                });
-        if (it != actual_scores.end()) {
-            auto pos = it - actual_scores.begin();
-            LOG(INFO) << "expected id found in residual scores: " << pos << " with score: " << it->score;
-            if (pos > k) {
-                LOG(INFO) << "top 25 cutoff: " << k << ". expected id has been dropped";
-            }
-        }
-    }
-
-    size_t num_to_return = std::min<size_t>(actual_scores.size(), k);
-    std::vector<std::pair<float, idx_t>> top_k_scores(
-            actual_scores.begin(), actual_scores.begin() + num_to_return);
+    auto actual_scores = rank_phase_two(candidates_centroid_ranked, doc_codes, doc_residuals, distances, query_data, n, k, opts);
 
     std::vector<SearchResult> results;
     std::transform(
-            top_k_scores.begin(),
-            top_k_scores.end(),
+            actual_scores.begin(),
+            actual_scores.end(),
             std::back_inserter(results),
-            [](std::pair<float, idx_t> p) {
-                return SearchResult{p.second, p.first};
+            [](DocCandidate<float> p) {
+                return SearchResult{p.doc_id, p.score};
             });
 
     return results;

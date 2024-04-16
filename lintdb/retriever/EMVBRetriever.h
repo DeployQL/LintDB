@@ -48,7 +48,8 @@ namespace lintdb {
         std::shared_ptr<InvertedList> inverted_list_;
         std::shared_ptr<ForwardIndex> index_;
         std::shared_ptr<Encoder> encoder_;
-        std::unique_ptr<faiss::ProductQuantizer> pq;
+
+        size_t num_subquantizers;
 
         // compute_hit_frequency
         std::vector<idx_t> top_passages(
@@ -81,8 +82,10 @@ namespace lintdb {
             const std::vector<DocCandidate<float>>& candidates,
             const std::vector<std::unique_ptr<DocumentCodes>>& doc_codes,
             const std::vector<std::unique_ptr<DocumentResiduals>>& doc_residuals,
+            const std::vector<float>& distances,
             const gsl::span<const float> query_data,
             const size_t n,
+            const size_t num_to_return,
             const RetrieverOptions& opts
         );
 

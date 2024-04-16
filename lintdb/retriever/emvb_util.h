@@ -34,7 +34,39 @@ namespace lintdb {
         return (bitvectors_centroids[slot] >> offset) & (uint64_t)1;
     }
 
-    int popcount(uint32_t t) {
-        return _mm_popcnt_u32(t);
+    inline float compute_distances_one_qt_one_doc(
+        const size_t query_term_index, // M
+        const size_t doc_term_index, // the code we're updating.
+        std::vector<float> &precomputed_dis_table,
+        const size_t ksub,
+        const size_t num_subquantizers, // necessary to navigate distances.
+        const size_t num_query_tokens, // M
+        const std::vector<residual_t>& residuals
+    )
+    {
+
+        const float *dt = precomputed_dis_table.data() + query_term_index * ksub * num_subquantizers;
+        int residual_pos = num_subquantizers * doc_term_index;
+
+        float dis = 0;
+        for (size_t m = residual_pos; m < residual_pos+num_subquantizers; m += 4)
+        {
+            float dism = 0;
+            dism = dt[residuals[m]];
+            m++;
+            dt += ksub;
+            dism += dt[residuals[m]];
+            m++;
+            dt += ksub;
+            dism += dt[residuals[m]];
+            m++;
+            dt += ksub;
+            dism += dt[residuals[m]];
+            m++;
+            dt += ksub;
+            dis += dism;
+        }
+
+        return dis;
     }
 }

@@ -28,6 +28,11 @@
 
 
 namespace lintdb {
+  std::ostream& operator<<(std::ostream& os, const Configuration& config) {
+        os << "Configuration(" << config.nlist << ", " << config.nbits << ", " << config.niter << ", " << config.dim << ", " << config.num_subquantizers << ", " << serialize_encoding(config.quantizer_type) << ")";
+        return os;
+    }
+
 IndexIVF::IndexIVF(std::string path, bool read_only): read_only(read_only), path(path) {
     LOG(INFO) << "loading LintDB from path: " << path;
 
@@ -40,7 +45,8 @@ IndexIVF::IndexIVF(std::string path, bool read_only): read_only(read_only), path
         this->config.nbits, 
         this->config.niter, 
         this->config.dim, 
-        index_config.quantizer_type
+        index_config.quantizer_type,
+        this->config.num_subquantizers
     };
     this->encoder = DefaultEncoder::load(path, config);
 
@@ -91,7 +97,7 @@ IndexIVF::IndexIVF(
 
 IndexIVF::IndexIVF(const IndexIVF& other, const std::string path) {
     // we'll leverage the loading methods and construct the index components from files on disk.
-    this->config = other.config;
+    this->config = Configuration(other.config);
     this->read_only = false; // copying an index will always be writeable.
 
     this->path = path;
@@ -105,7 +111,6 @@ IndexIVF::IndexIVF(const IndexIVF& other, const std::string path) {
         this->config.num_subquantizers
     };
     this->encoder = DefaultEncoder::load(other.path, config);
-    LOG(INFO) << "read only: " << read_only;
     this->initialize_inverted_list();
 
     this->save();
@@ -267,6 +272,9 @@ void IndexIVF::update(const uint64_t tenant, const std::vector<RawPassage>& docs
 void IndexIVF::merge(const std::string path) {
 
     Configuration incoming_config = read_metadata(path);
+
+    LOG(INFO) << "incoming config: " << incoming_config;
+    LOG(INFO) << "current config: " << this->config;
 
     LINTDB_THROW_IF_NOT(this->config == incoming_config);
 

@@ -7,6 +7,8 @@
 
 namespace lintdb {
     struct ProductEncoder : public Quantizer {
+        std::unique_ptr<faiss::IndexPQ> pq;
+        
         ProductEncoder(
             size_t dim,
             size_t nbits, 
@@ -29,6 +31,6 @@ namespace lintdb {
         private:
         size_t nbits; // number of bits used in binarizing the residuals.
         size_t dim; // number of dimensions per embedding.
-        std::unique_ptr<faiss::IndexPQ> pq;
+        
     };
 }

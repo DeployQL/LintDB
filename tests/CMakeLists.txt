@@ -20,6 +20,8 @@ find_package(OpenBLAS CONFIG REQUIRED)
 target_link_libraries(lintdb-tests PRIVATE OpenBLAS::OpenBLAS)
 # find_package(LAPACK REQUIRED)
 # target_link_libraries(lintdb-tests PRIVATE ${LAPACK_LIBRARIES})
+find_package(RocksDB CONFIG REQUIRED)
+target_link_libraries(lintdb-tests PRIVATE RocksDB::rocksdb)
 
 find_package(Microsoft.GSL CONFIG REQUIRED)
 target_link_libraries(lintdb-tests PRIVATE Microsoft.GSL::GSL)

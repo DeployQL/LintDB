@@ -12,6 +12,7 @@ set(
     invlists/EncodedDocument.cpp
     retriever/PlaidRetriever.cpp
     retriever/plaid.cpp
+    retriever/EMVBRetriever.cpp
     schema/util.cpp
 )
 
@@ -41,6 +42,11 @@ set(
     retriever/Retriever.h
     retriever/PlaidRetriever.h
     retriever/plaid.h
+    retriever/EMVBRetriever.h
+    retriever/emvb_util.h
+    retriever/emvb.h
+    retriever/emvb_generic.h
+    retriever/emvb_avx.h
     schema/forward_index_generated.h
     schema/inverted_index_generated.h
     schema/mapping_generated.h

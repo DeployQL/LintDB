@@ -3,6 +3,7 @@
 #include <cblas.h>
 #include "lintdb/SearchOptions.h"
 #include <unordered_map>
+#include "lintdb/exception.h"
 
 namespace lintdb {
     void normalize_vector(float* doc_residuals, const size_t num_doc_tokens, const size_t dim) {
@@ -38,15 +39,14 @@ namespace lintdb {
         static const std::unordered_map<std::string, IndexEncoding> stringToType {
             {"NONE", IndexEncoding::NONE},
             {"BINARIZER", IndexEncoding::BINARIZER},
-            {"PRODUCT_ENCODER", IndexEncoding::PRODUCT_QUANTIZER}
+            {"PRODUCT_QUANTIZER", IndexEncoding::PRODUCT_QUANTIZER}
         };
 
         auto it = stringToType.find(str);
         if (it != stringToType.end()) {
             return it->second;
         } else {
-            // Handle error: Unknown string
-            return IndexEncoding::NONE; // or any other appropriate error handling
+            throw LintDBException("Unknown string: " + str);
         }
     }
 }
