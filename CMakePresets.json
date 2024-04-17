@@ -1,5 +1,6 @@
 {
-    "$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
+    "$schema":
+            "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
     "version": 8,
     "cmakeMinimumRequired": {
         "major": 3,
@@ -10,11 +11,13 @@
         {
             "name": "debug",
             "displayName": "Ninja Multi-Config",
-            "description": "Configure with vcpkg toolchain and generate Ninja project files for all configurations",
+            "description":
+                    "Configure with vcpkg toolchain and generate Ninja project files for all configurations",
             "binaryDir": "${sourceDir}/builds/${presetName}",
             "generator": "Ninja Multi-Config",
-            "toolchainFile": "${sourceDir}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
-            "cacheVariables" : {
+            "toolchainFile":
+                    "${sourceDir}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
                 "BUILD_SHARED_LIBS": "ON",
                 "CMAKE_INSTALL_LIBDIR": "lib",
@@ -24,11 +27,13 @@
         {
             "name": "release",
             "displayName": "Ninja Multi-Config",
-            "description": "Configure with vcpkg toolchain and generate Ninja project files for all configurations",
+            "description":
+                    "Configure with vcpkg toolchain and generate Ninja project files for all configurations",
             "binaryDir": "${sourceDir}/builds/${presetName}",
             "generator": "Ninja Multi-Config",
-            "toolchainFile": "${sourceDir}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
-            "cacheVariables" : {
+            "toolchainFile":
+                    "${sourceDir}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
                 "BUILD_SHARED_LIBS": "ON",
                 "CMAKE_INSTALL_LIBDIR": "lib",
@@ -38,11 +43,13 @@
         {
             "name": "python",
             "displayName": "Ninja Multi-Config",
-            "description": "Configure with vcpkg toolchain and generate Ninja project files for all configurations",
+            "description":
+                    "Configure with vcpkg toolchain and generate Ninja project files for all configurations",
             "binaryDir": "${sourceDir}/builds/${presetName}",
             "generator": "Ninja Multi-Config",
-            "toolchainFile": "${sourceDir}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
-            "cacheVariables" : {
+            "toolchainFile":
+                    "${sourceDir}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
                 "BUILD_SHARED_LIBS": "ON",
                 "CMAKE_INSTALL_LIBDIR": "lib",
@@ -79,7 +86,7 @@
             "configurePreset": "release",
             "output": {
                 "outputOnFailure": true
-              },
+            },
             "hidden": true
         },
         {

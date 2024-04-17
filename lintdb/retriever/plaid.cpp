@@ -1,13 +1,13 @@
 #include "lintdb/retriever/plaid.h"
 #include <faiss/utils/hamming.h>
 #include <glog/logging.h>
+#include <algorithm>
+#include <gsl/span>
 #include <iostream>
+#include <numeric>
 #include <unordered_set>
 #include "lintdb/api.h"
 #include "lintdb/util.h"
-#include <numeric>
-#include <algorithm>
-#include <gsl/span>
 
 namespace lintdb {
 
@@ -39,8 +39,10 @@ float score_documents_by_codes(
 }
 
 float colbert_centroid_score(
-        const std::vector<code_t>& doc_codes, // of size num_doc_tokens. one code per token.
-        const std::vector<float>& centroid_scores, // of size nquery_vectors x n_centroids
+        const std::vector<code_t>&
+                doc_codes, // of size num_doc_tokens. one code per token.
+        const std::vector<float>&
+                centroid_scores, // of size nquery_vectors x n_centroids
         const size_t nquery_vectors,
         const size_t n_centroids,
         const idx_t doc_id) {
@@ -52,8 +54,9 @@ float colbert_centroid_score(
 
         if (seen_codes.find(code) == seen_codes.end()) {
             for (int k = 0; k < nquery_vectors; k++) {
-                per_doc_approx_scores[k] =
-                    std::max(per_doc_approx_scores[k], centroid_scores[k * n_centroids + code]);
+                per_doc_approx_scores[k] = std::max(
+                        per_doc_approx_scores[k],
+                        centroid_scores[k * n_centroids + code]);
             }
             seen_codes.insert(code);
         }
@@ -99,8 +102,8 @@ float score_document_by_residuals(
         bool normalize) {
     // use BLAS functions to matmul doc residuals with the transposed query
     // vectors. we'll use the sum of the max scores for each centroid.
-    int m = num_doc_tokens; // rows of op(A) and of matrix C.
-    int n = num_query_tokens;   // columns of matrix op(B) and of matrix C.
+    int m = num_doc_tokens;   // rows of op(A) and of matrix C.
+    int n = num_query_tokens; // columns of matrix op(B) and of matrix C.
     int k = dim; // the number of columns of op(A) and rows of op(B).
 
     if (normalize) {
@@ -121,14 +124,14 @@ float score_document_by_residuals(
             k, // leading dimension is the length of the first dimension
                // (columns)
             query_vectors.data(), // should be k x n after transpose
-            k,             // this is the leading dimension of B, not op(b)
+            k, // this is the leading dimension of B, not op(b)
             0.000,
             output.data(), // m x n
             n);
 
     // find the max score for each doc_token.
     std::vector<float> max_scores(n, 0);
-    for (size_t i = 0; i < m; i++) { // per num_doc_tokens
+    for (size_t i = 0; i < m; i++) {     // per num_doc_tokens
         for (size_t j = 0; j < n; j++) { // per num_query_tokens
             auto score = output[i * n + j];
             if (score > max_scores[j]) {

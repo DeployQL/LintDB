@@ -1,40 +1,42 @@
 
 #include "lintdb/index.h"
 #include <glog/logging.h>
+#include <json/json.h>
+#include <json/reader.h>
+#include <json/writer.h>
 #include <omp.h>
+#include <rocksdb/db.h>
 #include <rocksdb/filter_policy.h>
 #include <rocksdb/slice_transform.h>
 #include <rocksdb/table.h>
+#include <rocksdb/utilities/optimistic_transaction_db.h>
+#include <stdio.h>
 #include <algorithm>
 #include <filesystem>
-#include <limits>
 #include <fstream>
+#include <gsl/span>
 #include <iostream>
+#include <limits>
 #include <string>
 #include <unordered_set>
 #include <vector>
 #include "lintdb/assert.h"
 #include "lintdb/cf.h"
 #include "lintdb/invlists/RocksdbList.h"
-#include "lintdb/schema/util.h"
 #include "lintdb/retriever/Retriever.h"
-#include <stdio.h>
-#include <json/writer.h>
-#include <json/json.h>
-#include <json/reader.h>
-#include <rocksdb/utilities/optimistic_transaction_db.h>
-#include <rocksdb/db.h>
-#include <gsl/span>
+#include "lintdb/schema/util.h"
 #include "lintdb/util.h"
 
-
 namespace lintdb {
-  std::ostream& operator<<(std::ostream& os, const Configuration& config) {
-        os << "Configuration(" << config.nlist << ", " << config.nbits << ", " << config.niter << ", " << config.dim << ", " << config.num_subquantizers << ", " << serialize_encoding(config.quantizer_type) << ")";
-        return os;
-    }
+std::ostream& operator<<(std::ostream& os, const Configuration& config) {
+    os << "Configuration(" << config.nlist << ", " << config.nbits << ", "
+       << config.niter << ", " << config.dim << ", " << config.num_subquantizers
+       << ", " << serialize_encoding(config.quantizer_type) << ")";
+    return os;
+}
 
-IndexIVF::IndexIVF(std::string path, bool read_only): read_only(read_only), path(path) {
+IndexIVF::IndexIVF(std::string path, bool read_only)
+        : read_only(read_only), path(path) {
     LOG(INFO) << "loading LintDB from path: " << path;
 
     // set all of our individual attributes.
@@ -42,13 +44,12 @@ IndexIVF::IndexIVF(std::string path, bool read_only): read_only(read_only), path
     this->config = index_config;
 
     auto config = EncoderConfig{
-        this->config.nlist, 
-        this->config.nbits, 
-        this->config.niter, 
-        this->config.dim, 
-        index_config.quantizer_type,
-        this->config.num_subquantizers
-    };
+            this->config.nlist,
+            this->config.nbits,
+            this->config.niter,
+            this->config.dim,
+            index_config.quantizer_type,
+            this->config.num_subquantizers};
     this->encoder = DefaultEncoder::load(path, config);
 
     initialize_inverted_list();
@@ -57,14 +58,13 @@ IndexIVF::IndexIVF(std::string path, bool read_only): read_only(read_only), path
 IndexIVF::IndexIVF(std::string path, Configuration& config)
         : config(config), path(path) {
     IndexIVF(
-        path,
-        config.nlist,
-        config.dim,
-        config.nbits,
-        config.niter,
-        config.num_subquantizers,
-        config.quantizer_type
-    );
+            path,
+            config.nlist,
+            config.dim,
+            config.nbits,
+            config.niter,
+            config.num_subquantizers,
+            config.quantizer_type);
 }
 
 IndexIVF::IndexIVF(
@@ -75,42 +75,45 @@ IndexIVF::IndexIVF(
         size_t niter,
         size_t num_subquantizers,
         IndexEncoding quantizer_type,
-        bool read_only
-    ) : read_only(read_only), path(path) {
+        bool read_only)
+        : read_only(read_only), path(path) {
     LINTDB_THROW_IF_NOT(nlist <= std::numeric_limits<code_t>::max());
 
     Configuration config = Configuration{
-        .nlist = nlist,
-        .nbits = binarize_nbits,
-        .niter = niter,
-        .dim = dim,
-        .num_subquantizers = num_subquantizers,
-        .quantizer_type = quantizer_type
-    };
+            .nlist = nlist,
+            .nbits = binarize_nbits,
+            .niter = niter,
+            .dim = dim,
+            .num_subquantizers = num_subquantizers,
+            .quantizer_type = quantizer_type};
     this->config = config;
 
     this->encoder = std::make_unique<DefaultEncoder>(
-        nlist, binarize_nbits, niter, dim, num_subquantizers, quantizer_type
-    );
+            nlist,
+            binarize_nbits,
+            niter,
+            dim,
+            num_subquantizers,
+            quantizer_type);
 
     initialize_inverted_list();
 }
 
 IndexIVF::IndexIVF(const IndexIVF& other, const std::string path) {
-    // we'll leverage the loading methods and construct the index components from files on disk.
+    // we'll leverage the loading methods and construct the index components
+    // from files on disk.
     this->config = Configuration(other.config);
     this->read_only = false; // copying an index will always be writeable.
 
     this->path = path;
 
     auto config = EncoderConfig{
-        this->config.nlist, 
-        this->config.nbits, 
-        this->config.niter, 
-        this->config.dim, 
-        this->config.quantizer_type, 
-        this->config.num_subquantizers
-    };
+            this->config.nlist,
+            this->config.nbits,
+            this->config.niter,
+            this->config.dim,
+            this->config.quantizer_type,
+            this->config.num_subquantizers};
     this->encoder = DefaultEncoder::load(other.path, config);
     this->initialize_inverted_list();
 
@@ -133,9 +136,11 @@ void IndexIVF::initialize_inverted_list() {
             LOG(ERROR) << s.ToString();
         }
         assert(s.ok());
-        auto owned_ptr = std::shared_ptr<rocksdb::OptimisticTransactionDB>(ptr2);
+        auto owned_ptr =
+                std::shared_ptr<rocksdb::OptimisticTransactionDB>(ptr2);
         this->db = owned_ptr;
-        auto index = std::make_shared<WritableRocksDBInvertedList>(WritableRocksDBInvertedList(owned_ptr, this->column_families));
+        auto index = std::make_shared<WritableRocksDBInvertedList>(
+                WritableRocksDBInvertedList(owned_ptr, this->column_families));
         this->index_ = index;
         this->inverted_list_ = index;
     } else {
@@ -146,13 +151,14 @@ void IndexIVF::initialize_inverted_list() {
         assert(s.ok());
         auto owned_ptr = std::shared_ptr<rocksdb::DB>(ptr);
         this->db = owned_ptr;
-        auto index = std::make_shared<ReadOnlyRocksDBInvertedList>(ReadOnlyRocksDBInvertedList(owned_ptr, this->column_families));
+        auto index = std::make_shared<ReadOnlyRocksDBInvertedList>(
+                ReadOnlyRocksDBInvertedList(owned_ptr, this->column_families));
         this->index_ = index;
-        this->inverted_list_ = index; 
+        this->inverted_list_ = index;
     }
 
-    this->retriever = std::make_unique<PlaidRetriever>(PlaidRetriever(this->inverted_list_, this->index_, this->encoder));
-
+    this->retriever = std::make_unique<PlaidRetriever>(
+            PlaidRetriever(this->inverted_list_, this->index_, this->encoder));
 }
 
 void IndexIVF::train(size_t n, std::vector<float>& embeddings) {
@@ -165,7 +171,8 @@ void IndexIVF::train(float* embeddings, size_t n, size_t dim) {
 }
 
 void IndexIVF::train(float* embeddings, int n, int dim) {
-    assert(config.nlist <= std::numeric_limits<code_t>::max() && "nlist must be less than 32 bits.");
+    assert(config.nlist <= std::numeric_limits<code_t>::max() &&
+           "nlist must be less than 32 bits.");
     train(embeddings, static_cast<size_t>(n), static_cast<size_t>(dim));
 }
 
@@ -185,25 +192,33 @@ std::vector<SearchResult> IndexIVF::search(
         const size_t n_probe,
         const size_t k,
         const SearchOptions& opts) const {
-    return search(tenant, block.embeddings.data(), block.num_tokens, block.dimensions, n_probe, k, opts);
+    return search(
+            tenant,
+            block.embeddings.data(),
+            block.num_tokens,
+            block.dimensions,
+            n_probe,
+            k,
+            opts);
 }
 
 /**
- * Implementation note: 
- * 
- * when we look at what IVF lists to search, we have several parameters that will influence this.
- * 1. k_top_centroids: responsible for how many centroids per token we include in our search before sorting.
+ * Implementation note:
+ *
+ * when we look at what IVF lists to search, we have several parameters that
+ * will influence this.
+ * 1. k_top_centroids: responsible for how many centroids per token we include
+ * in our search before sorting.
  * 2. n_probe: the number of lists we search on after sorting.
-*/
+ */
 std::vector<SearchResult> IndexIVF::search(
-    const uint64_t tenant,
-    const float* data,
-    const int n,
-    const int dim,
-    const size_t n_probe,
-    const size_t k,
-    const SearchOptions& opts) const {
-
+        const uint64_t tenant,
+        const float* data,
+        const int n,
+        const int dim,
+        const size_t n_probe,
+        const size_t k,
+        const SearchOptions& opts) const {
     // per block, run a matrix multiplication and find the nearest centroid.
     // block: (num_tokens x dimensions)
     // centroids: (nlist x dimensions)
@@ -214,22 +229,15 @@ std::vector<SearchResult> IndexIVF::search(
 
     gsl::span<const float> query_span = gsl::span(data, n);
     RetrieverOptions plaid_options = RetrieverOptions{
-        .total_centroids_to_calculate = config.nlist,
-        .num_second_pass = opts.num_second_pass,
-        .expected_id = opts.expected_id,
-        .centroid_threshold = opts.centroid_score_threshold,
-        .k_top_centroids = opts.k_top_centroids,
-        .n_probe = n_probe
-    };
+            .total_centroids_to_calculate = config.nlist,
+            .num_second_pass = opts.num_second_pass,
+            .expected_id = opts.expected_id,
+            .centroid_threshold = opts.centroid_score_threshold,
+            .k_top_centroids = opts.k_top_centroids,
+            .n_probe = n_probe};
 
-    auto results = this->retriever->retrieve(
-        tenant,
-        query_span,
-        n,
-        k,
-        plaid_options
-    );
-
+    auto results =
+            this->retriever->retrieve(tenant, query_span, n, k, plaid_options);
 
     return results;
 }
@@ -238,10 +246,12 @@ void IndexIVF::set_centroids(float* data, int n, int dim) {
     encoder->set_centroids(data, n, dim);
 }
 
-void IndexIVF::set_weights(const std::vector<float> weights, const std::vector<float> cutoffs, const float avg_residual) {
+void IndexIVF::set_weights(
+        const std::vector<float> weights,
+        const std::vector<float> cutoffs,
+        const float avg_residual) {
     encoder->set_weights(weights, cutoffs, avg_residual);
 }
-
 
 void IndexIVF::add(const uint64_t tenant, const std::vector<RawPassage>& docs) {
     LINTDB_THROW_IF_NOT(this->encoder->is_trained);
@@ -261,7 +271,9 @@ void IndexIVF::remove(const uint64_t tenant, const std::vector<idx_t>& ids) {
     index_->remove(tenant, ids);
 }
 
-void IndexIVF::update(const uint64_t tenant, const std::vector<RawPassage>& docs) {
+void IndexIVF::update(
+        const uint64_t tenant,
+        const std::vector<RawPassage>& docs) {
     std::vector<idx_t> ids;
     for (auto doc : docs) {
         ids.push_back(doc.id);
@@ -271,7 +283,6 @@ void IndexIVF::update(const uint64_t tenant, const std::vector<RawPassage>& docs
 }
 
 void IndexIVF::merge(const std::string path) {
-
     Configuration incoming_config = read_metadata(path);
 
     LOG(INFO) << "incoming config: " << incoming_config;
@@ -287,16 +298,16 @@ void IndexIVF::merge(const std::string path) {
     std::vector<rocksdb::ColumnFamilyHandle*> other_cfs;
 
     rocksdb::DB* ptr;
-    rocksdb::Status s = rocksdb::DB::OpenForReadOnly(
-            options, path, cfs, &other_cfs, &ptr);
+    rocksdb::Status s =
+            rocksdb::DB::OpenForReadOnly(options, path, cfs, &other_cfs, &ptr);
     assert(s.ok());
     std::shared_ptr<rocksdb::DB> owned_ptr = std::shared_ptr<rocksdb::DB>(ptr);
 
     index_->merge(owned_ptr, other_cfs);
 
     for (auto cf : other_cfs) {
-            owned_ptr->DestroyColumnFamilyHandle(cf);
-        }
+        owned_ptr->DestroyColumnFamilyHandle(cf);
+    }
 }
 
 void IndexIVF::write_metadata() {
@@ -309,7 +320,8 @@ void IndexIVF::write_metadata() {
     metadata["nbits"] = Json::UInt64(this->config.nbits);
     metadata["dim"] = Json::UInt64(this->config.dim);
     metadata["niter"] = Json::UInt64(this->config.niter);
-    metadata["num_subquantizers"] = Json::UInt64(this->config.num_subquantizers);
+    metadata["num_subquantizers"] =
+            Json::UInt64(this->config.num_subquantizers);
 
     auto quantizer_type = serialize_encoding(this->config.quantizer_type);
     metadata["quantizer_type"] = Json::String(quantizer_type);

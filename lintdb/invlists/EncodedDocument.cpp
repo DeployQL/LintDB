@@ -8,10 +8,7 @@ EncodedDocument::EncodedDocument(
                 r, // reflects the residual vector for each token vector.
         size_t num_tokens,
         idx_t id)
-        : codes(c),
-          residuals(r),
-          num_tokens(num_tokens),
-          id(id) {}
+        : codes(c), residuals(r), num_tokens(num_tokens), id(id) {}
 
 EncodedDocument::EncodedDocument(
         const code_t* c, // reflects the centroid id for each token vector.
