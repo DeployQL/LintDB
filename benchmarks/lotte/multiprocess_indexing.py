@@ -1,4 +1,5 @@
 import lintdb as ldb
+from lintdb import (IndexEncoding_BINARIZER, IndexEncoding_NONE, IndexEncoding_PRODUCT_QUANTIZER)
 from datasets import load_dataset
 from collections import namedtuple
 from colbert import Indexer, Searcher
@@ -113,9 +114,11 @@ def run(
     if index_type == "binarizer":
         index_type_enum = ldb.IndexEncoding_BINARIZER
     elif index_type == 'pq':
-        index_type_enum = ldb.IndexEncoding_PRODUCT_QUANTIZATION
+        index_type_enum = ldb.IndexEncoding_PRODUCT_QUANTIZER
     elif index_type == 'none':
         index_type_enum = ldb.IndexEncoding_NONE
+
+    print(f"using index type: {index_type_enum}")
 
         # lifestyle full centroids == 65536
         #lifestyle-40k-benchmark centroids == 32768
@@ -142,7 +145,7 @@ def run(
         for id, embedding in tqdm(pool.imap_unordered(encode_one, zip(range(10000), training_data))):
             training_array.append(embedding)
 
-        np_arr = np.stack(training_array, axis=0)
+        np_arr = np.concatenate(training_array, axis=0)
         index.train(np_arr)
 
 
