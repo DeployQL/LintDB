@@ -32,8 +32,7 @@
                 "CMAKE_BUILD_TYPE": "Release",
                 "BUILD_SHARED_LIBS": "ON",
                 "CMAKE_INSTALL_LIBDIR": "lib",
-                "ENABLE_PYTHON": "OFF",
-                "BUILD_TESTING": "OFF"
+                "ENABLE_PYTHON": "OFF"
             }
         },
         {
@@ -47,8 +46,7 @@
                 "CMAKE_BUILD_TYPE": "Release",
                 "BUILD_SHARED_LIBS": "ON",
                 "CMAKE_INSTALL_LIBDIR": "lib",
-                "ENABLE_PYTHON": "ON",
-                "BUILD_TESTING": "OFF"
+                "ENABLE_PYTHON": "ON"
             }
         }
     ],

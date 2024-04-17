@@ -7,6 +7,7 @@
 #include <rocksdb/table.h>
 #include <algorithm>
 #include <filesystem>
+#include <limits>
 #include <fstream>
 #include <iostream>
 #include <string>

@@ -2,6 +2,11 @@
 
 namespace lintdb {
     std::unique_ptr<Quantizer> load_quantizer(std::string path, IndexEncoding type, QuantizerConfig& config) {
+        if (type == IndexEncoding::NONE) {
+            // the file won't exist, so we check NONE first.
+            return nullptr;
+        }
+
         if (FILE *file = fopen((path + "/" + QUANTIZER_FILENAME).c_str(), "r")) {
             fclose(file);
             switch (type)

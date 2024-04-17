@@ -1,12 +1,12 @@
 
 set(
     LINT_DB_SRC
-    index.cpp
-    quantizers/Binarizer.cpp
     Encoder.cpp
+    index.cpp
+    util.cpp
+    quantizers/Binarizer.cpp
     quantizers/ProductEncoder.cpp
     quantizers/io.cpp
-    util.cpp
     invlists/RocksdbList.cpp
     invlists/util.cpp
     invlists/EncodedDocument.cpp
@@ -18,22 +18,22 @@ set(
 
 set(
     LINT_DB_HEADERS
-    index.h
     api.h
     assert.h
-    exception.h
-    constants.h
     cf.h
-    RawPassage.h
+    constants.h
     EmbeddingBlock.h
     Encoder.h
+    exception.h
+    index.h
+    RawPassage.h
+    SearchOptions.h
+    SearchResult.h
+    util.h
     quantizers/Binarizer.h
     quantizers/Quantizer.h
     quantizers/ProductEncoder.h
     quantizers/io.h
-    SearchOptions.h
-    SearchResult.h
-    util.h
     invlists/InvertedList.h
     invlists/Iterator.h
     invlists/EncodedDocument.h

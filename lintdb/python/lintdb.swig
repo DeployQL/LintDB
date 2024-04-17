@@ -6,6 +6,7 @@
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 
 #include "lintdb/index.h"
+#include "lintdb/SearchOptions.h"
 #include "lintdb/RawPassage.h"
 #include "lintdb/exception.h"
 #include <stdint.h>

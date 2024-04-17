@@ -119,24 +119,35 @@ def run(
 
         # lifestyle full centroids == 65536
         #lifestyle-40k-benchmark centroids == 32768
-    index = ldb.IndexIVF(index_path, 32768, 128, nbits, 6, 16)
+    index = ldb.IndexIVF(index_path, 32768, 128, nbits, 6, 16, index_type_enum)
+    pool = mp.Pool(processes=num_procs, initializer=intialize_model, initargs=(checkpoint,))
+
     # in multiprocessing, we only allow for reuse of centroids.
-    with Run().context(RunConfig(nranks=1, experiment='colbert-lifestyle-40k-benchmark')):
-        checkpoint_config = ColBERTConfig.load_from_checkpoint(checkpoint)
-        config = ColBERTConfig.from_existing(checkpoint_config, None)
-        searcher = Searcher(index='colbert-lifestyle-40k-benchmark', config=config, collection=d.collection)
-        centroids = searcher.ranker.codec.centroids
-        index.set_centroids(centroids)
-        index.set_weights(
-            searcher.ranker.codec.bucket_weights.tolist(), 
-            searcher.ranker.codec.bucket_cutoffs.tolist(), 
-            searcher.ranker.codec.avg_residual
-        )
-        index.save()
+    if index_type_enum == ldb.IndexEncoding_BINARIZER:
+        with Run().context(RunConfig(nranks=1, experiment='colbert-lifestyle-40k-benchmark')):
+            checkpoint_config = ColBERTConfig.load_from_checkpoint(checkpoint)
+            config = ColBERTConfig.from_existing(checkpoint_config, None)
+            searcher = Searcher(index='colbert-lifestyle-40k-benchmark', config=config, collection=d.collection)
+            centroids = searcher.ranker.codec.centroids
+            index.set_centroids(centroids)
+            index.set_weights(
+                searcher.ranker.codec.bucket_weights.tolist(), 
+                searcher.ranker.codec.bucket_cutoffs.tolist(), 
+                searcher.ranker.codec.avg_residual
+            )
+            index.save()
+    else:
+        training_data = random.sample(d.collection, 10000)
+        training_array = []
+        for id, embedding in tqdm(pool.imap_unordered(encode_one, zip(range(10000), training_data))):
+            training_array.append(embedding)
+
+        np_arr = np.stack(training_array, axis=0)
+        index.train(np_arr)
+
 
     start = time.perf_counter()
 
-    pool = mp.Pool(processes=num_procs, initializer=intialize_model, initargs=(checkpoint,))
 
     def create_tuples():
         for i, dd in zip(d.dids, d.collection):
