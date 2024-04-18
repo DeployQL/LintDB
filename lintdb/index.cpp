@@ -126,7 +126,6 @@ void IndexIVF::initialize_inverted_list() {
     options.create_missing_column_families = true;
 
     auto cfs = create_column_families();
-    LOG(INFO) << "read only: " << read_only;
 
     if (!read_only) {
         rocksdb::OptimisticTransactionDB* ptr2;

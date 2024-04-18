@@ -303,7 +303,7 @@ void DefaultEncoder::train(
         if (quantizer != nullptr) {
             // residual quantizers are trained on residuals. we aren't
             // supporting training directly on embeddings.
-            LOG(INFO) << "Training binarizer with " << n << " embeddings.";
+            LOG(INFO) << "Training quantizer with " << n << " embeddings.";
             // train binarizer on residuals.
             std::vector<idx_t> assign(n);
             coarse_quantizer->assign(n, embeddings, assign.data());
