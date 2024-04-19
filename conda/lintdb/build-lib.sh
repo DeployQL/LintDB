@@ -12,7 +12,5 @@ cmake -B _build \
 
 make -C _build -j$(nproc) lintdb
 
-ldd _build/liblintdb.so
-
 cmake --install _build --prefix $PREFIX
 cmake --install _build --prefix _liblintdb_stage/

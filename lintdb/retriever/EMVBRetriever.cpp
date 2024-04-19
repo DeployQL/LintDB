@@ -14,6 +14,30 @@
 #include "lintdb/retriever/plaid.h"
 
 namespace lintdb {
+extern "C" {
+    // this is to keep the clang syntax checker happy
+    #ifndef FINTEGER
+    #define FINTEGER int
+    #endif
+
+    /* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
+
+    int sgemm_(
+            const char* transa,
+            const char* transb,
+            FINTEGER* m,
+            FINTEGER* n,
+            FINTEGER* k,
+            const float* alpha,
+            const float* a,
+            FINTEGER* lda,
+            const float* b,
+            FINTEGER* ldb,
+            float* beta,
+            float* c,
+            FINTEGER* ldc);
+}
+
 EMVBRetriever::EMVBRetriever(
         std::shared_ptr<InvertedList> inverted_list,
         std::shared_ptr<ForwardIndex> index,
@@ -37,21 +61,27 @@ std::vector<idx_t> EMVBRetriever::top_passages(
         const RetrieverOptions& opts,
         std::vector<float>& query_scores,
         std::vector<uint32_t>& bitvectors) {
-    cblas_sgemm(
-            CblasRowMajor,
-            CblasNoTrans,
-            CblasTrans,
-            n,
-            encoder_->nlist,
-            encoder_->dim,
-            1.0,
+
+    int m = n;
+    int nn = encoder_->nlist;
+    int k = encoder_->dim;
+    float alpha = 1.0;
+    float beta = 0.0;
+
+    sgemm_(
+            "Not Transposed",
+            "Transposed",
+            &m,
+            &nn,
+            &k,
+            &alpha,
             query_data.data(), // size: (num_query_tok x dim)
-            encoder_->dim,
+            &k,
             encoder_->get_centroids(), // size: (nlist x dim)
-            encoder_->dim,
-            0.0,
+            &k,
+            &beta,
             query_scores.data(), // size: (num_query_tok x nlist)
-            encoder_->nlist);
+            &nn);
 
     std::vector<size_t> start_sorted(n * encoder_->get_num_centroids());
     size_t offset = 0;

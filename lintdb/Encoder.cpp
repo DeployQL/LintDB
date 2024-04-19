@@ -1,5 +1,4 @@
 #include "lintdb/Encoder.h"
-#include <cblas.h>
 #include <faiss/Clustering.h>
 #include <faiss/IndexFlat.h>
 #include <faiss/IndexLSH.h>
@@ -14,6 +13,31 @@
 #include "lintdb/util.h"
 
 namespace lintdb {
+
+extern "C" {
+    // this is to keep the clang syntax checker happy
+    #ifndef FINTEGER
+    #define FINTEGER int
+    #endif
+
+    /* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
+
+    int sgemm_(
+            const char* transa,
+            const char* transb,
+            FINTEGER* m,
+            FINTEGER* n,
+            FINTEGER* k,
+            const float* alpha,
+            const float* a,
+            FINTEGER* lda,
+            const float* b,
+            FINTEGER* ldb,
+            float* beta,
+            float* c,
+            FINTEGER* ldc);
+}
+
 DefaultEncoder::DefaultEncoder(
         size_t nlist,
         size_t nbits,
@@ -128,21 +152,27 @@ void DefaultEncoder::search(
         const float centroid_threshold) {
     std::vector<float> query_scores(num_query_tok * nlist, 0);
 
-    cblas_sgemm(
-            CblasRowMajor,
-            CblasNoTrans,
-            CblasTrans,
-            num_query_tok,
-            nlist,
-            dim,
-            1.0,
+    float alpha = 1.0;
+    float beta = 0.0;
+
+    int m = num_query_tok;
+    int n = nlist;
+    int k = dim;
+
+    sgemm_(
+            "Not Transposed",
+            "Transposed",
+            &m,
+            &n,
+            &k,
+            &alpha,
             data, // size: (num_query_tok x dim)
-            dim,
+            &k,
             coarse_quantizer->get_xb(), // size: (nlist x dim)
-            dim,
-            0.0,
+            &k,
+            &beta,
             query_scores.data(), // size: (num_query_tok x nlist)
-            nlist);
+            &n);
 
     auto comparator = [](std::pair<float, idx_t> p1,
                          std::pair<float, idx_t> p2) {

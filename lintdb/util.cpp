@@ -1,11 +1,40 @@
 #include "lintdb/util.h"
-#include <cblas.h>
 #include <unordered_map>
 #include "lintdb/SearchOptions.h"
 #include "lintdb/api.h"
 #include "lintdb/exception.h"
 
 namespace lintdb {
+extern "C" {
+    // this is to keep the clang syntax checker happy
+    #ifndef FINTEGER
+    #define FINTEGER int
+    #endif
+
+    /* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
+
+    int sgemm_(
+            const char* transa,
+            const char* transb,
+            FINTEGER* m,
+            FINTEGER* n,
+            FINTEGER* k,
+            const float* alpha,
+            const float* a,
+            FINTEGER* lda,
+            const float* b,
+            FINTEGER* ldb,
+            float* beta,
+            float* c,
+            FINTEGER* ldc);
+
+    float snrm2_(FINTEGER n, const float* x, FINTEGER incx);
+
+    int sscal_(FINTEGER* n, const float* alpha, float* x, FINTEGER* incx);
+
+
+}
+
 void normalize_vector(
         float* doc_residuals,
         const size_t num_doc_tokens,
@@ -13,12 +42,16 @@ void normalize_vector(
     float mod = 0.0;
 
     for (size_t i = 0; i < num_doc_tokens; i++) {
-        mod = cblas_snrm2(dim, doc_residuals + i * dim, 1);
+        mod = snrm2_(dim, doc_residuals + i * dim, 1);
         if (mod == 1.0) {
             continue;
         }
+
+        int dim2 = dim;
+        float mod2 = 1.0 / mod;
+        int incx = 1;
         // auto adjusted = std::max(mod, 1e-12f);
-        cblas_sscal(dim, 1.0 / mod, doc_residuals + i * dim, 1);
+        sscal_(&dim2, &mod2, doc_residuals + i * dim, &incx);
     }
 }
 

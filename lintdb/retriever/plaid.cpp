@@ -11,6 +11,30 @@
 
 namespace lintdb {
 
+extern "C" {
+    // this is to keep the clang syntax checker happy
+    #ifndef FINTEGER
+    #define FINTEGER int
+    #endif
+
+    /* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
+
+    int sgemm_(
+            const char* transa,
+            const char* transb,
+            FINTEGER* m,
+            FINTEGER* n,
+            FINTEGER* k,
+            const float* alpha,
+            const float* a,
+            FINTEGER* lda,
+            const float* b,
+            FINTEGER* ldb,
+            float* beta,
+            float* c,
+            FINTEGER* ldc);
+}
+
 float score_documents_by_codes(
         const gsl::span<float>
                 max_scores_by_centroid, // the max score per centroid across the
@@ -105,6 +129,8 @@ float score_document_by_residuals(
     int m = num_doc_tokens;   // rows of op(A) and of matrix C.
     int n = num_query_tokens; // columns of matrix op(B) and of matrix C.
     int k = dim; // the number of columns of op(A) and rows of op(B).
+    float alpha = 1.0;
+    float beta = 0.0;
 
     if (normalize) {
         normalize_vector(doc_residuals, num_doc_tokens, dim);
@@ -112,22 +138,21 @@ float score_document_by_residuals(
 
     std::vector<float> output(m * n, 0);
     // gives us a num_doc_tokens x num_query_tokens matrix.
-    cblas_sgemm(
-            CblasRowMajor,
-            CblasNoTrans,
-            CblasTrans,
-            m, // 8
-            n, // 4
-            k, // 128
-            1.0,
+    sgemm_(
+            "Not Transposed",
+            "Transpose",
+            &m, // 8
+            &n, // 4
+            &k, // 128
+            &alpha,
             doc_residuals, // m x k
-            k, // leading dimension is the length of the first dimension
+            &k, // leading dimension is the length of the first dimension
                // (columns)
             query_vectors.data(), // should be k x n after transpose
-            k, // this is the leading dimension of B, not op(b)
-            0.000,
+            &k, // this is the leading dimension of B, not op(b)
+            &beta,
             output.data(), // m x n
-            n);
+            &n);
 
     // find the max score for each doc_token.
     std::vector<float> max_scores(n, 0);
