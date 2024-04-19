@@ -56,37 +56,43 @@ namespace lintdb {
         return centroid_scores;
     }
 
-     inline float compute_score_by_column_reduction(
-        const std::vector<float> &centroid_distances, // should be (num_centroids x num_query_tokens)
-        const size_t doclen, 
-        const size_t num_query_tokens) // M is num tokens
-    {
-        // we need to calculate by column the max values. To do this, we'll  break the matrix into chunks of 8 values by column (centroids)
-        size_t num_values = centroid_distances.size() / num_query_tokens;
+inline float compute_score_by_column_reduction(const std::vector<float>& centroid_distances, const size_t doclen, const size_t num_query_tokens) {
+    size_t num_values = centroid_distances.size() / num_query_tokens;
 
-        __m256 sum = _mm256_setzero_ps();
+    __m256 sum = _mm256_setzero_ps();
 
-        for (size_t i = 0; i < num_values; i += 8)
-        {
-            __m256 current = _mm256_loadu_ps(&centroid_distances[i]);
+    for (size_t i = 0; i < num_values; i += 8) {
+        __m256 current = _mm256_loadu_ps(&centroid_distances[i]);
 
-            for (size_t j = 1; j < doclen; j++)
-            {
-                __m256 current_j = _mm256_loadu_ps(&centroid_distances[j * num_query_tokens + i]);
-                __mmask8 m = _mm256_cmp_ps_mask(current_j, current, _CMP_GT_OS);
-                current = _mm256_mask_blend_ps(m, current, current_j);
-            }
+        for (size_t j = 1; j < doclen; j++) {
+            __m256 current_j = _mm256_loadu_ps(&centroid_distances[j * num_query_tokens + i]);
 
-            sum = _mm256_add_ps(sum, current);
+            // Compare current_j and current
+            __m256 cmp_result = _mm256_cmp_ps(current_j, current, _CMP_GT_OS);
+
+           // Convert comparison result to mask
+            int mask = _mm256_movemask_ps(cmp_result);
+
+            // Generate blend mask using bitwise logical operations
+            int blend_mask = ~(1 << 8) | mask;
+
+            // Blend current_j and current using blend_mask
+            current = _mm256_blend_ps(current, current_j, _mm256_castsi256_ps(_mm256_set1_epi32(blend_mask)));
         }
 
-        sum = _mm256_hadd_ps(sum, sum);
-        sum = _mm256_hadd_ps(sum, sum);
-
-        alignas(32) float result[8];
-        _mm256_store_ps(result, sum);
-        return result[0]; // Extract the scalar value
+        // Horizontal addition of current
+        __m256 sum_temp = _mm256_hadd_ps(current, current);
+        sum = _mm256_add_ps(sum, sum_temp);
     }
+
+    // Horizontal addition of sum
+    sum = _mm256_hadd_ps(sum, sum);
+    sum = _mm256_hadd_ps(sum, sum);
+
+    alignas(32) float result[8];
+    _mm256_store_ps(result, sum);
+    return result[0]; // Extract the scalar value
+}
 
 inline std::vector<int> filter_centroids_in_scoring(const float th, const float *current_centroid_scores, const size_t doclen)
 {

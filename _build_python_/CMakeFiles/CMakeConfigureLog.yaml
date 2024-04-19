@@ -1,0 +1,1288 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/CMakeDetermineSystem.cmake:233 (message)"
+      - "CMakeLists.txt:12 (project)"
+    message: |
+      The system is: Linux - 5.15.0-102-generic - x86_64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/usr/local/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/local/share/cmake-3.28/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:12 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: /usr/bin/c++ 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
+      
+      The CXX compiler identification is Clang, found in:
+        /home/matt/deployql/LintDB/_build_python_/CMakeFiles/3.28.3/CompilerIdCXX/a.out
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:57 (try_compile)"
+      - "/usr/local/share/cmake-3.28/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:12 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-svuZ0c"
+      binary: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-svuZ0c"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-18"
+      CMAKE_CXX_FLAGS: ""
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      VCPKG_APPLOCAL_DEPS: "ON"
+      VCPKG_TARGET_TRIPLET: "x64-linux"
+      Z_VCPKG_ROOT_DIR: "/home/matt/deployql/LintDB/tools/vcpkg"
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-svuZ0c'
+        
+        Run Build Command(s): /usr/local/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_f75df/fast
+        gmake[1]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-svuZ0c'
+        /usr/bin/gmake  -f CMakeFiles/cmTC_f75df.dir/build.make CMakeFiles/cmTC_f75df.dir/build
+        gmake[2]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-svuZ0c'
+        Building CXX object CMakeFiles/cmTC_f75df.dir/CMakeCXXCompilerABI.cpp.o
+        /usr/bin/c++   -v -MD -MT CMakeFiles/cmTC_f75df.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_f75df.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_f75df.dir/CMakeCXXCompilerABI.cpp.o -c /usr/local/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp
+        Ubuntu clang version 18.1.0 (++20240211023316+0d656f0f12d4-1~exp1~20240211023423.38)
+        Target: x86_64-pc-linux-gnu
+        Thread model: posix
+        InstalledDir: /usr/bin
+        Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/11
+        Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12
+        Selected GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12
+        Candidate multilib: .;@m64
+        Selected multilib: .;@m64
+         (in-process)
+         "/usr/lib/llvm-18/bin/clang" -cc1 -triple x86_64-pc-linux-gnu -emit-obj -mrelax-all -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=all -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu x86-64 -tune-cpu generic -debugger-tuning=gdb -fdebug-compilation-dir=/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-svuZ0c -v -fcoverage-compilation-dir=/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-svuZ0c -resource-dir /usr/lib/llvm-18/lib/clang/18 -dependency-file CMakeFiles/cmTC_f75df.dir/CMakeCXXCompilerABI.cpp.o.d -MT CMakeFiles/cmTC_f75df.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12 -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/x86_64-linux-gnu/c++/12 -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12/backward -internal-isystem /usr/lib/llvm-18/lib/clang/18/include -internal-isystem /usr/local/include -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../x86_64-linux-gnu/include -internal-externc-isystem /usr/include/x86_64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -fdeprecated-macro -ferror-limit 19 -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_f75df.dir/CMakeCXXCompilerABI.cpp.o -x c++ /usr/local/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp
+        clang -cc1 version 18.1.0 based upon LLVM 18.1.0 default target x86_64-pc-linux-gnu
+        ignoring nonexistent directory "/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../x86_64-linux-gnu/include"
+        ignoring nonexistent directory "/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12
+         /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/x86_64-linux-gnu/c++/12
+         /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12/backward
+         /usr/lib/llvm-18/lib/clang/18/include
+         /usr/local/include
+         /usr/include/x86_64-linux-gnu
+         /usr/include
+        End of search list.
+        Linking CXX executable cmTC_f75df
+        /usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f75df.dir/link.txt --verbose=1
+        /usr/bin/c++  -v CMakeFiles/cmTC_f75df.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_f75df 
+        Ubuntu clang version 18.1.0 (++20240211023316+0d656f0f12d4-1~exp1~20240211023423.38)
+        Target: x86_64-pc-linux-gnu
+        Thread model: posix
+        InstalledDir: /usr/bin
+        Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/11
+        Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12
+        Selected GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12
+        Candidate multilib: .;@m64
+        Selected multilib: .;@m64
+         "/usr/bin/ld" -z relro --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_f75df /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtbeginS.o -L/usr/bin/../lib/gcc/x86_64-linux-gnu/12 -L/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/usr/lib/llvm-18/bin/../lib -L/lib -L/usr/lib CMakeFiles/cmTC_f75df.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtendS.o /lib/x86_64-linux-gnu/crtn.o
+        gmake[2]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-svuZ0c'
+        gmake[1]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-svuZ0c'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:127 (message)"
+      - "/usr/local/share/cmake-3.28/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:12 (project)"
+    message: |
+      Parsed CXX implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12]
+          add: [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/x86_64-linux-gnu/c++/12]
+          add: [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12/backward]
+          add: [/usr/lib/llvm-18/lib/clang/18/include]
+          add: [/usr/local/include]
+          add: [/usr/include/x86_64-linux-gnu]
+          add: [/usr/include]
+        end of search list found
+        collapse include dir [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12] ==> [/usr/include/c++/12]
+        collapse include dir [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/x86_64-linux-gnu/c++/12] ==> [/usr/include/x86_64-linux-gnu/c++/12]
+        collapse include dir [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12/backward] ==> [/usr/include/c++/12/backward]
+        collapse include dir [/usr/lib/llvm-18/lib/clang/18/include] ==> [/usr/lib/llvm-18/lib/clang/18/include]
+        collapse include dir [/usr/local/include] ==> [/usr/local/include]
+        collapse include dir [/usr/include/x86_64-linux-gnu] ==> [/usr/include/x86_64-linux-gnu]
+        collapse include dir [/usr/include] ==> [/usr/include]
+        implicit include dirs: [/usr/include/c++/12;/usr/include/x86_64-linux-gnu/c++/12;/usr/include/c++/12/backward;/usr/lib/llvm-18/lib/clang/18/include;/usr/local/include;/usr/include/x86_64-linux-gnu;/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:159 (message)"
+      - "/usr/local/share/cmake-3.28/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:12 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        ignore line: [Change Dir: '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-svuZ0c']
+        ignore line: []
+        ignore line: [Run Build Command(s): /usr/local/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_f75df/fast]
+        ignore line: [gmake[1]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-svuZ0c']
+        ignore line: [/usr/bin/gmake  -f CMakeFiles/cmTC_f75df.dir/build.make CMakeFiles/cmTC_f75df.dir/build]
+        ignore line: [gmake[2]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-svuZ0c']
+        ignore line: [Building CXX object CMakeFiles/cmTC_f75df.dir/CMakeCXXCompilerABI.cpp.o]
+        ignore line: [/usr/bin/c++   -v -MD -MT CMakeFiles/cmTC_f75df.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_f75df.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_f75df.dir/CMakeCXXCompilerABI.cpp.o -c /usr/local/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [Ubuntu clang version 18.1.0 (++20240211023316+0d656f0f12d4-1~exp1~20240211023423.38)]
+        ignore line: [Target: x86_64-pc-linux-gnu]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /usr/bin]
+        ignore line: [Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/11]
+        ignore line: [Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+        ignore line: [Selected GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+        ignore line: [Candidate multilib: .]
+        ignore line: [@m64]
+        ignore line: [Selected multilib: .]
+        ignore line: [@m64]
+        ignore line: [ (in-process)]
+        ignore line: [ "/usr/lib/llvm-18/bin/clang" -cc1 -triple x86_64-pc-linux-gnu -emit-obj -mrelax-all -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCXXCompilerABI.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=all -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu x86-64 -tune-cpu generic -debugger-tuning=gdb -fdebug-compilation-dir=/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-svuZ0c -v -fcoverage-compilation-dir=/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-svuZ0c -resource-dir /usr/lib/llvm-18/lib/clang/18 -dependency-file CMakeFiles/cmTC_f75df.dir/CMakeCXXCompilerABI.cpp.o.d -MT CMakeFiles/cmTC_f75df.dir/CMakeCXXCompilerABI.cpp.o -sys-header-deps -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12 -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/x86_64-linux-gnu/c++/12 -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12/backward -internal-isystem /usr/lib/llvm-18/lib/clang/18/include -internal-isystem /usr/local/include -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../x86_64-linux-gnu/include -internal-externc-isystem /usr/include/x86_64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -fdeprecated-macro -ferror-limit 19 -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_f75df.dir/CMakeCXXCompilerABI.cpp.o -x c++ /usr/local/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [clang -cc1 version 18.1.0 based upon LLVM 18.1.0 default target x86_64-pc-linux-gnu]
+        ignore line: [ignoring nonexistent directory "/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../x86_64-linux-gnu/include"]
+        ignore line: [ignoring nonexistent directory "/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12]
+        ignore line: [ /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/x86_64-linux-gnu/c++/12]
+        ignore line: [ /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12/backward]
+        ignore line: [ /usr/lib/llvm-18/lib/clang/18/include]
+        ignore line: [ /usr/local/include]
+        ignore line: [ /usr/include/x86_64-linux-gnu]
+        ignore line: [ /usr/include]
+        ignore line: [End of search list.]
+        ignore line: [Linking CXX executable cmTC_f75df]
+        ignore line: [/usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f75df.dir/link.txt --verbose=1]
+        ignore line: [/usr/bin/c++  -v CMakeFiles/cmTC_f75df.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_f75df ]
+        ignore line: [Ubuntu clang version 18.1.0 (++20240211023316+0d656f0f12d4-1~exp1~20240211023423.38)]
+        ignore line: [Target: x86_64-pc-linux-gnu]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /usr/bin]
+        ignore line: [Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/11]
+        ignore line: [Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+        ignore line: [Selected GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+        ignore line: [Candidate multilib: .]
+        ignore line: [@m64]
+        ignore line: [Selected multilib: .]
+        ignore line: [@m64]
+        link line: [ "/usr/bin/ld" -z relro --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_f75df /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtbeginS.o -L/usr/bin/../lib/gcc/x86_64-linux-gnu/12 -L/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/usr/lib/llvm-18/bin/../lib -L/lib -L/usr/lib CMakeFiles/cmTC_f75df.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtendS.o /lib/x86_64-linux-gnu/crtn.o]
+          arg [/usr/bin/ld] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--build-id] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [elf_x86_64] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_f75df] ==> ignore
+          arg [/lib/x86_64-linux-gnu/Scrt1.o] ==> obj [/lib/x86_64-linux-gnu/Scrt1.o]
+          arg [/lib/x86_64-linux-gnu/crti.o] ==> obj [/lib/x86_64-linux-gnu/crti.o]
+          arg [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtbeginS.o] ==> obj [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtbeginS.o]
+          arg [-L/usr/bin/../lib/gcc/x86_64-linux-gnu/12] ==> dir [/usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+          arg [-L/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64] ==> dir [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64]
+          arg [-L/lib/x86_64-linux-gnu] ==> dir [/lib/x86_64-linux-gnu]
+          arg [-L/lib/../lib64] ==> dir [/lib/../lib64]
+          arg [-L/usr/lib/x86_64-linux-gnu] ==> dir [/usr/lib/x86_64-linux-gnu]
+          arg [-L/usr/lib/../lib64] ==> dir [/usr/lib/../lib64]
+          arg [-L/usr/lib/llvm-18/bin/../lib] ==> dir [/usr/lib/llvm-18/bin/../lib]
+          arg [-L/lib] ==> dir [/lib]
+          arg [-L/usr/lib] ==> dir [/usr/lib]
+          arg [CMakeFiles/cmTC_f75df.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [-lstdc++] ==> lib [stdc++]
+          arg [-lm] ==> lib [m]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+          arg [-lc] ==> lib [c]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+          arg [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtendS.o] ==> obj [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtendS.o]
+          arg [/lib/x86_64-linux-gnu/crtn.o] ==> obj [/lib/x86_64-linux-gnu/crtn.o]
+        collapse obj [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtbeginS.o] ==> [/usr/lib/gcc/x86_64-linux-gnu/12/crtbeginS.o]
+        collapse obj [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtendS.o] ==> [/usr/lib/gcc/x86_64-linux-gnu/12/crtendS.o]
+        collapse library dir [/usr/bin/../lib/gcc/x86_64-linux-gnu/12] ==> [/usr/lib/gcc/x86_64-linux-gnu/12]
+        collapse library dir [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64] ==> [/usr/lib64]
+        collapse library dir [/lib/x86_64-linux-gnu] ==> [/lib/x86_64-linux-gnu]
+        collapse library dir [/lib/../lib64] ==> [/lib64]
+        collapse library dir [/usr/lib/x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+        collapse library dir [/usr/lib/../lib64] ==> [/usr/lib64]
+        collapse library dir [/usr/lib/llvm-18/bin/../lib] ==> [/usr/lib/llvm-18/lib]
+        collapse library dir [/lib] ==> [/lib]
+        collapse library dir [/usr/lib] ==> [/usr/lib]
+        implicit libs: [stdc++;m;gcc_s;gcc;c;gcc_s;gcc]
+        implicit objs: [/lib/x86_64-linux-gnu/Scrt1.o;/lib/x86_64-linux-gnu/crti.o;/usr/lib/gcc/x86_64-linux-gnu/12/crtbeginS.o;/usr/lib/gcc/x86_64-linux-gnu/12/crtendS.o;/lib/x86_64-linux-gnu/crtn.o]
+        implicit dirs: [/usr/lib/gcc/x86_64-linux-gnu/12;/usr/lib64;/lib/x86_64-linux-gnu;/lib64;/usr/lib/x86_64-linux-gnu;/usr/lib/llvm-18/lib;/lib;/usr/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/FindOpenMP.cmake:219 (try_compile)"
+      - "/usr/local/share/cmake-3.28/Modules/FindOpenMP.cmake:486 (_OPENMP_GET_FLAGS)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:859 (_find_package)"
+      - "lintdb/CMakeLists.txt:60 (find_package)"
+    description: "Detecting CXX OpenMP compiler info"
+    directories:
+      source: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ZK6sly"
+      binary: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ZK6sly"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-18"
+      CMAKE_CXX_FLAGS: " -std=c++17 -march=native -O3 -fopenmp -pthread -D_LIBCPP_DISABLE_AVAILABILITY"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/matt/deployql/LintDB/cmake"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "10.13"
+      VCPKG_APPLOCAL_DEPS: "ON"
+      VCPKG_TARGET_TRIPLET: "x64-linux"
+      Z_VCPKG_ROOT_DIR: "/home/matt/deployql/LintDB/tools/vcpkg"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_CXX_fopenmplibomp"
+      cached: true
+      stdout: |
+        Change Dir: '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ZK6sly'
+        
+        Run Build Command(s): /usr/local/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_29bcc/fast
+        gmake[1]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ZK6sly'
+        /usr/bin/gmake  -f CMakeFiles/cmTC_29bcc.dir/build.make CMakeFiles/cmTC_29bcc.dir/build
+        gmake[2]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ZK6sly'
+        Building CXX object CMakeFiles/cmTC_29bcc.dir/OpenMPTryFlag.cpp.o
+        /usr/bin/c++   -std=c++17 -march=native -O3 -fopenmp -pthread -D_LIBCPP_DISABLE_AVAILABILITY -fopenmp=libomp -v -MD -MT CMakeFiles/cmTC_29bcc.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_29bcc.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_29bcc.dir/OpenMPTryFlag.cpp.o -c /home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ZK6sly/OpenMPTryFlag.cpp
+        Ubuntu clang version 18.1.0 (++20240211023316+0d656f0f12d4-1~exp1~20240211023423.38)
+        Target: x86_64-pc-linux-gnu
+        Thread model: posix
+        InstalledDir: /usr/bin
+        Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/11
+        Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12
+        Selected GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12
+        Candidate multilib: .;@m64
+        Selected multilib: .;@m64
+         (in-process)
+         "/usr/lib/llvm-18/bin/clang" -cc1 -triple x86_64-pc-linux-gnu -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name OpenMPTryFlag.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=none -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu haswell -target-feature -prfchw -target-feature -cldemote -target-feature +avx -target-feature +aes -target-feature +sahf -target-feature +pclmul -target-feature -xop -target-feature +crc32 -target-feature -xsaves -target-feature -avx512fp16 -target-feature -usermsr -target-feature -sm4 -target-feature +sse4.1 -target-feature -avx512ifma -target-feature +xsave -target-feature -avx512pf -target-feature +sse4.2 -target-feature -tsxldtrk -target-feature -ptwrite -target-feature -widekl -target-feature -sm3 -target-feature +invpcid -target-feature +64bit -target-feature -xsavec -target-feature -avx10.1-512 -target-feature -avx512vpopcntdq -target-feature +cmov -target-feature -avx512vp2intersect -target-feature -avx512cd -target-feature +movbe -target-feature -avxvnniint8 -target-feature -avx512er -target-feature -amx-int8 -target-feature -kl -target-feature -avx10.1-256 -target-feature -sha512 -target-feature -avxvnni -target-feature -rtm -target-feature -adx -target-feature +avx2 -target-feature -hreset -target-feature -movdiri -target-feature -serialize -target-feature -vpclmulqdq -target-feature -avx512vl -target-feature -uintr -target-feature -clflushopt -target-feature -raoint -target-feature -cmpccxadd -target-feature +bmi -target-feature -amx-tile -target-feature +sse -target-feature -gfni -target-feature -avxvnniint16 -target-feature -amx-fp16 -target-feature +xsaveopt -target-feature +rdrnd -target-feature -avx512f -target-feature -amx-bf16 -target-feature -avx512bf16 -target-feature -avx512vnni -target-feature +cx8 -target-feature -avx512bw -target-feature +sse3 -target-feature -pku -target-feature +fsgsbase -target-feature -clzero -target-feature -mwaitx -target-feature -lwp -target-feature +lzcnt -target-feature -sha -target-feature -movdir64b -target-feature -wbnoinvd -target-feature -enqcmd -target-feature -prefetchwt1 -target-feature -avxneconvert -target-feature -tbm -target-feature -pconfig -target-feature -amx-complex -target-feature +ssse3 -target-feature +cx16 -target-feature +bmi2 -target-feature +fma -target-feature +popcnt -target-feature -avxifma -target-feature +f16c -target-feature -avx512bitalg -target-feature -rdpru -target-feature -clwb -target-feature +mmx -target-feature +sse2 -target-feature -rdseed -target-feature -avx512vbmi2 -target-feature -prefetchi -target-feature -rdpid -target-feature -fma4 -target-feature -avx512vbmi -target-feature -shstk -target-feature -vaes -target-feature -waitpkg -target-feature -sgx -target-feature +fxsr -target-feature -avx512dq -target-feature -sse4a -debugger-tuning=gdb -fdebug-compilation-dir=/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ZK6sly -v -fcoverage-compilation-dir=/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ZK6sly -resource-dir /usr/lib/llvm-18/lib/clang/18 -dependency-file CMakeFiles/cmTC_29bcc.dir/OpenMPTryFlag.cpp.o.d -MT CMakeFiles/cmTC_29bcc.dir/OpenMPTryFlag.cpp.o -sys-header-deps -D _LIBCPP_DISABLE_AVAILABILITY -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12 -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/x86_64-linux-gnu/c++/12 -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12/backward -internal-isystem /usr/lib/llvm-18/lib/clang/18/include -internal-isystem /usr/local/include -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../x86_64-linux-gnu/include -internal-externc-isystem /usr/include/x86_64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -O3 -std=c++17 -fdeprecated-macro -ferror-limit 19 -fopenmp -pthread -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -vectorize-loops -vectorize-slp -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_29bcc.dir/OpenMPTryFlag.cpp.o -x c++ /home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ZK6sly/OpenMPTryFlag.cpp
+        clang -cc1 version 18.1.0 based upon LLVM 18.1.0 default target x86_64-pc-linux-gnu
+        ignoring nonexistent directory "/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../x86_64-linux-gnu/include"
+        ignoring nonexistent directory "/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12
+         /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/x86_64-linux-gnu/c++/12
+         /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12/backward
+         /usr/lib/llvm-18/lib/clang/18/include
+         /usr/local/include
+         /usr/include/x86_64-linux-gnu
+         /usr/include
+        End of search list.
+        Linking CXX executable cmTC_29bcc
+        /usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_29bcc.dir/link.txt --verbose=1
+        /usr/bin/c++  -std=c++17 -march=native -O3 -fopenmp -pthread -D_LIBCPP_DISABLE_AVAILABILITY -fopenmp=libomp -v CMakeFiles/cmTC_29bcc.dir/OpenMPTryFlag.cpp.o -o cmTC_29bcc  -v 
+        Ubuntu clang version 18.1.0 (++20240211023316+0d656f0f12d4-1~exp1~20240211023423.38)
+        Target: x86_64-pc-linux-gnu
+        Thread model: posix
+        InstalledDir: /usr/bin
+        Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/11
+        Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12
+        Selected GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12
+        Candidate multilib: .;@m64
+        Selected multilib: .;@m64
+         "/usr/bin/ld" -z relro --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_29bcc /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtbeginS.o -L/usr/bin/../lib/gcc/x86_64-linux-gnu/12 -L/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/usr/lib/llvm-18/bin/../lib -L/lib -L/usr/lib CMakeFiles/cmTC_29bcc.dir/OpenMPTryFlag.cpp.o -lstdc++ -lm -lomp -L/usr/lib/llvm-18/lib -lgcc_s -lgcc -lpthread -lc -lgcc_s -lgcc /usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtendS.o /lib/x86_64-linux-gnu/crtn.o
+        gmake[2]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ZK6sly'
+        gmake[1]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ZK6sly'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/FindOpenMP.cmake:262 (message)"
+      - "/usr/local/share/cmake-3.28/Modules/FindOpenMP.cmake:486 (_OPENMP_GET_FLAGS)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:859 (_find_package)"
+      - "lintdb/CMakeLists.txt:60 (find_package)"
+    message: |
+      Parsed CXX OpenMP implicit link information from above output:
+        link line regex: [^( *|.*[/\\])(ld|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        ignore line: [Change Dir: '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ZK6sly']
+        ignore line: []
+        ignore line: [Run Build Command(s): /usr/local/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_29bcc/fast]
+        ignore line: [gmake[1]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ZK6sly']
+        ignore line: [/usr/bin/gmake  -f CMakeFiles/cmTC_29bcc.dir/build.make CMakeFiles/cmTC_29bcc.dir/build]
+        ignore line: [gmake[2]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ZK6sly']
+        ignore line: [Building CXX object CMakeFiles/cmTC_29bcc.dir/OpenMPTryFlag.cpp.o]
+        ignore line: [/usr/bin/c++   -std=c++17 -march=native -O3 -fopenmp -pthread -D_LIBCPP_DISABLE_AVAILABILITY -fopenmp=libomp -v -MD -MT CMakeFiles/cmTC_29bcc.dir/OpenMPTryFlag.cpp.o -MF CMakeFiles/cmTC_29bcc.dir/OpenMPTryFlag.cpp.o.d -o CMakeFiles/cmTC_29bcc.dir/OpenMPTryFlag.cpp.o -c /home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ZK6sly/OpenMPTryFlag.cpp]
+        ignore line: [Ubuntu clang version 18.1.0 (++20240211023316+0d656f0f12d4-1~exp1~20240211023423.38)]
+        ignore line: [Target: x86_64-pc-linux-gnu]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /usr/bin]
+        ignore line: [Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/11]
+        ignore line: [Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+        ignore line: [Selected GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+        ignore line: [Candidate multilib: .]
+        ignore line: [@m64]
+        ignore line: [Selected multilib: .]
+        ignore line: [@m64]
+        ignore line: [ (in-process)]
+        ignore line: [ "/usr/lib/llvm-18/bin/clang" -cc1 -triple x86_64-pc-linux-gnu -emit-obj -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name OpenMPTryFlag.cpp -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=none -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu haswell -target-feature -prfchw -target-feature -cldemote -target-feature +avx -target-feature +aes -target-feature +sahf -target-feature +pclmul -target-feature -xop -target-feature +crc32 -target-feature -xsaves -target-feature -avx512fp16 -target-feature -usermsr -target-feature -sm4 -target-feature +sse4.1 -target-feature -avx512ifma -target-feature +xsave -target-feature -avx512pf -target-feature +sse4.2 -target-feature -tsxldtrk -target-feature -ptwrite -target-feature -widekl -target-feature -sm3 -target-feature +invpcid -target-feature +64bit -target-feature -xsavec -target-feature -avx10.1-512 -target-feature -avx512vpopcntdq -target-feature +cmov -target-feature -avx512vp2intersect -target-feature -avx512cd -target-feature +movbe -target-feature -avxvnniint8 -target-feature -avx512er -target-feature -amx-int8 -target-feature -kl -target-feature -avx10.1-256 -target-feature -sha512 -target-feature -avxvnni -target-feature -rtm -target-feature -adx -target-feature +avx2 -target-feature -hreset -target-feature -movdiri -target-feature -serialize -target-feature -vpclmulqdq -target-feature -avx512vl -target-feature -uintr -target-feature -clflushopt -target-feature -raoint -target-feature -cmpccxadd -target-feature +bmi -target-feature -amx-tile -target-feature +sse -target-feature -gfni -target-feature -avxvnniint16 -target-feature -amx-fp16 -target-feature +xsaveopt -target-feature +rdrnd -target-feature -avx512f -target-feature -amx-bf16 -target-feature -avx512bf16 -target-feature -avx512vnni -target-feature +cx8 -target-feature -avx512bw -target-feature +sse3 -target-feature -pku -target-feature +fsgsbase -target-feature -clzero -target-feature -mwaitx -target-feature -lwp -target-feature +lzcnt -target-feature -sha -target-feature -movdir64b -target-feature -wbnoinvd -target-feature -enqcmd -target-feature -prefetchwt1 -target-feature -avxneconvert -target-feature -tbm -target-feature -pconfig -target-feature -amx-complex -target-feature +ssse3 -target-feature +cx16 -target-feature +bmi2 -target-feature +fma -target-feature +popcnt -target-feature -avxifma -target-feature +f16c -target-feature -avx512bitalg -target-feature -rdpru -target-feature -clwb -target-feature +mmx -target-feature +sse2 -target-feature -rdseed -target-feature -avx512vbmi2 -target-feature -prefetchi -target-feature -rdpid -target-feature -fma4 -target-feature -avx512vbmi -target-feature -shstk -target-feature -vaes -target-feature -waitpkg -target-feature -sgx -target-feature +fxsr -target-feature -avx512dq -target-feature -sse4a -debugger-tuning=gdb -fdebug-compilation-dir=/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ZK6sly -v -fcoverage-compilation-dir=/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ZK6sly -resource-dir /usr/lib/llvm-18/lib/clang/18 -dependency-file CMakeFiles/cmTC_29bcc.dir/OpenMPTryFlag.cpp.o.d -MT CMakeFiles/cmTC_29bcc.dir/OpenMPTryFlag.cpp.o -sys-header-deps -D _LIBCPP_DISABLE_AVAILABILITY -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12 -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/x86_64-linux-gnu/c++/12 -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12/backward -internal-isystem /usr/lib/llvm-18/lib/clang/18/include -internal-isystem /usr/local/include -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../x86_64-linux-gnu/include -internal-externc-isystem /usr/include/x86_64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -O3 -std=c++17 -fdeprecated-macro -ferror-limit 19 -fopenmp -pthread -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -fcxx-exceptions -fexceptions -vectorize-loops -vectorize-slp -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_29bcc.dir/OpenMPTryFlag.cpp.o -x c++ /home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ZK6sly/OpenMPTryFlag.cpp]
+        ignore line: [clang -cc1 version 18.1.0 based upon LLVM 18.1.0 default target x86_64-pc-linux-gnu]
+        ignore line: [ignoring nonexistent directory "/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../x86_64-linux-gnu/include"]
+        ignore line: [ignoring nonexistent directory "/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12]
+        ignore line: [ /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/x86_64-linux-gnu/c++/12]
+        ignore line: [ /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../include/c++/12/backward]
+        ignore line: [ /usr/lib/llvm-18/lib/clang/18/include]
+        ignore line: [ /usr/local/include]
+        ignore line: [ /usr/include/x86_64-linux-gnu]
+        ignore line: [ /usr/include]
+        ignore line: [End of search list.]
+        ignore line: [Linking CXX executable cmTC_29bcc]
+        ignore line: [/usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_29bcc.dir/link.txt --verbose=1]
+        ignore line: [/usr/bin/c++  -std=c++17 -march=native -O3 -fopenmp -pthread -D_LIBCPP_DISABLE_AVAILABILITY -fopenmp=libomp -v CMakeFiles/cmTC_29bcc.dir/OpenMPTryFlag.cpp.o -o cmTC_29bcc  -v ]
+        ignore line: [Ubuntu clang version 18.1.0 (++20240211023316+0d656f0f12d4-1~exp1~20240211023423.38)]
+        ignore line: [Target: x86_64-pc-linux-gnu]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /usr/bin]
+        ignore line: [Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/11]
+        ignore line: [Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+        ignore line: [Selected GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+        ignore line: [Candidate multilib: .]
+        ignore line: [@m64]
+        ignore line: [Selected multilib: .]
+        ignore line: [@m64]
+        link line: [ "/usr/bin/ld" -z relro --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_29bcc /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtbeginS.o -L/usr/bin/../lib/gcc/x86_64-linux-gnu/12 -L/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/usr/lib/llvm-18/bin/../lib -L/lib -L/usr/lib CMakeFiles/cmTC_29bcc.dir/OpenMPTryFlag.cpp.o -lstdc++ -lm -lomp -L/usr/lib/llvm-18/lib -lgcc_s -lgcc -lpthread -lc -lgcc_s -lgcc /usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtendS.o /lib/x86_64-linux-gnu/crtn.o]
+          arg [/usr/bin/ld] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--build-id] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [elf_x86_64] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_29bcc] ==> ignore
+          arg [-L/usr/bin/../lib/gcc/x86_64-linux-gnu/12] ==> dir [/usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+          arg [-L/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64] ==> dir [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64]
+          arg [-L/lib/x86_64-linux-gnu] ==> dir [/lib/x86_64-linux-gnu]
+          arg [-L/lib/../lib64] ==> dir [/lib/../lib64]
+          arg [-L/usr/lib/x86_64-linux-gnu] ==> dir [/usr/lib/x86_64-linux-gnu]
+          arg [-L/usr/lib/../lib64] ==> dir [/usr/lib/../lib64]
+          arg [-L/usr/lib/llvm-18/bin/../lib] ==> dir [/usr/lib/llvm-18/bin/../lib]
+          arg [-L/lib] ==> dir [/lib]
+          arg [-L/usr/lib] ==> dir [/usr/lib]
+          arg [CMakeFiles/cmTC_29bcc.dir/OpenMPTryFlag.cpp.o] ==> ignore
+          arg [-lstdc++] ==> lib [stdc++]
+          arg [-lm] ==> lib [m]
+          arg [-lomp] ==> lib [omp]
+          arg [-L/usr/lib/llvm-18/lib] ==> dir [/usr/lib/llvm-18/lib]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+          arg [-lpthread] ==> lib [pthread]
+          arg [-lc] ==> lib [c]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lgcc] ==> lib [gcc]
+        collapse library dir [/usr/bin/../lib/gcc/x86_64-linux-gnu/12] ==> [/usr/lib/gcc/x86_64-linux-gnu/12]
+        collapse library dir [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64] ==> [/usr/lib64]
+        collapse library dir [/lib/x86_64-linux-gnu] ==> [/lib/x86_64-linux-gnu]
+        collapse library dir [/lib/../lib64] ==> [/lib64]
+        collapse library dir [/usr/lib/x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+        collapse library dir [/usr/lib/../lib64] ==> [/usr/lib64]
+        collapse library dir [/usr/lib/llvm-18/bin/../lib] ==> [/usr/lib/llvm-18/lib]
+        collapse library dir [/lib] ==> [/lib]
+        collapse library dir [/usr/lib] ==> [/usr/lib]
+        collapse library dir [/usr/lib/llvm-18/lib] ==> [/usr/lib/llvm-18/lib]
+        implicit libs: [stdc++;m;omp;gcc_s;gcc;pthread;c;gcc_s;gcc]
+        implicit objs: []
+        implicit dirs: [/usr/lib/gcc/x86_64-linux-gnu/12;/usr/lib64;/lib/x86_64-linux-gnu;/lib64;/usr/lib/x86_64-linux-gnu;/usr/lib/llvm-18/lib;/lib;/usr/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/FindOpenMP.cmake:420 (try_compile)"
+      - "/usr/local/share/cmake-3.28/Modules/FindOpenMP.cmake:560 (_OPENMP_GET_SPEC_DATE)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:859 (_find_package)"
+      - "lintdb/CMakeLists.txt:60 (find_package)"
+    description: "Detecting CXX OpenMP version"
+    directories:
+      source: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-6w4nmg"
+      binary: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-6w4nmg"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-18"
+      CMAKE_CXX_FLAGS: " -std=c++17 -march=native -O3 -fopenmp -pthread -D_LIBCPP_DISABLE_AVAILABILITY"
+      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/matt/deployql/LintDB/cmake"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "10.13"
+      VCPKG_APPLOCAL_DEPS: "ON"
+      VCPKG_TARGET_TRIPLET: "x64-linux"
+      Z_VCPKG_ROOT_DIR: "/home/matt/deployql/LintDB/tools/vcpkg"
+    buildResult:
+      variable: "OpenMP_SPECTEST_CXX_"
+      cached: true
+      stdout: |
+        Change Dir: '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-6w4nmg'
+        
+        Run Build Command(s): /usr/local/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_2324e/fast
+        gmake[1]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-6w4nmg'
+        /usr/bin/gmake  -f CMakeFiles/cmTC_2324e.dir/build.make CMakeFiles/cmTC_2324e.dir/build
+        gmake[2]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-6w4nmg'
+        Building CXX object CMakeFiles/cmTC_2324e.dir/OpenMPCheckVersion.cpp.o
+        /usr/bin/c++   -std=c++17 -march=native -O3 -fopenmp -pthread -D_LIBCPP_DISABLE_AVAILABILITY -fopenmp=libomp -MD -MT CMakeFiles/cmTC_2324e.dir/OpenMPCheckVersion.cpp.o -MF CMakeFiles/cmTC_2324e.dir/OpenMPCheckVersion.cpp.o.d -o CMakeFiles/cmTC_2324e.dir/OpenMPCheckVersion.cpp.o -c /home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-6w4nmg/OpenMPCheckVersion.cpp
+        Linking CXX executable cmTC_2324e
+        /usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_2324e.dir/link.txt --verbose=1
+        /usr/bin/c++  -std=c++17 -march=native -O3 -fopenmp -pthread -D_LIBCPP_DISABLE_AVAILABILITY -fopenmp=libomp CMakeFiles/cmTC_2324e.dir/OpenMPCheckVersion.cpp.o -o cmTC_2324e 
+        gmake[2]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-6w4nmg'
+        gmake[1]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-6w4nmg'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/usr/local/share/cmake-3.28/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/local/share/cmake-3.28/Modules/CMakeDetermineCCompiler.cmake:123 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/FindLAPACK.cmake:89 (enable_language)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/vcpkg-cmake-wrapper.cmake:9 (_find_package)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:813 (include)"
+      - "lintdb/CMakeLists.txt:68 (find_package)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler: /usr/bin/cc 
+      Build flags: 
+      Id flags:  
+      
+      The output was:
+      0
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
+      
+      The C compiler identification is Clang, found in:
+        /home/matt/deployql/LintDB/_build_python_/CMakeFiles/3.28.3/CompilerIdC/a.out
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:57 (try_compile)"
+      - "/usr/local/share/cmake-3.28/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/FindLAPACK.cmake:89 (enable_language)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/vcpkg-cmake-wrapper.cmake:9 (_find_package)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:813 (include)"
+      - "lintdb/CMakeLists.txt:68 (find_package)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ilxU53"
+      binary: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ilxU53"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-18"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/matt/deployql/LintDB/cmake;/home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/share/lapack"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "10.13"
+      VCPKG_APPLOCAL_DEPS: "ON"
+      VCPKG_TARGET_TRIPLET: "x64-linux"
+      Z_VCPKG_ROOT_DIR: "/home/matt/deployql/LintDB/tools/vcpkg"
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ilxU53'
+        
+        Run Build Command(s): /usr/local/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_e9ac4/fast
+        gmake[1]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ilxU53'
+        /usr/bin/gmake  -f CMakeFiles/cmTC_e9ac4.dir/build.make CMakeFiles/cmTC_e9ac4.dir/build
+        gmake[2]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ilxU53'
+        Building C object CMakeFiles/cmTC_e9ac4.dir/CMakeCCompilerABI.c.o
+        /usr/bin/cc   -v -MD -MT CMakeFiles/cmTC_e9ac4.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_e9ac4.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_e9ac4.dir/CMakeCCompilerABI.c.o -c /usr/local/share/cmake-3.28/Modules/CMakeCCompilerABI.c
+        Ubuntu clang version 18.1.0 (++20240211023316+0d656f0f12d4-1~exp1~20240211023423.38)
+        Target: x86_64-pc-linux-gnu
+        Thread model: posix
+        InstalledDir: /usr/bin
+        Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/11
+        Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12
+        Selected GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12
+        Candidate multilib: .;@m64
+        Selected multilib: .;@m64
+         (in-process)
+         "/usr/lib/llvm-18/bin/clang" -cc1 -triple x86_64-pc-linux-gnu -emit-obj -mrelax-all -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=all -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu x86-64 -tune-cpu generic -debugger-tuning=gdb -fdebug-compilation-dir=/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ilxU53 -v -fcoverage-compilation-dir=/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ilxU53 -resource-dir /usr/lib/llvm-18/lib/clang/18 -dependency-file CMakeFiles/cmTC_e9ac4.dir/CMakeCCompilerABI.c.o.d -MT CMakeFiles/cmTC_e9ac4.dir/CMakeCCompilerABI.c.o -sys-header-deps -internal-isystem /usr/lib/llvm-18/lib/clang/18/include -internal-isystem /usr/local/include -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../x86_64-linux-gnu/include -internal-externc-isystem /usr/include/x86_64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -ferror-limit 19 -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_e9ac4.dir/CMakeCCompilerABI.c.o -x c /usr/local/share/cmake-3.28/Modules/CMakeCCompilerABI.c
+        clang -cc1 version 18.1.0 based upon LLVM 18.1.0 default target x86_64-pc-linux-gnu
+        ignoring nonexistent directory "/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../x86_64-linux-gnu/include"
+        ignoring nonexistent directory "/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /usr/lib/llvm-18/lib/clang/18/include
+         /usr/local/include
+         /usr/include/x86_64-linux-gnu
+         /usr/include
+        End of search list.
+        Linking C executable cmTC_e9ac4
+        /usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e9ac4.dir/link.txt --verbose=1
+        /usr/bin/cc  -v CMakeFiles/cmTC_e9ac4.dir/CMakeCCompilerABI.c.o -o cmTC_e9ac4 
+        Ubuntu clang version 18.1.0 (++20240211023316+0d656f0f12d4-1~exp1~20240211023423.38)
+        Target: x86_64-pc-linux-gnu
+        Thread model: posix
+        InstalledDir: /usr/bin
+        Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/11
+        Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12
+        Selected GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12
+        Candidate multilib: .;@m64
+        Selected multilib: .;@m64
+         "/usr/bin/ld" -z relro --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_e9ac4 /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtbeginS.o -L/usr/bin/../lib/gcc/x86_64-linux-gnu/12 -L/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/usr/lib/llvm-18/bin/../lib -L/lib -L/usr/lib CMakeFiles/cmTC_e9ac4.dir/CMakeCCompilerABI.c.o -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtendS.o /lib/x86_64-linux-gnu/crtn.o
+        gmake[2]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ilxU53'
+        gmake[1]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ilxU53'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:127 (message)"
+      - "/usr/local/share/cmake-3.28/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/FindLAPACK.cmake:89 (enable_language)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/vcpkg-cmake-wrapper.cmake:9 (_find_package)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:813 (include)"
+      - "lintdb/CMakeLists.txt:68 (find_package)"
+    message: |
+      Parsed C implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/usr/lib/llvm-18/lib/clang/18/include]
+          add: [/usr/local/include]
+          add: [/usr/include/x86_64-linux-gnu]
+          add: [/usr/include]
+        end of search list found
+        collapse include dir [/usr/lib/llvm-18/lib/clang/18/include] ==> [/usr/lib/llvm-18/lib/clang/18/include]
+        collapse include dir [/usr/local/include] ==> [/usr/local/include]
+        collapse include dir [/usr/include/x86_64-linux-gnu] ==> [/usr/include/x86_64-linux-gnu]
+        collapse include dir [/usr/include] ==> [/usr/include]
+        implicit include dirs: [/usr/lib/llvm-18/lib/clang/18/include;/usr/local/include;/usr/include/x86_64-linux-gnu;/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/CMakeDetermineCompilerABI.cmake:159 (message)"
+      - "/usr/local/share/cmake-3.28/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/FindLAPACK.cmake:89 (enable_language)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/vcpkg-cmake-wrapper.cmake:9 (_find_package)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:813 (include)"
+      - "lintdb/CMakeLists.txt:68 (find_package)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        ignore line: [Change Dir: '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ilxU53']
+        ignore line: []
+        ignore line: [Run Build Command(s): /usr/local/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_e9ac4/fast]
+        ignore line: [gmake[1]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ilxU53']
+        ignore line: [/usr/bin/gmake  -f CMakeFiles/cmTC_e9ac4.dir/build.make CMakeFiles/cmTC_e9ac4.dir/build]
+        ignore line: [gmake[2]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ilxU53']
+        ignore line: [Building C object CMakeFiles/cmTC_e9ac4.dir/CMakeCCompilerABI.c.o]
+        ignore line: [/usr/bin/cc   -v -MD -MT CMakeFiles/cmTC_e9ac4.dir/CMakeCCompilerABI.c.o -MF CMakeFiles/cmTC_e9ac4.dir/CMakeCCompilerABI.c.o.d -o CMakeFiles/cmTC_e9ac4.dir/CMakeCCompilerABI.c.o -c /usr/local/share/cmake-3.28/Modules/CMakeCCompilerABI.c]
+        ignore line: [Ubuntu clang version 18.1.0 (++20240211023316+0d656f0f12d4-1~exp1~20240211023423.38)]
+        ignore line: [Target: x86_64-pc-linux-gnu]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /usr/bin]
+        ignore line: [Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/11]
+        ignore line: [Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+        ignore line: [Selected GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+        ignore line: [Candidate multilib: .]
+        ignore line: [@m64]
+        ignore line: [Selected multilib: .]
+        ignore line: [@m64]
+        ignore line: [ (in-process)]
+        ignore line: [ "/usr/lib/llvm-18/bin/clang" -cc1 -triple x86_64-pc-linux-gnu -emit-obj -mrelax-all -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name CMakeCCompilerABI.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=all -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu x86-64 -tune-cpu generic -debugger-tuning=gdb -fdebug-compilation-dir=/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ilxU53 -v -fcoverage-compilation-dir=/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-ilxU53 -resource-dir /usr/lib/llvm-18/lib/clang/18 -dependency-file CMakeFiles/cmTC_e9ac4.dir/CMakeCCompilerABI.c.o.d -MT CMakeFiles/cmTC_e9ac4.dir/CMakeCCompilerABI.c.o -sys-header-deps -internal-isystem /usr/lib/llvm-18/lib/clang/18/include -internal-isystem /usr/local/include -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../x86_64-linux-gnu/include -internal-externc-isystem /usr/include/x86_64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -ferror-limit 19 -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_e9ac4.dir/CMakeCCompilerABI.c.o -x c /usr/local/share/cmake-3.28/Modules/CMakeCCompilerABI.c]
+        ignore line: [clang -cc1 version 18.1.0 based upon LLVM 18.1.0 default target x86_64-pc-linux-gnu]
+        ignore line: [ignoring nonexistent directory "/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../x86_64-linux-gnu/include"]
+        ignore line: [ignoring nonexistent directory "/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /usr/lib/llvm-18/lib/clang/18/include]
+        ignore line: [ /usr/local/include]
+        ignore line: [ /usr/include/x86_64-linux-gnu]
+        ignore line: [ /usr/include]
+        ignore line: [End of search list.]
+        ignore line: [Linking C executable cmTC_e9ac4]
+        ignore line: [/usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e9ac4.dir/link.txt --verbose=1]
+        ignore line: [/usr/bin/cc  -v CMakeFiles/cmTC_e9ac4.dir/CMakeCCompilerABI.c.o -o cmTC_e9ac4 ]
+        ignore line: [Ubuntu clang version 18.1.0 (++20240211023316+0d656f0f12d4-1~exp1~20240211023423.38)]
+        ignore line: [Target: x86_64-pc-linux-gnu]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /usr/bin]
+        ignore line: [Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/11]
+        ignore line: [Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+        ignore line: [Selected GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+        ignore line: [Candidate multilib: .]
+        ignore line: [@m64]
+        ignore line: [Selected multilib: .]
+        ignore line: [@m64]
+        link line: [ "/usr/bin/ld" -z relro --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_e9ac4 /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtbeginS.o -L/usr/bin/../lib/gcc/x86_64-linux-gnu/12 -L/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/usr/lib/llvm-18/bin/../lib -L/lib -L/usr/lib CMakeFiles/cmTC_e9ac4.dir/CMakeCCompilerABI.c.o -lgcc --as-needed -lgcc_s --no-as-needed -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtendS.o /lib/x86_64-linux-gnu/crtn.o]
+          arg [/usr/bin/ld] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--build-id] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [elf_x86_64] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_e9ac4] ==> ignore
+          arg [/lib/x86_64-linux-gnu/Scrt1.o] ==> obj [/lib/x86_64-linux-gnu/Scrt1.o]
+          arg [/lib/x86_64-linux-gnu/crti.o] ==> obj [/lib/x86_64-linux-gnu/crti.o]
+          arg [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtbeginS.o] ==> obj [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtbeginS.o]
+          arg [-L/usr/bin/../lib/gcc/x86_64-linux-gnu/12] ==> dir [/usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+          arg [-L/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64] ==> dir [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64]
+          arg [-L/lib/x86_64-linux-gnu] ==> dir [/lib/x86_64-linux-gnu]
+          arg [-L/lib/../lib64] ==> dir [/lib/../lib64]
+          arg [-L/usr/lib/x86_64-linux-gnu] ==> dir [/usr/lib/x86_64-linux-gnu]
+          arg [-L/usr/lib/../lib64] ==> dir [/usr/lib/../lib64]
+          arg [-L/usr/lib/llvm-18/bin/../lib] ==> dir [/usr/lib/llvm-18/bin/../lib]
+          arg [-L/lib] ==> dir [/lib]
+          arg [-L/usr/lib] ==> dir [/usr/lib]
+          arg [CMakeFiles/cmTC_e9ac4.dir/CMakeCCompilerABI.c.o] ==> ignore
+          arg [-lgcc] ==> lib [gcc]
+          arg [--as-needed] ==> ignore
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [--no-as-needed] ==> ignore
+          arg [-lc] ==> lib [c]
+          arg [-lgcc] ==> lib [gcc]
+          arg [--as-needed] ==> ignore
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [--no-as-needed] ==> ignore
+          arg [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtendS.o] ==> obj [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtendS.o]
+          arg [/lib/x86_64-linux-gnu/crtn.o] ==> obj [/lib/x86_64-linux-gnu/crtn.o]
+        collapse obj [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtbeginS.o] ==> [/usr/lib/gcc/x86_64-linux-gnu/12/crtbeginS.o]
+        collapse obj [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtendS.o] ==> [/usr/lib/gcc/x86_64-linux-gnu/12/crtendS.o]
+        collapse library dir [/usr/bin/../lib/gcc/x86_64-linux-gnu/12] ==> [/usr/lib/gcc/x86_64-linux-gnu/12]
+        collapse library dir [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64] ==> [/usr/lib64]
+        collapse library dir [/lib/x86_64-linux-gnu] ==> [/lib/x86_64-linux-gnu]
+        collapse library dir [/lib/../lib64] ==> [/lib64]
+        collapse library dir [/usr/lib/x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+        collapse library dir [/usr/lib/../lib64] ==> [/usr/lib64]
+        collapse library dir [/usr/lib/llvm-18/bin/../lib] ==> [/usr/lib/llvm-18/lib]
+        collapse library dir [/lib] ==> [/lib]
+        collapse library dir [/usr/lib] ==> [/usr/lib]
+        implicit libs: [gcc;gcc_s;c;gcc;gcc_s]
+        implicit objs: [/lib/x86_64-linux-gnu/Scrt1.o;/lib/x86_64-linux-gnu/crti.o;/usr/lib/gcc/x86_64-linux-gnu/12/crtbeginS.o;/usr/lib/gcc/x86_64-linux-gnu/12/crtendS.o;/lib/x86_64-linux-gnu/crtn.o]
+        implicit dirs: [/usr/lib/gcc/x86_64-linux-gnu/12;/usr/lib64;/lib/x86_64-linux-gnu;/lib64;/usr/lib/x86_64-linux-gnu;/usr/lib/llvm-18/lib;/lib;/usr/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "/usr/local/share/cmake-3.28/Modules/FindBLAS.cmake:372 (check_function_exists)"
+      - "/usr/local/share/cmake-3.28/Modules/FindBLAS.cmake:753 (check_blas_libraries)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/blas/vcpkg-cmake-wrapper.cmake:5 (_find_package)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:813 (include)"
+      - "/usr/local/share/cmake-3.28/Modules/CMakeFindDependencyMacro.cmake:76 (find_package)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/FindLAPACK.cmake:199 (find_dependency)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/vcpkg-cmake-wrapper.cmake:9 (_find_package)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:813 (include)"
+      - "lintdb/CMakeLists.txt:68 (find_package)"
+    checks:
+      - "Looking for sgemm_"
+    directories:
+      source: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-p0LTYp"
+      binary: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-p0LTYp"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-18"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/matt/deployql/LintDB/cmake;/home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/share/lapack"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "10.13"
+      VCPKG_APPLOCAL_DEPS: "ON"
+      VCPKG_TARGET_TRIPLET: "x64-linux"
+      Z_VCPKG_ROOT_DIR: "/home/matt/deployql/LintDB/tools/vcpkg"
+    buildResult:
+      variable: "BLAS_openblas_WORKS"
+      cached: true
+      stdout: |
+        Change Dir: '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-p0LTYp'
+        
+        Run Build Command(s): /usr/local/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_5e18c/fast
+        gmake[1]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-p0LTYp'
+        /usr/bin/gmake  -f CMakeFiles/cmTC_5e18c.dir/build.make CMakeFiles/cmTC_5e18c.dir/build
+        gmake[2]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-p0LTYp'
+        Building C object CMakeFiles/cmTC_5e18c.dir/CheckFunctionExists.c.o
+        /usr/bin/cc   -DCHECK_FUNCTION_EXISTS=sgemm_ -MD -MT CMakeFiles/cmTC_5e18c.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_5e18c.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_5e18c.dir/CheckFunctionExists.c.o -c /home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-p0LTYp/CheckFunctionExists.c
+        Linking C executable cmTC_5e18c
+        /usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_5e18c.dir/link.txt --verbose=1
+        /usr/bin/cc  -DCHECK_FUNCTION_EXISTS=sgemm_ CMakeFiles/cmTC_5e18c.dir/CheckFunctionExists.c.o -o cmTC_5e18c  /home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/lib/libopenblas.a 
+        gmake[2]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-p0LTYp'
+        gmake[1]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-p0LTYp'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/FindLAPACK.cmake:176 (check_function_exists)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/FindLAPACK.cmake:350 (check_lapack_libraries)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/vcpkg-cmake-wrapper.cmake:9 (_find_package)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:813 (include)"
+      - "lintdb/CMakeLists.txt:68 (find_package)"
+    checks:
+      - "Looking for cheev_"
+    directories:
+      source: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-vCZOre"
+      binary: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-vCZOre"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-18"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/matt/deployql/LintDB/cmake;/home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/share/lapack"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "10.13"
+      VCPKG_APPLOCAL_DEPS: "ON"
+      VCPKG_TARGET_TRIPLET: "x64-linux"
+      Z_VCPKG_ROOT_DIR: "/home/matt/deployql/LintDB/tools/vcpkg"
+    buildResult:
+      variable: "LAPACK_openblas_WORKS"
+      cached: true
+      stdout: |
+        Change Dir: '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-vCZOre'
+        
+        Run Build Command(s): /usr/local/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_10d8e/fast
+        gmake[1]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-vCZOre'
+        /usr/bin/gmake  -f CMakeFiles/cmTC_10d8e.dir/build.make CMakeFiles/cmTC_10d8e.dir/build
+        gmake[2]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-vCZOre'
+        Building C object CMakeFiles/cmTC_10d8e.dir/CheckFunctionExists.c.o
+        /usr/bin/cc   -DCHECK_FUNCTION_EXISTS=cheev_ -MD -MT CMakeFiles/cmTC_10d8e.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_10d8e.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_10d8e.dir/CheckFunctionExists.c.o -c /home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-vCZOre/CheckFunctionExists.c
+        Linking C executable cmTC_10d8e
+        /usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_10d8e.dir/link.txt --verbose=1
+        /usr/bin/cc  -DCHECK_FUNCTION_EXISTS=cheev_ CMakeFiles/cmTC_10d8e.dir/CheckFunctionExists.c.o -o cmTC_10d8e  /home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/lib/libopenblas.a /home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/lib/libopenblas.a 
+        /usr/bin/ld: CMakeFiles/cmTC_10d8e.dir/CheckFunctionExists.c.o: in function `main':
+        CheckFunctionExists.c:(.text+0x17): undefined reference to `cheev_'
+        cc: error: linker command failed with exit code 1 (use -v to see invocation)
+        gmake[2]: *** [CMakeFiles/cmTC_10d8e.dir/build.make:102: cmTC_10d8e] Error 1
+        gmake[2]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-vCZOre'
+        gmake[1]: *** [Makefile:127: cmTC_10d8e/fast] Error 2
+        gmake[1]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-vCZOre'
+        
+      exitCode: 2
+...
+
+---
+events:
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "/usr/local/share/cmake-3.28/Modules/FindBLAS.cmake:372 (check_function_exists)"
+      - "/usr/local/share/cmake-3.28/Modules/FindBLAS.cmake:416 (check_blas_libraries)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/blas/vcpkg-cmake-wrapper.cmake:5 (_find_package)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:813 (include)"
+      - "/usr/local/share/cmake-3.28/Modules/CMakeFindDependencyMacro.cmake:76 (find_package)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/FindLAPACK.cmake:199 (find_dependency)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/vcpkg-cmake-wrapper.cmake:9 (_find_package)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:813 (include)"
+      - "lintdb/CMakeLists.txt:68 (find_package)"
+    checks:
+      - "Looking for sgemm_"
+    directories:
+      source: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-7PiFSW"
+      binary: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-7PiFSW"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-18"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/matt/deployql/LintDB/cmake;/home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/share/lapack"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "10.13"
+      VCPKG_APPLOCAL_DEPS: "ON"
+      VCPKG_TARGET_TRIPLET: "x64-linux"
+      Z_VCPKG_ROOT_DIR: "/home/matt/deployql/LintDB/tools/vcpkg"
+    buildResult:
+      variable: "BLAS_WORKS"
+      cached: true
+      stdout: |
+        Change Dir: '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-7PiFSW'
+        
+        Run Build Command(s): /usr/local/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_83631/fast
+        gmake[1]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-7PiFSW'
+        /usr/bin/gmake  -f CMakeFiles/cmTC_83631.dir/build.make CMakeFiles/cmTC_83631.dir/build
+        gmake[2]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-7PiFSW'
+        Building C object CMakeFiles/cmTC_83631.dir/CheckFunctionExists.c.o
+        /usr/bin/cc   -DCHECK_FUNCTION_EXISTS=sgemm_ -MD -MT CMakeFiles/cmTC_83631.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_83631.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_83631.dir/CheckFunctionExists.c.o -c /home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-7PiFSW/CheckFunctionExists.c
+        Linking C executable cmTC_83631
+        /usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_83631.dir/link.txt --verbose=1
+        /usr/bin/cc  -DCHECK_FUNCTION_EXISTS=sgemm_ CMakeFiles/cmTC_83631.dir/CheckFunctionExists.c.o -o cmTC_83631 
+        /usr/bin/ld: CMakeFiles/cmTC_83631.dir/CheckFunctionExists.c.o: in function `main':
+        CheckFunctionExists.c:(.text+0x17): undefined reference to `sgemm_'
+        cc: error: linker command failed with exit code 1 (use -v to see invocation)
+        gmake[2]: *** [CMakeFiles/cmTC_83631.dir/build.make:100: cmTC_83631] Error 1
+        gmake[2]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-7PiFSW'
+        gmake[1]: *** [Makefile:127: cmTC_83631/fast] Error 2
+        gmake[1]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-7PiFSW'
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
+      - "/usr/local/share/cmake-3.28/Modules/CheckCSourceCompiles.cmake:52 (cmake_check_source_compiles)"
+      - "/usr/local/share/cmake-3.28/Modules/FindThreads.cmake:97 (CHECK_C_SOURCE_COMPILES)"
+      - "/usr/local/share/cmake-3.28/Modules/FindThreads.cmake:163 (_threads_check_libc)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:859 (_find_package)"
+      - "/usr/local/share/cmake-3.28/Modules/FindBLAS.cmake:470 (find_package)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/blas/vcpkg-cmake-wrapper.cmake:5 (_find_package)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:813 (include)"
+      - "/usr/local/share/cmake-3.28/Modules/CMakeFindDependencyMacro.cmake:76 (find_package)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/FindLAPACK.cmake:199 (find_dependency)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/vcpkg-cmake-wrapper.cmake:9 (_find_package)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:813 (include)"
+      - "lintdb/CMakeLists.txt:68 (find_package)"
+    checks:
+      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
+    directories:
+      source: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-4RYqFX"
+      binary: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-4RYqFX"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-18"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/matt/deployql/LintDB/cmake;/home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/share/lapack"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "10.13"
+      VCPKG_APPLOCAL_DEPS: "ON"
+      VCPKG_TARGET_TRIPLET: "x64-linux"
+      Z_VCPKG_ROOT_DIR: "/home/matt/deployql/LintDB/tools/vcpkg"
+    buildResult:
+      variable: "CMAKE_HAVE_LIBC_PTHREAD"
+      cached: true
+      stdout: |
+        Change Dir: '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-4RYqFX'
+        
+        Run Build Command(s): /usr/local/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_d3d8d/fast
+        gmake[1]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-4RYqFX'
+        /usr/bin/gmake  -f CMakeFiles/cmTC_d3d8d.dir/build.make CMakeFiles/cmTC_d3d8d.dir/build
+        gmake[2]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-4RYqFX'
+        Building C object CMakeFiles/cmTC_d3d8d.dir/src.c.o
+        /usr/bin/cc -DCMAKE_HAVE_LIBC_PTHREAD   -MD -MT CMakeFiles/cmTC_d3d8d.dir/src.c.o -MF CMakeFiles/cmTC_d3d8d.dir/src.c.o.d -o CMakeFiles/cmTC_d3d8d.dir/src.c.o -c /home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-4RYqFX/src.c
+        Linking C executable cmTC_d3d8d
+        /usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_d3d8d.dir/link.txt --verbose=1
+        /usr/bin/cc CMakeFiles/cmTC_d3d8d.dir/src.c.o -o cmTC_d3d8d 
+        gmake[2]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-4RYqFX'
+        gmake[1]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-4RYqFX'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/FindLAPACK.cmake:176 (check_function_exists)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/FindLAPACK.cmake:287 (check_lapack_libraries)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/vcpkg-cmake-wrapper.cmake:9 (_find_package)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:813 (include)"
+      - "lintdb/CMakeLists.txt:68 (find_package)"
+    checks:
+      - "Looking for cheev_"
+    directories:
+      source: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-KYMHCk"
+      binary: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-KYMHCk"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-18"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/matt/deployql/LintDB/cmake;/home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/share/lapack"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "10.13"
+      VCPKG_APPLOCAL_DEPS: "ON"
+      VCPKG_TARGET_TRIPLET: "x64-linux"
+      Z_VCPKG_ROOT_DIR: "/home/matt/deployql/LintDB/tools/vcpkg"
+    buildResult:
+      variable: "LAPACK_WORKS"
+      cached: true
+      stdout: |
+        Change Dir: '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-KYMHCk'
+        
+        Run Build Command(s): /usr/local/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_f76ba/fast
+        gmake[1]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-KYMHCk'
+        /usr/bin/gmake  -f CMakeFiles/cmTC_f76ba.dir/build.make CMakeFiles/cmTC_f76ba.dir/build
+        gmake[2]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-KYMHCk'
+        Building C object CMakeFiles/cmTC_f76ba.dir/CheckFunctionExists.c.o
+        /usr/bin/cc   -DCHECK_FUNCTION_EXISTS=cheev_ -MD -MT CMakeFiles/cmTC_f76ba.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_f76ba.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_f76ba.dir/CheckFunctionExists.c.o -c /home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-KYMHCk/CheckFunctionExists.c
+        Linking C executable cmTC_f76ba
+        /usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f76ba.dir/link.txt --verbose=1
+        /usr/bin/cc  -DCHECK_FUNCTION_EXISTS=cheev_ CMakeFiles/cmTC_f76ba.dir/CheckFunctionExists.c.o -o cmTC_f76ba  /home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/lib/libopenblas.a -lm -ldl 
+        /usr/bin/ld: CMakeFiles/cmTC_f76ba.dir/CheckFunctionExists.c.o: in function `main':
+        CheckFunctionExists.c:(.text+0x17): undefined reference to `cheev_'
+        cc: error: linker command failed with exit code 1 (use -v to see invocation)
+        gmake[2]: *** [CMakeFiles/cmTC_f76ba.dir/build.make:101: cmTC_f76ba] Error 1
+        gmake[2]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-KYMHCk'
+        gmake[1]: *** [Makefile:127: cmTC_f76ba/fast] Error 2
+        gmake[1]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-KYMHCk'
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/FindLAPACK.cmake:176 (check_function_exists)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/FindLAPACK.cmake:457 (check_lapack_libraries)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/vcpkg-cmake-wrapper.cmake:9 (_find_package)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:813 (include)"
+      - "lintdb/CMakeLists.txt:68 (find_package)"
+    checks:
+      - "Looking for cheev_"
+    directories:
+      source: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-gHJ3Uv"
+      binary: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-gHJ3Uv"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-18"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/matt/deployql/LintDB/cmake;/home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/share/lapack"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "10.13"
+      VCPKG_APPLOCAL_DEPS: "ON"
+      VCPKG_TARGET_TRIPLET: "x64-linux"
+      Z_VCPKG_ROOT_DIR: "/home/matt/deployql/LintDB/tools/vcpkg"
+    buildResult:
+      variable: "LAPACK_lapack_WORKS"
+      cached: true
+      stdout: |
+        Change Dir: '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-gHJ3Uv'
+        
+        Run Build Command(s): /usr/local/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_92ac5/fast
+        gmake[1]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-gHJ3Uv'
+        /usr/bin/gmake  -f CMakeFiles/cmTC_92ac5.dir/build.make CMakeFiles/cmTC_92ac5.dir/build
+        gmake[2]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-gHJ3Uv'
+        Building C object CMakeFiles/cmTC_92ac5.dir/CheckFunctionExists.c.o
+        /usr/bin/cc   -DCHECK_FUNCTION_EXISTS=cheev_ -MD -MT CMakeFiles/cmTC_92ac5.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_92ac5.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_92ac5.dir/CheckFunctionExists.c.o -c /home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-gHJ3Uv/CheckFunctionExists.c
+        Linking C executable cmTC_92ac5
+        /usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_92ac5.dir/link.txt --verbose=1
+        /usr/bin/cc  -DCHECK_FUNCTION_EXISTS=cheev_ CMakeFiles/cmTC_92ac5.dir/CheckFunctionExists.c.o -o cmTC_92ac5  /home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/lib/liblapack.a /home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/lib/libopenblas.a 
+        /usr/bin/ld: /home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/lib/liblapack.a(iparmq.f.o): in function `iparmq_':
+        iparmq.f:(.text+0x25e): undefined reference to `logf'
+        /usr/bin/ld: iparmq.f:(.text+0x26b): undefined reference to `lroundf'
+        /usr/bin/ld: /home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/lib/liblapack.a(clanhe.f.o): in function `clanhe_':
+        clanhe.f:(.text+0x150): undefined reference to `cabsf'
+        /usr/bin/ld: clanhe.f:(.text+0x29a): undefined reference to `cabsf'
+        /usr/bin/ld: clanhe.f:(.text+0x3b5): undefined reference to `cabsf'
+        /usr/bin/ld: clanhe.f:(.text+0x4cd): undefined reference to `cabsf'
+        /usr/bin/ld: /home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/lib/liblapack.a(xerbla.f.o): in function `xerbla_':
+        xerbla.f:(.text+0x55): undefined reference to `_gfortran_st_write'
+        /usr/bin/ld: xerbla.f:(.text+0x60): undefined reference to `_gfortran_string_len_trim'
+        /usr/bin/ld: xerbla.f:(.text+0x77): undefined reference to `_gfortran_transfer_character_write'
+        /usr/bin/ld: xerbla.f:(.text+0x87): undefined reference to `_gfortran_transfer_integer_write'
+        /usr/bin/ld: xerbla.f:(.text+0x8f): undefined reference to `_gfortran_st_write_done'
+        /usr/bin/ld: xerbla.f:(.text+0x9a): undefined reference to `_gfortran_stop_string'
+        /usr/bin/ld: /home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/lib/libopenblas.a(chemv_thread_U.c.o): in function `chemv_thread_U':
+        chemv_thread_U.c:(.text+0x1dc): undefined reference to `sqrt'
+        /usr/bin/ld: /home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/lib/libopenblas.a(chemv_thread_L.c.o): in function `chemv_thread_L':
+        chemv_thread_L.c:(.text+0x21a): undefined reference to `sqrt'
+        /usr/bin/ld: /home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/lib/libopenblas.a(chemv_thread_V.c.o): in function `chemv_thread_V':
+        chemv_thread_V.c:(.text+0x1dc): undefined reference to `sqrt'
+        /usr/bin/ld: /home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/lib/libopenblas.a(chemv_thread_M.c.o): in function `chemv_thread_M':
+        chemv_thread_M.c:(.text+0x21a): undefined reference to `sqrt'
+        /usr/bin/ld: /home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/lib/libopenblas.a(cher2_thread_U.c.o): in function `cher2_thread_U':
+        cher2_thread_U.c:(.text+0x160): undefined reference to `sqrt'
+        /usr/bin/ld: /home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/lib/libopenblas.a(cher2_thread_L.c.o):cher2_thread_L.c:(.text+0x164): more undefined references to `sqrt' follow
+        cc: error: linker command failed with exit code 1 (use -v to see invocation)
+        gmake[2]: *** [CMakeFiles/cmTC_92ac5.dir/build.make:102: cmTC_92ac5] Error 1
+        gmake[2]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-gHJ3Uv'
+        gmake[1]: *** [Makefile:127: cmTC_92ac5/fast] Error 2
+        gmake[1]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-gHJ3Uv'
+        
+      exitCode: 2
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/CheckFunctionExists.cmake:86 (try_compile)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/FindLAPACK.cmake:176 (check_function_exists)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/FindLAPACK.cmake:470 (check_lapack_libraries)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/lapack/vcpkg-cmake-wrapper.cmake:9 (_find_package)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:813 (include)"
+      - "lintdb/CMakeLists.txt:68 (find_package)"
+    checks:
+      - "Looking for cheev_"
+    directories:
+      source: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-HyaCyg"
+      binary: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-HyaCyg"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-18"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/matt/deployql/LintDB/cmake;/home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/share/lapack"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "10.13"
+      VCPKG_APPLOCAL_DEPS: "ON"
+      VCPKG_TARGET_TRIPLET: "x64-linux"
+      Z_VCPKG_ROOT_DIR: "/home/matt/deployql/LintDB/tools/vcpkg"
+    buildResult:
+      variable: "LAPACK_lapack_m_gfortran_WORKS"
+      cached: true
+      stdout: |
+        Change Dir: '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-HyaCyg'
+        
+        Run Build Command(s): /usr/local/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_a4507/fast
+        gmake[1]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-HyaCyg'
+        /usr/bin/gmake  -f CMakeFiles/cmTC_a4507.dir/build.make CMakeFiles/cmTC_a4507.dir/build
+        gmake[2]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-HyaCyg'
+        Building C object CMakeFiles/cmTC_a4507.dir/CheckFunctionExists.c.o
+        /usr/bin/cc   -DCHECK_FUNCTION_EXISTS=cheev_ -MD -MT CMakeFiles/cmTC_a4507.dir/CheckFunctionExists.c.o -MF CMakeFiles/cmTC_a4507.dir/CheckFunctionExists.c.o.d -o CMakeFiles/cmTC_a4507.dir/CheckFunctionExists.c.o -c /home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-HyaCyg/CheckFunctionExists.c
+        Linking C executable cmTC_a4507
+        /usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a4507.dir/link.txt --verbose=1
+        /usr/bin/cc  -DCHECK_FUNCTION_EXISTS=cheev_ CMakeFiles/cmTC_a4507.dir/CheckFunctionExists.c.o -o cmTC_a4507  /home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/lib/liblapack.a -lm /usr/lib/x86_64-linux-gnu/libgfortran.so.5 /home/matt/deployql/LintDB/_build_python_/vcpkg_installed/x64-linux/lib/libopenblas.a 
+        gmake[2]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-HyaCyg'
+        gmake[1]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-HyaCyg'
+        
+      exitCode: 0
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/FindOpenMP.cmake:219 (try_compile)"
+      - "/usr/local/share/cmake-3.28/Modules/FindOpenMP.cmake:486 (_OPENMP_GET_FLAGS)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:859 (_find_package)"
+      - "/usr/local/share/cmake-3.28/Modules/CMakeFindDependencyMacro.cmake:76 (find_package)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/faiss/faiss-config.cmake:7 (find_dependency)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:859 (_find_package)"
+      - "lintdb/CMakeLists.txt:72 (find_package)"
+    description: "Detecting C OpenMP compiler info"
+    directories:
+      source: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-sDTiz2"
+      binary: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-sDTiz2"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-18"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/matt/deployql/LintDB/cmake"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "10.13"
+      VCPKG_APPLOCAL_DEPS: "ON"
+      VCPKG_TARGET_TRIPLET: "x64-linux"
+      Z_VCPKG_ROOT_DIR: "/home/matt/deployql/LintDB/tools/vcpkg"
+    buildResult:
+      variable: "OpenMP_COMPILE_RESULT_C_fopenmplibomp"
+      cached: true
+      stdout: |
+        Change Dir: '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-sDTiz2'
+        
+        Run Build Command(s): /usr/local/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_a62a7/fast
+        gmake[1]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-sDTiz2'
+        /usr/bin/gmake  -f CMakeFiles/cmTC_a62a7.dir/build.make CMakeFiles/cmTC_a62a7.dir/build
+        gmake[2]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-sDTiz2'
+        Building C object CMakeFiles/cmTC_a62a7.dir/OpenMPTryFlag.c.o
+        /usr/bin/cc   -fopenmp=libomp -v -MD -MT CMakeFiles/cmTC_a62a7.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_a62a7.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_a62a7.dir/OpenMPTryFlag.c.o -c /home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-sDTiz2/OpenMPTryFlag.c
+        Ubuntu clang version 18.1.0 (++20240211023316+0d656f0f12d4-1~exp1~20240211023423.38)
+        Target: x86_64-pc-linux-gnu
+        Thread model: posix
+        InstalledDir: /usr/bin
+        Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/11
+        Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12
+        Selected GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12
+        Candidate multilib: .;@m64
+        Selected multilib: .;@m64
+         (in-process)
+         "/usr/lib/llvm-18/bin/clang" -cc1 -triple x86_64-pc-linux-gnu -emit-obj -mrelax-all -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name OpenMPTryFlag.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=all -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu x86-64 -tune-cpu generic -debugger-tuning=gdb -fdebug-compilation-dir=/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-sDTiz2 -v -fcoverage-compilation-dir=/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-sDTiz2 -resource-dir /usr/lib/llvm-18/lib/clang/18 -dependency-file CMakeFiles/cmTC_a62a7.dir/OpenMPTryFlag.c.o.d -MT CMakeFiles/cmTC_a62a7.dir/OpenMPTryFlag.c.o -sys-header-deps -internal-isystem /usr/lib/llvm-18/lib/clang/18/include -internal-isystem /usr/local/include -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../x86_64-linux-gnu/include -internal-externc-isystem /usr/include/x86_64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -ferror-limit 19 -fopenmp -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_a62a7.dir/OpenMPTryFlag.c.o -x c /home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-sDTiz2/OpenMPTryFlag.c
+        clang -cc1 version 18.1.0 based upon LLVM 18.1.0 default target x86_64-pc-linux-gnu
+        ignoring nonexistent directory "/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../x86_64-linux-gnu/include"
+        ignoring nonexistent directory "/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /usr/lib/llvm-18/lib/clang/18/include
+         /usr/local/include
+         /usr/include/x86_64-linux-gnu
+         /usr/include
+        End of search list.
+        Linking C executable cmTC_a62a7
+        /usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a62a7.dir/link.txt --verbose=1
+        /usr/bin/cc  -fopenmp=libomp -v CMakeFiles/cmTC_a62a7.dir/OpenMPTryFlag.c.o -o cmTC_a62a7  -v 
+        Ubuntu clang version 18.1.0 (++20240211023316+0d656f0f12d4-1~exp1~20240211023423.38)
+        Target: x86_64-pc-linux-gnu
+        Thread model: posix
+        InstalledDir: /usr/bin
+        Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/11
+        Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12
+        Selected GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12
+        Candidate multilib: .;@m64
+        Selected multilib: .;@m64
+         "/usr/bin/ld" -z relro --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_a62a7 /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtbeginS.o -L/usr/bin/../lib/gcc/x86_64-linux-gnu/12 -L/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/usr/lib/llvm-18/bin/../lib -L/lib -L/usr/lib CMakeFiles/cmTC_a62a7.dir/OpenMPTryFlag.c.o -lomp -L/usr/lib/llvm-18/lib -lgcc --as-needed -lgcc_s --no-as-needed -lpthread -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtendS.o /lib/x86_64-linux-gnu/crtn.o
+        gmake[2]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-sDTiz2'
+        gmake[1]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-sDTiz2'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/FindOpenMP.cmake:262 (message)"
+      - "/usr/local/share/cmake-3.28/Modules/FindOpenMP.cmake:486 (_OPENMP_GET_FLAGS)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:859 (_find_package)"
+      - "/usr/local/share/cmake-3.28/Modules/CMakeFindDependencyMacro.cmake:76 (find_package)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/faiss/faiss-config.cmake:7 (find_dependency)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:859 (_find_package)"
+      - "lintdb/CMakeLists.txt:72 (find_package)"
+    message: |
+      Parsed C OpenMP implicit link information from above output:
+        link line regex: [^( *|.*[/\\])(ld|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        ignore line: [Change Dir: '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-sDTiz2']
+        ignore line: []
+        ignore line: [Run Build Command(s): /usr/local/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_a62a7/fast]
+        ignore line: [gmake[1]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-sDTiz2']
+        ignore line: [/usr/bin/gmake  -f CMakeFiles/cmTC_a62a7.dir/build.make CMakeFiles/cmTC_a62a7.dir/build]
+        ignore line: [gmake[2]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-sDTiz2']
+        ignore line: [Building C object CMakeFiles/cmTC_a62a7.dir/OpenMPTryFlag.c.o]
+        ignore line: [/usr/bin/cc   -fopenmp=libomp -v -MD -MT CMakeFiles/cmTC_a62a7.dir/OpenMPTryFlag.c.o -MF CMakeFiles/cmTC_a62a7.dir/OpenMPTryFlag.c.o.d -o CMakeFiles/cmTC_a62a7.dir/OpenMPTryFlag.c.o -c /home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-sDTiz2/OpenMPTryFlag.c]
+        ignore line: [Ubuntu clang version 18.1.0 (++20240211023316+0d656f0f12d4-1~exp1~20240211023423.38)]
+        ignore line: [Target: x86_64-pc-linux-gnu]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /usr/bin]
+        ignore line: [Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/11]
+        ignore line: [Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+        ignore line: [Selected GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+        ignore line: [Candidate multilib: .]
+        ignore line: [@m64]
+        ignore line: [Selected multilib: .]
+        ignore line: [@m64]
+        ignore line: [ (in-process)]
+        ignore line: [ "/usr/lib/llvm-18/bin/clang" -cc1 -triple x86_64-pc-linux-gnu -emit-obj -mrelax-all -disable-free -clear-ast-before-backend -disable-llvm-verifier -discard-value-names -main-file-name OpenMPTryFlag.c -mrelocation-model pic -pic-level 2 -pic-is-pie -mframe-pointer=all -fmath-errno -ffp-contract=on -fno-rounding-math -mconstructor-aliases -funwind-tables=2 -target-cpu x86-64 -tune-cpu generic -debugger-tuning=gdb -fdebug-compilation-dir=/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-sDTiz2 -v -fcoverage-compilation-dir=/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-sDTiz2 -resource-dir /usr/lib/llvm-18/lib/clang/18 -dependency-file CMakeFiles/cmTC_a62a7.dir/OpenMPTryFlag.c.o.d -MT CMakeFiles/cmTC_a62a7.dir/OpenMPTryFlag.c.o -sys-header-deps -internal-isystem /usr/lib/llvm-18/lib/clang/18/include -internal-isystem /usr/local/include -internal-isystem /usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../x86_64-linux-gnu/include -internal-externc-isystem /usr/include/x86_64-linux-gnu -internal-externc-isystem /include -internal-externc-isystem /usr/include -ferror-limit 19 -fopenmp -fgnuc-version=4.2.1 -fskip-odr-check-in-gmf -faddrsig -D__GCC_HAVE_DWARF2_CFI_ASM=1 -o CMakeFiles/cmTC_a62a7.dir/OpenMPTryFlag.c.o -x c /home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-sDTiz2/OpenMPTryFlag.c]
+        ignore line: [clang -cc1 version 18.1.0 based upon LLVM 18.1.0 default target x86_64-pc-linux-gnu]
+        ignore line: [ignoring nonexistent directory "/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../x86_64-linux-gnu/include"]
+        ignore line: [ignoring nonexistent directory "/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /usr/lib/llvm-18/lib/clang/18/include]
+        ignore line: [ /usr/local/include]
+        ignore line: [ /usr/include/x86_64-linux-gnu]
+        ignore line: [ /usr/include]
+        ignore line: [End of search list.]
+        ignore line: [Linking C executable cmTC_a62a7]
+        ignore line: [/usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a62a7.dir/link.txt --verbose=1]
+        ignore line: [/usr/bin/cc  -fopenmp=libomp -v CMakeFiles/cmTC_a62a7.dir/OpenMPTryFlag.c.o -o cmTC_a62a7  -v ]
+        ignore line: [Ubuntu clang version 18.1.0 (++20240211023316+0d656f0f12d4-1~exp1~20240211023423.38)]
+        ignore line: [Target: x86_64-pc-linux-gnu]
+        ignore line: [Thread model: posix]
+        ignore line: [InstalledDir: /usr/bin]
+        ignore line: [Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/11]
+        ignore line: [Found candidate GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+        ignore line: [Selected GCC installation: /usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+        ignore line: [Candidate multilib: .]
+        ignore line: [@m64]
+        ignore line: [Selected multilib: .]
+        ignore line: [@m64]
+        link line: [ "/usr/bin/ld" -z relro --hash-style=gnu --build-id --eh-frame-hdr -m elf_x86_64 -pie -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_a62a7 /lib/x86_64-linux-gnu/Scrt1.o /lib/x86_64-linux-gnu/crti.o /usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtbeginS.o -L/usr/bin/../lib/gcc/x86_64-linux-gnu/12 -L/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64 -L/lib/x86_64-linux-gnu -L/lib/../lib64 -L/usr/lib/x86_64-linux-gnu -L/usr/lib/../lib64 -L/usr/lib/llvm-18/bin/../lib -L/lib -L/usr/lib CMakeFiles/cmTC_a62a7.dir/OpenMPTryFlag.c.o -lomp -L/usr/lib/llvm-18/lib -lgcc --as-needed -lgcc_s --no-as-needed -lpthread -lc -lgcc --as-needed -lgcc_s --no-as-needed /usr/bin/../lib/gcc/x86_64-linux-gnu/12/crtendS.o /lib/x86_64-linux-gnu/crtn.o]
+          arg [/usr/bin/ld] ==> ignore
+          arg [-zrelro] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [--build-id] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [elf_x86_64] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_a62a7] ==> ignore
+          arg [-L/usr/bin/../lib/gcc/x86_64-linux-gnu/12] ==> dir [/usr/bin/../lib/gcc/x86_64-linux-gnu/12]
+          arg [-L/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64] ==> dir [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64]
+          arg [-L/lib/x86_64-linux-gnu] ==> dir [/lib/x86_64-linux-gnu]
+          arg [-L/lib/../lib64] ==> dir [/lib/../lib64]
+          arg [-L/usr/lib/x86_64-linux-gnu] ==> dir [/usr/lib/x86_64-linux-gnu]
+          arg [-L/usr/lib/../lib64] ==> dir [/usr/lib/../lib64]
+          arg [-L/usr/lib/llvm-18/bin/../lib] ==> dir [/usr/lib/llvm-18/bin/../lib]
+          arg [-L/lib] ==> dir [/lib]
+          arg [-L/usr/lib] ==> dir [/usr/lib]
+          arg [CMakeFiles/cmTC_a62a7.dir/OpenMPTryFlag.c.o] ==> ignore
+          arg [-lomp] ==> lib [omp]
+          arg [-L/usr/lib/llvm-18/lib] ==> dir [/usr/lib/llvm-18/lib]
+          arg [-lgcc] ==> lib [gcc]
+          arg [--as-needed] ==> ignore
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [--no-as-needed] ==> ignore
+          arg [-lpthread] ==> lib [pthread]
+          arg [-lc] ==> lib [c]
+          arg [-lgcc] ==> lib [gcc]
+          arg [--as-needed] ==> ignore
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [--no-as-needed] ==> ignore
+        collapse library dir [/usr/bin/../lib/gcc/x86_64-linux-gnu/12] ==> [/usr/lib/gcc/x86_64-linux-gnu/12]
+        collapse library dir [/usr/bin/../lib/gcc/x86_64-linux-gnu/12/../../../../lib64] ==> [/usr/lib64]
+        collapse library dir [/lib/x86_64-linux-gnu] ==> [/lib/x86_64-linux-gnu]
+        collapse library dir [/lib/../lib64] ==> [/lib64]
+        collapse library dir [/usr/lib/x86_64-linux-gnu] ==> [/usr/lib/x86_64-linux-gnu]
+        collapse library dir [/usr/lib/../lib64] ==> [/usr/lib64]
+        collapse library dir [/usr/lib/llvm-18/bin/../lib] ==> [/usr/lib/llvm-18/lib]
+        collapse library dir [/lib] ==> [/lib]
+        collapse library dir [/usr/lib] ==> [/usr/lib]
+        collapse library dir [/usr/lib/llvm-18/lib] ==> [/usr/lib/llvm-18/lib]
+        implicit libs: [omp;gcc;gcc_s;pthread;c;gcc;gcc_s]
+        implicit objs: []
+        implicit dirs: [/usr/lib/gcc/x86_64-linux-gnu/12;/usr/lib64;/lib/x86_64-linux-gnu;/lib64;/usr/lib/x86_64-linux-gnu;/usr/lib/llvm-18/lib;/lib;/usr/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/local/share/cmake-3.28/Modules/FindOpenMP.cmake:420 (try_compile)"
+      - "/usr/local/share/cmake-3.28/Modules/FindOpenMP.cmake:560 (_OPENMP_GET_SPEC_DATE)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:859 (_find_package)"
+      - "/usr/local/share/cmake-3.28/Modules/CMakeFindDependencyMacro.cmake:76 (find_package)"
+      - "_build_python_/vcpkg_installed/x64-linux/share/faiss/faiss-config.cmake:7 (find_dependency)"
+      - "tools/vcpkg/scripts/buildsystems/vcpkg.cmake:859 (_find_package)"
+      - "lintdb/CMakeLists.txt:72 (find_package)"
+    description: "Detecting C OpenMP version"
+    directories:
+      source: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-1Is0xQ"
+      binary: "/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-1Is0xQ"
+    cmakeVariables:
+      CMAKE_CXX_COMPILER_CLANG_SCAN_DEPS: "/usr/bin/clang-scan-deps-18"
+      CMAKE_C_FLAGS: ""
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+      CMAKE_MODULE_PATH: "/home/matt/deployql/LintDB/cmake"
+      CMAKE_OSX_DEPLOYMENT_TARGET: "10.13"
+      VCPKG_APPLOCAL_DEPS: "ON"
+      VCPKG_TARGET_TRIPLET: "x64-linux"
+      Z_VCPKG_ROOT_DIR: "/home/matt/deployql/LintDB/tools/vcpkg"
+    buildResult:
+      variable: "OpenMP_SPECTEST_C_"
+      cached: true
+      stdout: |
+        Change Dir: '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-1Is0xQ'
+        
+        Run Build Command(s): /usr/local/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_20056/fast
+        gmake[1]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-1Is0xQ'
+        /usr/bin/gmake  -f CMakeFiles/cmTC_20056.dir/build.make CMakeFiles/cmTC_20056.dir/build
+        gmake[2]: Entering directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-1Is0xQ'
+        Building C object CMakeFiles/cmTC_20056.dir/OpenMPCheckVersion.c.o
+        /usr/bin/cc   -fopenmp=libomp -MD -MT CMakeFiles/cmTC_20056.dir/OpenMPCheckVersion.c.o -MF CMakeFiles/cmTC_20056.dir/OpenMPCheckVersion.c.o.d -o CMakeFiles/cmTC_20056.dir/OpenMPCheckVersion.c.o -c /home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-1Is0xQ/OpenMPCheckVersion.c
+        Linking C executable cmTC_20056
+        /usr/local/bin/cmake -E cmake_link_script CMakeFiles/cmTC_20056.dir/link.txt --verbose=1
+        /usr/bin/cc  -fopenmp=libomp CMakeFiles/cmTC_20056.dir/OpenMPCheckVersion.c.o -o cmTC_20056 
+        gmake[2]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-1Is0xQ'
+        gmake[1]: Leaving directory '/home/matt/deployql/LintDB/_build_python_/CMakeFiles/CMakeScratch/TryCompile-1Is0xQ'
+        
+      exitCode: 0
+...

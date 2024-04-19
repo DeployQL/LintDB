@@ -18,7 +18,9 @@ include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 17)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O2 -march=native -fopenmp -pthread -D_LIBCPP_DISABLE_AVAILABILITY")
+# set(BLA_VENDOR OpenBLAS)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -march=native -O3 -fopenmp -pthread -D_LIBCPP_DISABLE_AVAILABILITY")
 
 # the below is caused by github actions failing to build flatbuffers.
 # therefore, we set this value so that we use a higher sdk version to build it.
@@ -33,6 +35,7 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
 
 option(ENABLE_PYTHON "Build Python extension." ON)
+option(ENABLE_BENCHMARKS "Build benchmarks." OFF)
 
 add_subdirectory(lintdb)
 
@@ -43,4 +46,8 @@ endif()
 include(CTest)
 if(BUILD_TESTING)
 add_subdirectory(tests)
+endif()
+
+if(ENABLE_BENCHMARKS)
+  add_subdirectory(benchmarks)
 endif()

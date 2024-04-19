@@ -6,15 +6,13 @@
         "faiss",
         "rocksdb",
         "flatbuffers",
-        {
-            "name": "openblas",
-            "features": [
-                "threads"
-            ]
-        },
         "gtest",
         "glog",
         "jsoncpp",
-        "ms-gsl"
+        "ms-gsl",
+        "benchmark",
+        "intel-mkl",
+        "blas",
+        "lapack"
     ]
 }

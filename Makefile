@@ -43,7 +43,7 @@ valgrind:
 	valgrind -s --trace-children=yes --track-origins=yes --keep-stacktraces=alloc-and-free --suppressions=debug/valgrind-python.supp env PYTHONPATH="build/lintdb/python/build/lib" python tests/test_index.py
 
 callgrind:
-	valgrind --tool=callgrind PYTHONPATH="build/lintdb/python/build/lib" python ./benchmarks/run_lintdb.py
+	PYTHONPATH="_build_python_/lintdb/python/lintdb" valgrind --tool=callgrind python ./benchmarks/run_lintdb.py
 	
 py-docs:
 	rm -rf docs/build
@@ -52,3 +52,25 @@ py-docs:
 
 debug-conda:
 	conda debug lintdb --python 3.10 --output-id 'lintdb-*-py*' 
+
+build-conda:
+# this command mimicks how conda builds the package. it also makes it easier to build and augment the pythonpath than the regular build-python command
+	cmake -B _build_python_${PY_VER} \
+      -DBUILD_SHARED_LIBS=ON \
+	  -DENABLE_PYTHON=ON \
+      -DBUILD_TESTING=OFF \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DPython_EXECUTABLE=$PYTHON \
+      .
+	cmake --build _build_python_${PY_VER} --target pylintdb -j12
+	cd _build_python_/lintdb/python && python setup.py build 
+
+build-benchmarks:
+	cmake -B build_benchmarks \
+      -DBUILD_SHARED_LIBS=ON \
+      -DBUILD_TESTING=OFF \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DENABLE_BENCHMARKS=ON \
+	  -DENABLE_PYTHON=OFF \
+	  .
+	cmake --build build_benchmarks --target=bench_lintdb -j12

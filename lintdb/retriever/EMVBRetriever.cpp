@@ -256,11 +256,7 @@ std::vector<DocCandidate<float>> EMVBRetriever::rank_phase_two(
     auto comparator = [](DocCandidate<float> p1, DocCandidate<float> p2) {
         return p1.score > p2.score;
     };
-#ifdef __AVX2__
-#pragma omp parallel for simd schedule(static, 8)
-#else
 #pragma omp parallel for
-#endif
     for (size_t doc = 0; doc < candidates.size(); doc++) {
         std::vector<float> maxes(num_query_tokens, 0);
 
