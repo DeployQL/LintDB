@@ -284,9 +284,6 @@ void IndexIVF::update(
 void IndexIVF::merge(const std::string path) {
     Configuration incoming_config = read_metadata(path);
 
-    LOG(INFO) << "incoming config: " << incoming_config;
-    LOG(INFO) << "current config: " << this->config;
-
     LINTDB_THROW_IF_NOT(this->config == incoming_config);
 
     rocksdb::Options options;

@@ -57,6 +57,11 @@ set(LINT_DB_HEADERS ${LINT_DB_HEADERS} PARENT_SCOPE)
 
 add_library(lintdb ${LINT_DB_SRC})
 
+string(FIND "${CMAKE_CXX_FLAGS}" "FINTEGER" finteger_idx)
+if (${finteger_idx} EQUAL -1)
+  target_compile_definitions(lintdb PRIVATE FINTEGER=int)
+endif()
+
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
     target_link_libraries(lintdb PUBLIC OpenMP::OpenMP_CXX)
@@ -64,7 +69,9 @@ endif()
 
 find_package(MKL)
 if (MKL_FOUND)
-  target_link_libraries(lintdb PRIVATE MKL::MKL)
+  # target_link_libraries(faiss PRIVATE "-Wl,--start-group" ${MKL_LIBRARIES} "-Wl,--end-group")
+  # target_link_libraries(lintdb PRIVATE MKL::MKL)
+  target_link_libraries(lintdb PRIVATE ${MKL_LIBRARIES})
 else()
 find_package(OpenBLAS CONFIG REQUIRED)
 target_link_libraries(lintdb PRIVATE OpenBLAS::OpenBLAS)
@@ -93,11 +100,6 @@ target_link_libraries(lintdb PRIVATE Microsoft.GSL::GSL)
 
 find_package(jsoncpp CONFIG REQUIRED)
 target_link_libraries(lintdb PRIVATE JsonCpp::JsonCpp)
-
-string(FIND "${CMAKE_CXX_FLAGS}" "FINTEGER" finteger_idx)
-if (${finteger_idx} EQUAL -1)
-  target_compile_definitions(lintdb PRIVATE FINTEGER=int)
-endif()
 
 
 if(MSVC)

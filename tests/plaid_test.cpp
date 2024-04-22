@@ -11,7 +11,6 @@
 #include <iostream>
 #include <algorithm>
 #include <stdlib.h>
-#include <cblas.h>
 #include "lintdb/util.h"
 
 TEST(PlaidTests, ReadsCodesCorrectly) {

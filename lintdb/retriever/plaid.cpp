@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include "lintdb/api.h"
 #include "lintdb/util.h"
+#include <mkl.h>
 
 namespace lintdb {
 
@@ -137,22 +138,38 @@ float score_document_by_residuals(
     }
 
     std::vector<float> output(m * n, 0);
+    cblas_sgemm(
+        CblasRowMajor,
+        CblasNoTrans,
+        CblasTrans,
+        m, // 8
+        n, // 4
+        k, // 128
+        1.0,
+        doc_residuals, // m x k
+        k, // leading dimension is the length of the first dimension
+            // (columns)
+        query_vectors.data(), // should be k x n after transpose
+        k,             // this is the leading dimension of B, not op(b)
+        0.000,
+        output.data(), // m x n
+        n);
     // gives us a num_doc_tokens x num_query_tokens matrix.
-    sgemm_(
-            "Not Transposed",
-            "Transpose",
-            &m, // 8
-            &n, // 4
-            &k, // 128
-            &alpha,
-            doc_residuals, // m x k
-            &k, // leading dimension is the length of the first dimension
-               // (columns)
-            query_vectors.data(), // should be k x n after transpose
-            &k, // this is the leading dimension of B, not op(b)
-            &beta,
-            output.data(), // m x n
-            &n);
+    // cblas_sgemm_64(
+    //         "Not Transposed",
+    //         "Transpose",
+    //         &m, // 8
+    //         &n, // 4
+    //         &k, // 128
+    //         &alpha,
+    //         doc_residuals, // m x k
+    //         &k, // leading dimension is the length of the first dimension
+    //            // (columns)
+    //         query_vectors.data(), // should be k x n after transpose
+    //         &k, // this is the leading dimension of B, not op(b)
+    //         &beta,
+    //         output.data(), // m x n
+    //         &n);
 
     // find the max score for each doc_token.
     std::vector<float> max_scores(n, 0);

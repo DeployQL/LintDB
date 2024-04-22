@@ -8,8 +8,8 @@ build-release:
 
 build-debug:
 # CC=clang CXX=clang++ cmake -Wall -S . -B build -DCMAKE_MAKE_PROGRAM=make -DCMAKE_BUILD_TYPE=Debug -DLLDB_EXPORT_ALL_SYMBOLS=ON -DBUILD_SHARED_LIBS=ON
-	cmake --preset debug
-	cmake --build -j12 --preset debug
+	MKLROOT=/home/matt/deployql/LintDB/builds/debug/vcpkg_installed/x64-linux/lib/intel64 cmake --preset debug
+	MKLROOT=/home/matt/deployql/LintDB/builds/debug/vcpkg_installed/x64-linux/lib/intel64 cmake --build -j12 --preset debug
 
 build-python: 
 	cmake --preset python
@@ -17,7 +17,7 @@ build-python:
 	cd builds/python/lintdb/python && python setup.py build
 
 test:
-	cd builds/debug && cmake -E env GLOG_v=100 GLOG_logtostderr=1 ctest --output-on-failure
+	cd builds/debug && cmake -E env GLOG_v=100 GLOG_logtostderr=1 MKL_THREADING_LAYER=GNU ctest --output-on-failure
 
 test-python: build-python
 # had to fix up conda to make this work--
@@ -61,16 +61,18 @@ build-conda:
       -DBUILD_TESTING=OFF \
       -DCMAKE_BUILD_TYPE=Release \
       -DPython_EXECUTABLE=$PYTHON \
+	  -DBLA_VENDOR=Intel10_64ilp \
       .
 	cmake --build _build_python_${PY_VER} --target pylintdb -j12
 	cd _build_python_/lintdb/python && python setup.py build 
 
 build-benchmarks:
-	cmake -B build_benchmarks \
+	MKLROOT=/home/matt/deployql/LintDB/builds/debug/vcpkg_installed/x64-linux/lib/intel64 cmake -B build_benchmarks \
       -DBUILD_SHARED_LIBS=ON \
       -DBUILD_TESTING=OFF \
       -DCMAKE_BUILD_TYPE=Release \
       -DENABLE_BENCHMARKS=ON \
 	  -DENABLE_PYTHON=OFF \
+	  -DBLA_VENDOR=Intel10_64lp \
 	  .
-	cmake --build build_benchmarks --target=bench_lintdb -j12
+	MKLROOT=/home/matt/deployql/LintDB/builds/debug/vcpkg_installed/x64-linux/lib/intel64 cmake --build build_benchmarks --target=bench_lintdb -j12

@@ -11,8 +11,6 @@
         "jsoncpp",
         "ms-gsl",
         "benchmark",
-        "intel-mkl",
-        "blas",
-        "lapack"
+        "intel-mkl"
     ]
 }

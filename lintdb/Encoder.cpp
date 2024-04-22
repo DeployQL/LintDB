@@ -11,6 +11,7 @@
 #include "lintdb/exception.h"
 #include "lintdb/quantizers/io.h"
 #include "lintdb/util.h"
+#include <mkl.h>
 
 namespace lintdb {
 
@@ -159,20 +160,21 @@ void DefaultEncoder::search(
     int n = nlist;
     int k = dim;
 
-    sgemm_(
-            "Not Transposed",
-            "Transposed",
-            &m,
-            &n,
-            &k,
-            &alpha,
-            data, // size: (num_query_tok x dim)
-            &k,
-            coarse_quantizer->get_xb(), // size: (nlist x dim)
-            &k,
-            &beta,
-            query_scores.data(), // size: (num_query_tok x nlist)
-            &n);
+    cblas_sgemm(
+        CblasRowMajor,
+        CblasNoTrans,
+        CblasTrans,
+        num_query_tok,
+        nlist,
+        dim,
+        1.0,
+        data, // size: (num_query_tok x dim)
+        dim,
+        coarse_quantizer->get_xb(), // size: (nlist x dim)
+        dim,
+        0.0,
+        query_scores.data(), // size: (num_query_tok x nlist)
+        nlist);
 
     auto comparator = [](std::pair<float, idx_t> p1,
                          std::pair<float, idx_t> p2) {

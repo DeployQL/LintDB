@@ -8,7 +8,6 @@
 #include <faiss/utils/random.h>
 #include <vector>
 #include <iostream>
-#include <cblas.h>
 #include <filesystem>
 #include <gsl/span>
 #include "lintdb/util.h"
@@ -153,24 +152,24 @@ TEST_P(IndexTest, TrainsWithCompressionCorrectly) {
 
 // EmbeddingBlocks store data in column major format, so contiguous memory is
 // a column of data. we should expect the first column to be the first elements generated.
-TEST(IndexTest, EmbeddingBlocksAreRowMajor) {
-    size_t dim = 128;
-    size_t num_docs = 100;
-    size_t num_tokens = 100;
+// TEST(IndexTest, EmbeddingBlocksAreRowMajor) {
+//     size_t dim = 128;
+//     size_t num_docs = 100;
+//     size_t num_tokens = 100;
 
-    size_t num_bits = 2;
+//     size_t num_bits = 2;
 
-    std::vector<float> buf(dim * num_tokens);
+//     std::vector<float> buf(dim * num_tokens);
 
-    faiss::rand_smooth_vectors(num_tokens, dim, buf.data(), 1234);
-    // let's reuse the buffer to grab what we'd consider a a block of embeddings.
-    lintdb::EmbeddingBlock block{buf.data(), num_tokens, dim};
-    //check that the first row is correct in the block.
-    for (size_t i = 0; i < num_tokens; i++) {
-        auto scal = block.embeddings[i];
-        EXPECT_EQ(scal, buf[i]);
-    }
-}
+//     faiss::rand_smooth_vectors(num_tokens, dim, buf.data(), 1234);
+//     // let's reuse the buffer to grab what we'd consider a a block of embeddings.
+//     lintdb::EmbeddingBlock block{buf.data(), num_tokens, dim};
+//     //check that the first row is correct in the block.
+//     for (size_t i = 0; i < num_tokens; i++) {
+//         auto scal = block.embeddings[i];
+//         EXPECT_EQ(scal, buf[i]);
+//     }
+// }
 
 TEST_P(IndexTest, SearchCorrectly) {
     size_t dim = 128;

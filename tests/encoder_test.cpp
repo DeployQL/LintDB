@@ -7,7 +7,6 @@
 #include <faiss/utils/random.h>
 #include <vector>
 #include <iostream>
-#include <cblas.h>
 #include <filesystem>
 #include <gsl/span>
 

@@ -3,6 +3,7 @@
 #include "lintdb/SearchOptions.h"
 #include "lintdb/api.h"
 #include "lintdb/exception.h"
+#include <mkl.h>
 
 namespace lintdb {
 extern "C" {
@@ -30,7 +31,7 @@ extern "C" {
 
     float snrm2_(FINTEGER n, const float* x, FINTEGER incx);
 
-    int sscal_(FINTEGER* n, const float* alpha, float* x, FINTEGER* incx);
+    int sscal_(FINTEGER* n, const float alpha, float* x, FINTEGER* incx);
 
 
 }
@@ -41,8 +42,10 @@ void normalize_vector(
         const size_t dim) {
     float mod = 0.0;
 
+    int dim2 = dim;
+
     for (size_t i = 0; i < num_doc_tokens; i++) {
-        mod = snrm2_(dim, doc_residuals + i * dim, 1);
+        mod = cblas_snrm2(dim2, doc_residuals + i * dim2, 1);
         if (mod == 1.0) {
             continue;
         }
@@ -51,7 +54,7 @@ void normalize_vector(
         float mod2 = 1.0 / mod;
         int incx = 1;
         // auto adjusted = std::max(mod, 1e-12f);
-        sscal_(&dim2, &mod2, doc_residuals + i * dim, &incx);
+        cblas_sscal(dim2, mod2, doc_residuals + i * dim, incx);
     }
 }
 

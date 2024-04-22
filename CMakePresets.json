@@ -19,9 +19,10 @@
                     "${sourceDir}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
-                "BUILD_SHARED_LIBS": "ON",
+                "BUILD_SHARED_LIBS": "OFF",
                 "CMAKE_INSTALL_LIBDIR": "lib",
-                "ENABLE_PYTHON": "OFF"
+                "ENABLE_PYTHON": "OFF",
+                "BLA_VENDOR":"Intel10_64lp"
             }
         },
         {
@@ -37,7 +38,8 @@
                 "CMAKE_BUILD_TYPE": "Release",
                 "BUILD_SHARED_LIBS": "ON",
                 "CMAKE_INSTALL_LIBDIR": "lib",
-                "ENABLE_PYTHON": "OFF"
+                "ENABLE_PYTHON": "OFF",
+                "BLA_VENDOR":"Intel10_64lp"
             }
         },
         {
@@ -53,7 +55,8 @@
                 "CMAKE_BUILD_TYPE": "Release",
                 "BUILD_SHARED_LIBS": "ON",
                 "CMAKE_INSTALL_LIBDIR": "lib",
-                "ENABLE_PYTHON": "ON"
+                "ENABLE_PYTHON": "ON",
+                "BLA_VENDOR":"Intel10_64lp"
             }
         }
     ],
