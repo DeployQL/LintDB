@@ -1,19 +1,23 @@
-
+ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 build-release:
-
 # CC=clang CXX=clang++ cmake -S . -B build -DCMAKE_MAKE_PROGRAM=make -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_LIBDIR=lib -DBUILD_SHARED_LIBS=ON
-	cmake --preset release
-	cmake --build -j12 --preset release
+	MKLROOT=${ROOT_DIR}/builds/release/vcpkg_installed/x64-linux/lib/intel64 cmake --preset release
+	MKLROOT=${ROOT_DIR}/builds/release/vcpkg_installed/x64-linux/lib/intel64 cmake --build -j12 --preset release
 
 build-debug:
 # CC=clang CXX=clang++ cmake -Wall -S . -B build -DCMAKE_MAKE_PROGRAM=make -DCMAKE_BUILD_TYPE=Debug -DLLDB_EXPORT_ALL_SYMBOLS=ON -DBUILD_SHARED_LIBS=ON
-	MKLROOT=/home/matt/deployql/LintDB/builds/debug/vcpkg_installed/x64-linux/lib/intel64 cmake --preset debug
-	MKLROOT=/home/matt/deployql/LintDB/builds/debug/vcpkg_installed/x64-linux/lib/intel64 cmake --build -j12 --preset debug
+	MKLROOT=${ROOT_DIR}/builds/debug/vcpkg_installed/x64-linux/lib/intel64 cmake --preset debug
+	MKLROOT=${ROOT_DIR}/builds/debug/vcpkg_installed/x64-linux/lib/intel64 cmake --build -j12 --preset debug
 
 build-python: 
+	MKLROOT=${ROOT_DIR}/builds/python/vcpkg_installed/x64-linux/lib/intel64 cmake --preset python
+	MKLROOT=${ROOT_DIR}/builds/python/vcpkg_installed/x64-linux/lib/intel64 cmake --build --preset python -j12
+	cd builds/python/lintdb/python && python setup.py build
+
+build-python-mac: 
 	cmake --preset python
-	cmake --build --preset python -j12
+	cmake --build --preset python-blas -j12
 	cd builds/python/lintdb/python && python setup.py build
 
 test:
@@ -42,8 +46,8 @@ valgrind:
 # we need valgrind?-3.20 to process dwarf5
 	valgrind -s --trace-children=yes --track-origins=yes --keep-stacktraces=alloc-and-free --suppressions=debug/valgrind-python.supp env PYTHONPATH="build/lintdb/python/build/lib" python tests/test_index.py
 
-callgrind:
-	PYTHONPATH="_build_python_/lintdb/python/lintdb" valgrind --tool=callgrind python ./benchmarks/run_lintdb.py
+callgrind: build-python
+	PYTHONPATH="builds/python/lintdb/python/build/lib/lintdb" valgrind --tool=callgrind --suppressions=debug/valgrind-python.supp --instr-atstart=no --dump-instr=yes --collect-jumps=yes python ./benchmarks/bench_lintdb.py
 	
 py-docs:
 	rm -rf docs/build
@@ -55,24 +59,26 @@ debug-conda:
 
 build-conda:
 # this command mimicks how conda builds the package. it also makes it easier to build and augment the pythonpath than the regular build-python command
-	cmake -B _build_python_${PY_VER} \
+	CC=clang CXX=clang++ CMAKE_C_COMPILER=clang CMAKE_CXX_COMPILER=clang++ MKLROOT=${ROOT_DIR}/_build_python_/vcpkg_installed/x64-linux/lib/intel64 cmake -B _build_python_${PY_VER} \
       -DBUILD_SHARED_LIBS=ON \
 	  -DENABLE_PYTHON=ON \
       -DBUILD_TESTING=OFF \
       -DCMAKE_BUILD_TYPE=Release \
       -DPython_EXECUTABLE=$PYTHON \
-	  -DBLA_VENDOR=Intel10_64ilp \
+	  -DBLA_VENDOR=Intel10_64lp \
       .
-	cmake --build _build_python_${PY_VER} --target pylintdb -j12
+	CC=clang CXX=clang++ CMAKE_C_COMPILER=clang CMAKE_CXX_COMPILER=clang++ cmake --build _build_python_${PY_VER} --target pylintdb -j12
 	cd _build_python_/lintdb/python && python setup.py build 
 
 build-benchmarks:
-	MKLROOT=/home/matt/deployql/LintDB/builds/debug/vcpkg_installed/x64-linux/lib/intel64 cmake -B build_benchmarks \
+	MKLROOT=${ROOT_DIR}/build_benchmarks/vcpkg_installed/x64-linux/lib/intel64 cmake -B build_benchmarks \
       -DBUILD_SHARED_LIBS=ON \
       -DBUILD_TESTING=OFF \
       -DCMAKE_BUILD_TYPE=Release \
       -DENABLE_BENCHMARKS=ON \
 	  -DENABLE_PYTHON=OFF \
+	  -DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
+      -DOpenMP_CXX_LIB_NAMES=libiomp5 \
 	  -DBLA_VENDOR=Intel10_64lp \
 	  .
-	MKLROOT=/home/matt/deployql/LintDB/builds/debug/vcpkg_installed/x64-linux/lib/intel64 cmake --build build_benchmarks --target=bench_lintdb -j12
+	cmake --build build_benchmarks --target=bench_lintdb -j12

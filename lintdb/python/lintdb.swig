@@ -1,6 +1,6 @@
 /* -*- C -*-  (not really, but good for syntax highlighting) */
 
-%module("threads"=1) lintdb
+%module lintdb
 %{
 #define SWIG_FILE_WITH_INIT
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
@@ -90,11 +90,11 @@ namespace std {
 
 // Python-specific: release GIL by default for all functions
 %exception {
-    // Py_BEGIN_ALLOW_THREADS
+    Py_BEGIN_ALLOW_THREADS
     try {
         $action
     } catch(LintDBException & e) {
-        // PyEval_RestoreThread(_save);
+        PyEval_RestoreThread(_save);
 
         if (PyErr_Occurred()) {
             // some previous code already set the error type.
@@ -103,7 +103,7 @@ namespace std {
         }
         SWIG_fail;
      } catch(faiss::FaissException & e) {
-        // PyEval_RestoreThread(_save);
+        PyEval_RestoreThread(_save);
 
         if (PyErr_Occurred()) {
             // some previous code already set the error type.
@@ -112,16 +112,16 @@ namespace std {
         }
         SWIG_fail;
     } catch(std::bad_alloc & ba) {
-        // PyEval_RestoreThread(_save);
+        PyEval_RestoreThread(_save);
         PyErr_SetString(PyExc_MemoryError, "std::bad_alloc");
         SWIG_fail;
     } catch(const std::exception& ex) {
-        // PyEval_RestoreThread(_save);
+        PyEval_RestoreThread(_save);
         std::string what = std::string("C++ exception ") + ex.what();
         PyErr_SetString(PyExc_RuntimeError, what.c_str());
         SWIG_fail;
     }
-    // Py_END_ALLOW_THREADS
+    Py_END_ALLOW_THREADS
 }
 
 // Define the C++ class

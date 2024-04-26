@@ -8,7 +8,6 @@
 #include <unordered_set>
 #include "lintdb/api.h"
 #include "lintdb/util.h"
-#include <mkl.h>
 
 namespace lintdb {
 
@@ -20,7 +19,7 @@ extern "C" {
 
     /* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
 
-    int sgemm_(
+    extern int sgemm_(
             const char* transa,
             const char* transb,
             FINTEGER* m,
@@ -127,49 +126,37 @@ float score_document_by_residuals(
         bool normalize) {
     // use BLAS functions to matmul doc residuals with the transposed query
     // vectors. we'll use the sum of the max scores for each centroid.
-    int m = num_doc_tokens;   // rows of op(A) and of matrix C.
-    int n = num_query_tokens; // columns of matrix op(B) and of matrix C.
-    int k = dim; // the number of columns of op(A) and rows of op(B).
+    FINTEGER m = FINTEGER(num_doc_tokens);   // rows of op(A) and of matrix C.
+    FINTEGER n = FINTEGER(num_query_tokens); // columns of matrix op(B) and of matrix C.
+    FINTEGER k = FINTEGER(dim); // the number of columns of op(A) and rows of op(B).
     float alpha = 1.0;
     float beta = 0.0;
+
+    FINTEGER out = FINTEGER(num_doc_tokens);
+    FINTEGER lda = FINTEGER(dim);
+    FINTEGER ldb = FINTEGER(dim);
 
     if (normalize) {
         normalize_vector(doc_residuals, num_doc_tokens, dim);
     }
 
     std::vector<float> output(m * n, 0);
-    cblas_sgemm(
-        CblasRowMajor,
-        CblasNoTrans,
-        CblasTrans,
-        m, // 8
-        n, // 4
-        k, // 128
-        1.0,
-        doc_residuals, // m x k
-        k, // leading dimension is the length of the first dimension
-            // (columns)
-        query_vectors.data(), // should be k x n after transpose
-        k,             // this is the leading dimension of B, not op(b)
-        0.000,
-        output.data(), // m x n
-        n);
-    // gives us a num_doc_tokens x num_query_tokens matrix.
-    // cblas_sgemm_64(
-    //         "Not Transposed",
-    //         "Transpose",
-    //         &m, // 8
-    //         &n, // 4
-    //         &k, // 128
-    //         &alpha,
-    //         doc_residuals, // m x k
-    //         &k, // leading dimension is the length of the first dimension
-    //            // (columns)
-    //         query_vectors.data(), // should be k x n after transpose
-    //         &k, // this is the leading dimension of B, not op(b)
-    //         &beta,
-    //         output.data(), // m x n
-    //         &n);
+    sgemm_(
+    "T",
+    "N",
+    &n, // 8
+    &m, // 4
+    &k, // 128
+    &alpha,
+    doc_residuals, // m x k
+    &lda, // leading dimension is the length of the first dimension
+        // (columns)
+    query_vectors.data(), // should be k x n after transpose
+    &ldb,             // this is the leading dimension of B, not op(b)
+    &beta,
+    output.data(), // m x n
+    &out);
+    
 
     // find the max score for each doc_token.
     std::vector<float> max_scores(n, 0);

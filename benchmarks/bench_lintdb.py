@@ -35,14 +35,6 @@ app = typer.Typer()
 
 @app.command()
 def single_search(dataset:str='lifestyle', split:str='dev',profile=False, checkpoint:str='colbert-ir/colbertv2.0', index_path:str='experiments/py_index_bench_colbert-lifestyle-2024-04-03'):
-    checkpoint_config = ColBERTConfig.load_from_checkpoint(checkpoint)
-    config = ColBERTConfig.from_existing(checkpoint_config, None)
-
-    from colbert.modeling.checkpoint import Checkpoint
-    from colbert import Searcher
-    checkpoint = Checkpoint(checkpoint, config)
-
-    d = load_lotte(dataset, split, stop=40000)
     latencies = []
     memory = []
 
@@ -50,9 +42,9 @@ def single_search(dataset:str='lifestyle', split:str='dev',profile=False, checkp
     rankings = {}
 
     count=0
-    for id, query in zip(d.qids, d.queries):
-        embeddings = checkpoint.queryFromText([query])
-        converted = np.squeeze(embeddings.numpy().astype('float32'))
+    for id in range(100):
+        embeddings = np.ones((32, 128)).astype('float32')
+        converted = embeddings
 
         start = time.perf_counter()
         if profile:

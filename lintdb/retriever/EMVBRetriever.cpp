@@ -12,7 +12,6 @@
 #include "lintdb/retriever/emvb.h"
 #include "lintdb/retriever/emvb_util.h"
 #include "lintdb/retriever/plaid.h"
-#include <mkl.h>
 
 namespace lintdb {
 extern "C" {
@@ -63,43 +62,30 @@ std::vector<idx_t> EMVBRetriever::top_passages(
         std::vector<float>& query_scores,
         std::vector<uint32_t>& bitvectors) {
 
-    int m = n;
-    int nn = encoder_->nlist;
-    int k = encoder_->dim;
+    FINTEGER m = FINTEGER(n);
+    FINTEGER nn = FINTEGER(encoder_->nlist);
+    FINTEGER k = FINTEGER(encoder_->dim);
     float alpha = 1.0;
     float beta = 0.0;
 
-    cblas_sgemm(
-        CblasRowMajor,
-        CblasNoTrans,
-        CblasTrans,
-        m, // 8
-        n, // 4
-        k, // 128
-        1.0,
-        query_data.data(), // m x k
-        k, // leading dimension is the length of the first dimension
-            // (columns)
-        encoder_->get_centroids(), // should be k x n after transpose
-        k,             // this is the leading dimension of B, not op(b)
-        0.000,
-        query_scores.data(), // m x n
-        n);
+    FINTEGER lda = FINTEGER(encoder_->dim);
+    FINTEGER ldb = FINTEGER(encoder_->dim);
+    FINTEGER out_dim = FINTEGER(encoder_->nlist);
 
-    // sgemm_(
-    //         "Not Transposed",
-    //         "Transposed",
-    //         &m,
-    //         &nn,
-    //         &k,
-    //         &alpha,
-    //         query_data.data(), // size: (num_query_tok x dim)
-    //         &k,
-    //         encoder_->get_centroids(), // size: (nlist x dim)
-    //         &k,
-    //         &beta,
-    //         query_scores.data(), // size: (num_query_tok x nlist)
-    //         &nn);
+    sgemm_(
+            "T",
+            "N",
+            &nn,
+            &m,
+            &k,
+            &alpha,
+            query_data.data(), // size: (num_query_tok x dim)
+            &lda,
+            encoder_->get_centroids(), // size: (nlist x dim)
+            &ldb,
+            &beta,
+            query_scores.data(), // size: (num_query_tok x nlist)
+            &out_dim);
 
     std::vector<size_t> start_sorted(n * encoder_->get_num_centroids());
     size_t offset = 0;

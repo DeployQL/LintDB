@@ -3,7 +3,6 @@
 #include "lintdb/SearchOptions.h"
 #include "lintdb/api.h"
 #include "lintdb/exception.h"
-#include <mkl.h>
 
 namespace lintdb {
 extern "C" {
@@ -14,24 +13,9 @@ extern "C" {
 
     /* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
 
-    int sgemm_(
-            const char* transa,
-            const char* transb,
-            FINTEGER* m,
-            FINTEGER* n,
-            FINTEGER* k,
-            const float* alpha,
-            const float* a,
-            FINTEGER* lda,
-            const float* b,
-            FINTEGER* ldb,
-            float* beta,
-            float* c,
-            FINTEGER* ldc);
+    float cblas_snrm2(FINTEGER n, const float* x, FINTEGER incx);
 
-    float snrm2_(FINTEGER n, const float* x, FINTEGER incx);
-
-    int sscal_(FINTEGER* n, const float alpha, float* x, FINTEGER* incx);
+    int cblas_sscal(FINTEGER n, const float alpha, float* x, FINTEGER incx);
 
 
 }
