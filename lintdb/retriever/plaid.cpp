@@ -151,10 +151,10 @@ float score_document_by_residuals(
         &m, // 4
         &k, // 128
         &alpha,
-        query_vectors.data(), // m x k
+        query_vectors.data(), // n x k
         &lda, // leading dimension is the length of the first dimension
             // (columns)
-        doc_residuals, // should be k x n after transpose
+        doc_residuals, // should be k x m after transpose
         &ldb,             // this is the leading dimension of B, not op(b)
         &beta,
         output.data(), // m x n. (col major is n x m)

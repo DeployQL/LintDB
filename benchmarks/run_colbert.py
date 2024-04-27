@@ -16,12 +16,25 @@ import random
 from typing import List, Annotated
 from lotte.common import load_lotte, _evaluate_dataset
 from common import get_memory_usage
+try:
+    from valgrind import callgrind_start_instrumentation, callgrind_stop_instrumentation, callgrind_dump_stats
+except ImportError:
+    print("didn't find valgrind")
+    def callgrind_stop_instrumentation():
+        pass
+
+    def callgrind_start_instrumentation():
+        pass
+
+    def callgrind_dump_stats(path:str):
+        pass
+
 
 app = typer.Typer()
 
 
 @app.command()
-def single_search(experiment='colbert-lifestyle-40k-benchmark', dataset:str='lifestyle', split:str='dev', checkpoint:str='colbert-ir/colbertv2.0', index_path:str='indexes/lifestyle'):
+def single_search(experiment='colbert-lifestyle-40k-benchmark', dataset:str='lifestyle', split:str='dev', profile=True, checkpoint:str='colbert-ir/colbertv2.0', index_path:str='indexes/lifestyle'):
     d = load_lotte(dataset, split, stop=40000)
     latencies = []
     memory = []
@@ -42,8 +55,14 @@ def single_search(experiment='colbert-lifestyle-40k-benchmark', dataset:str='lif
             embeddings = searcher.encode([query])
 
             start = time.perf_counter()
+            if profile:
+                callgrind_start_instrumentation()
+
             results = searcher._search_all_Q(Queries.cast({1: query}), embeddings, k=100)
             latencies.append(time.perf_counter() - start)
+            if profile:
+                callgrind_stop_instrumentation()
+                callgrind_dump_stats("callgrind.out.single_search")
             memory.append(get_memory_usage())
 
             for k, v in results.todict().items():

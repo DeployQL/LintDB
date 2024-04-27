@@ -42,7 +42,7 @@ def single_search(dataset:str='lifestyle', split:str='dev',profile=False, checkp
     rankings = {}
 
     count=0
-    for id in range(100):
+    for id in range(1000):
         embeddings = np.ones((32, 128)).astype('float32')
         converted = embeddings
 

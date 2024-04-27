@@ -20,7 +20,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 # set(BLA_VENDOR OpenBLAS)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -D_LIBCPP_DISABLE_AVAILABILITY")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -pthread -fopenmp -D_LIBCPP_DISABLE_AVAILABILITY")
 
 # the below is caused by github actions failing to build flatbuffers.
 # therefore, we set this value so that we use a higher sdk version to build it.

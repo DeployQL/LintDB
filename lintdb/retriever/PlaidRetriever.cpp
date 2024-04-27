@@ -25,6 +25,8 @@ std::vector<idx_t> PlaidRetriever::top_passages(
         std::vector<float>& reordered_distances) {
     std::vector<idx_t> coarse_idx(n * opts.total_centroids_to_calculate);
     std::vector<float> distances(n * opts.total_centroids_to_calculate);
+    // this method is no longer spitting out data.
+    // top_centroids shows zero centroids found.
     encoder_->search(
             query_data.data(),
             n,
@@ -33,8 +35,9 @@ std::vector<idx_t> PlaidRetriever::top_passages(
             opts.total_centroids_to_calculate,
             opts.centroid_threshold);
 
-    // // well, to get to the other side of this, we reorder the distances
-    // // in order of the centroids.
+    // this feels like duplicating the matmul done inside of the above call,
+    // but for now, we'll reorder the distances into a matrix.
+    // then, we'll find unique top centroids to search.
 
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < opts.total_centroids_to_calculate; j++) {
@@ -54,6 +57,7 @@ std::vector<idx_t> PlaidRetriever::top_passages(
             opts.total_centroids_to_calculate,
             opts.k_top_centroids,
             opts.n_probe);
+
 
     auto num_centroids_to_eval =
             std::min<size_t>(opts.n_probe, centroid_scores.size());
@@ -82,7 +86,7 @@ std::vector<idx_t> PlaidRetriever::top_passages(
 #pragma omp parallel
     {
         std::vector<idx_t> local_pids;
-#pragma omp for schedule(dynamic, LINTDB_CHUNK_SIZE) nowait
+#pragma omp for schedule(static, LINTDB_CHUNK_SIZE) nowait
         for (size_t i = 0; i < num_centroids_to_eval; i++) {
             auto idx = centroid_scores[i].second;
             if (idx == -1) {
@@ -315,7 +319,6 @@ std::vector<std::pair<float, idx_t>> PlaidRetriever::get_top_centroids(
         for (size_t j = 0; j < k_top_centroids; j++) {
             auto centroid_of_interest =
                     coarse_idx[i * total_centroids_to_calculate + j];
-
             // Note: including the centroid score threshold is not part of the
             // original colBERT model.
             // distances[i*total_centroids_to_calculate+j] >

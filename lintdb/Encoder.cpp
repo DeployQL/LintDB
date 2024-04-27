@@ -11,6 +11,7 @@
 #include "lintdb/exception.h"
 #include "lintdb/quantizers/io.h"
 #include "lintdb/util.h"
+#include <mkl.h>
 
 namespace lintdb {
 
@@ -162,7 +163,9 @@ void DefaultEncoder::search(
     FINTEGER lda = FINTEGER(dim);
     FINTEGER ldb = FINTEGER(dim);
     FINTEGER ldc = FINTEGER(nlist);
-
+    // we need to treat this as operating in column major format.
+    // we want data x centroids^T = C, but have row major data.
+    // because of that, we want to calculate centroids x data^T = C^T
     sgemm_(
         "T",
         "N",
@@ -170,17 +173,17 @@ void DefaultEncoder::search(
         &m,
         &k,
         &alpha,
-        coarse_quantizer->get_xb(), // size: (num_query_tok x dim)
+        coarse_quantizer->get_xb(), // size: (nlist x dim). transposed = (dim x nlist)
         &lda,
-        data, // size: (nlist x dim)
+        data, // size: (num_query_tok x dim). transposed = (dim x num_query_tok)
         &ldb,
         &beta,
-        query_scores.data(), // size: (num_query_tok x nlist)
+        query_scores.data(), // size: (nlist x num_query_tok)
         &ldc);
 
     auto comparator = [](std::pair<float, idx_t> p1,
                          std::pair<float, idx_t> p2) {
-        return p1.first > p2.first;
+        return p1.first < p2.first;
     };
 
     std::vector<std::pair<float, idx_t>> centroid_scores(num_query_tok * k_top_centroids);
@@ -191,7 +194,7 @@ void DefaultEncoder::search(
     std::vector<std::pair<float, idx_t>> token_centroid_scores;
     token_centroid_scores.reserve(k_top_centroids);
 
-#pragma omp for
+#pragma omp for schedule(static, 1) 
     for (int i = 0; i < num_query_tok; i++) {
         for (int j = 0; j < nlist; j++) {
             idx_t key = j;
@@ -220,21 +223,21 @@ void DefaultEncoder::search(
             }
         }
 
-        // std::sort_heap(
-        //         token_centroid_scores.begin(),
-        //         token_centroid_scores.end(),
-        //         comparator);
+        std::sort_heap(
+                token_centroid_scores.begin(),
+                token_centroid_scores.end(),
+                comparator);
 
         for (idx_t k = 0; k < k_top_centroids; k++) {
             auto top = token_centroid_scores.back();
             float score = top.first;
             idx_t idx = top.second;
-            auto pair = std::pair<float, idx_t>(score, idx);
             // centroid_scores.push_back(pair);
-            centroid_scores[i * k_top_centroids + k] = pair;
+            centroid_scores[i * k_top_centroids + k] = std::pair<float, idx_t>(score, idx);
 
             token_centroid_scores.pop_back();
         }
+        token_centroid_scores.clear();
     } // end for loop
 } // end parallel
 

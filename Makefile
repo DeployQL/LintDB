@@ -47,8 +47,11 @@ valgrind:
 	valgrind -s --trace-children=yes --track-origins=yes --keep-stacktraces=alloc-and-free --suppressions=debug/valgrind-python.supp env PYTHONPATH="_build_python_/lintdb/python/build/lib/lintdb" python benchmarks/bench_lintdb.py --index-path=experiments/py_index_bench_colbert-lifestyle-2024-04-03
 
 callgrind: build-conda
-	OMP_NUM_THREADS=1 PYTHONPATH="_build_python_/lintdb/python/build/lib/lintdb" valgrind --tool=callgrind --suppressions=debug/valgrind-python.supp --instr-atstart=no --dump-instr=yes --collect-jumps=yes python ./benchmarks/bench_lintdb.py
+	OMP_MAX_ACTIVE_LEVELS=2 OMP_THREAD_LIMIT=6 OMP_NUM_THREADS=6 PYTHONPATH="_build_python_/lintdb/python/build/lib/lintdb" valgrind --tool=callgrind --suppressions=debug/valgrind-python.supp --instr-atstart=no --dump-instr=yes --collect-jumps=yes python ./benchmarks/bench_lintdb.py
 	
+callgrind-colbert: build-conda
+	PYTHONPATH="_build_python_/lintdb/python/build/lib/lintdb" valgrind --tool=callgrind --suppressions=debug/valgrind-python.supp --instr-atstart=no --dump-instr=yes --collect-jumps=yes python ./benchmarks/run_colbert.py
+
 py-docs:
 	rm -rf docs/build
 	sphinx-apidoc -o docs/source/ ./build/lintdb/python/lintdb
@@ -60,15 +63,16 @@ debug-conda:
 build-conda:
 # this command mimicks how conda builds the package. it also makes it easier to build and augment the pythonpath than the regular build-python command
 	CC=clang CXX=clang++ CMAKE_C_COMPILER=clang CMAKE_CXX_COMPILER=clang++ MKLROOT=${ROOT_DIR}/_build_python_/vcpkg_installed/x64-linux/lib/intel64 cmake -B _build_python_${PY_VER} \
-      -DBUILD_SHARED_LIBS=ON \
-	  -DENABLE_PYTHON=ON \
-      -DBUILD_TESTING=OFF \
-      -DCMAKE_BUILD_TYPE=Release \
-	  -DBLA_VENDOR=Intel10_64lp \
-	  -DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
-      -DOpenMP_CXX_LIB_NAMES=libiomp5 \
-      -DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/_build_python_/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
-      .
+	-DBUILD_SHARED_LIBS=ON \
+	-DENABLE_PYTHON=ON \
+	-DBUILD_TESTING=OFF \
+	-DCMAKE_BUILD_TYPE=Release \
+	-DBLA_VENDOR=Intel10_64lp_seq \
+	-DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
+	-DOpenMP_CXX_LIB_NAMES=libiomp5 \
+	-DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/_build_python_/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
+	.
+
 	CC=clang CXX=clang++ CMAKE_C_COMPILER=clang CMAKE_CXX_COMPILER=clang++ cmake --build _build_python_${PY_VER} --target pylintdb -j12
 	cd _build_python_/lintdb/python && python setup.py build 
 
