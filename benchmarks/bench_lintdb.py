@@ -48,7 +48,6 @@ def single_search(dataset:str='lifestyle', split:str='dev',profile=False, checkp
 
         start = time.perf_counter()
         if profile:
-            print("starting instrumentation")
             callgrind_start_instrumentation()
         results = index.search(
             0,
@@ -63,8 +62,8 @@ def single_search(dataset:str='lifestyle', split:str='dev',profile=False, checkp
         memory.append(get_memory_usage())
         rankings[id] = [x.id for x in results]
         count+=1
-        if count == 2:
-            break
+        # if count == 2:
+        #     break
 
         # Stats(pr).strip_dirs().sort_stats(SortKey.TIME).print_stats(10)
     # _evaluate_dataset(rankings, dataset, 'search', k=5)

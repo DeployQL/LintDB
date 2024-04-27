@@ -6,6 +6,10 @@
 #include "lintdb/retriever/Retriever.h"
 #include "lintdb/retriever/plaid.h"
 
+#ifndef LINTDB_CHUNK_SIZE
+#define LINTDB_CHUNK_SIZE 1000
+#endif
+
 namespace lintdb {
 PlaidRetriever::PlaidRetriever(
         std::shared_ptr<InvertedList> inverted_list,
@@ -21,7 +25,7 @@ std::vector<idx_t> PlaidRetriever::top_passages(
         std::vector<float>& reordered_distances) {
     std::vector<idx_t> coarse_idx(n * opts.total_centroids_to_calculate);
     std::vector<float> distances(n * opts.total_centroids_to_calculate);
-    encoder_->search_quantizer(
+    encoder_->search(
             query_data.data(),
             n,
             coarse_idx,
@@ -78,7 +82,7 @@ std::vector<idx_t> PlaidRetriever::top_passages(
 #pragma omp parallel
     {
         std::vector<idx_t> local_pids;
-#pragma omp for nowait
+#pragma omp for schedule(dynamic, LINTDB_CHUNK_SIZE) nowait
         for (size_t i = 0; i < num_centroids_to_eval; i++) {
             auto idx = centroid_scores[i].second;
             if (idx == -1) {
@@ -113,7 +117,7 @@ std::vector<std::pair<float, idx_t>> PlaidRetriever::rank_phase_one(
 
     std::vector<std::pair<float, idx_t>> pid_scores(doc_codes.size());
 
-#pragma omp for
+#pragma omp for schedule(static, LINTDB_CHUNK_SIZE)
     for (int i = 0; i < doc_codes.size(); i++) {
         auto codes = doc_codes[i]->codes;
 
@@ -146,7 +150,7 @@ std::vector<std::pair<float, idx_t>> PlaidRetriever::rank_phase_two(
         const size_t n,
         const RetrieverOptions& opts) {
     std::vector<std::pair<float, idx_t>> actual_scores(top_25_ids.size());
-#pragma omp for
+#pragma omp for schedule(dynamic, LINTDB_CHUNK_SIZE)
     for (int i = 0; i < top_25_ids.size(); i++) {
         auto residuals = doc_residuals[i]->residuals;
 

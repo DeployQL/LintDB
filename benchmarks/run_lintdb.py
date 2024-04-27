@@ -54,28 +54,27 @@ def single_search(dataset:str='lifestyle', split:str='dev',profile=False, checkp
         embeddings = checkpoint.queryFromText([query])
         converted = np.squeeze(embeddings.numpy().astype('float32'))
 
-        start = time.perf_counter()
         if profile:
-            print("starting instrumentation")
             callgrind_start_instrumentation()
+        start = time.perf_counter()
         results = index.search(
             0,
             converted, 
             32, # nprobe
             100, # k to return
         )
+        latencies.append((time.perf_counter() - start)*1000)
         if profile:
             callgrind_stop_instrumentation()
             callgrind_dump_stats("callgrind.out.single_search")
-        latencies.append((time.perf_counter() - start)*1000)
         memory.append(get_memory_usage())
         rankings[id] = [x.id for x in results]
         count+=1
-        if count == 2:
-            break
+        # if count == 2:
+        #     break
 
         # Stats(pr).strip_dirs().sort_stats(SortKey.TIME).print_stats(10)
-    # _evaluate_dataset(rankings, dataset, 'search', k=5)
+    _evaluate_dataset(rankings, dataset, 'search', k=5)
 
     
     print(f"Average search latency: {np.mean(latencies):.2f}ms")

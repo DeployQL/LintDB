@@ -11,7 +11,6 @@
 #include "lintdb/exception.h"
 #include "lintdb/quantizers/io.h"
 #include "lintdb/util.h"
-#include <mkl.h>
 
 namespace lintdb {
 
@@ -156,37 +155,43 @@ void DefaultEncoder::search(
     float alpha = 1.0;
     float beta = 0.0;
 
-    int m = num_query_tok;
-    int n = nlist;
-    int k = dim;
+    FINTEGER m = FINTEGER(num_query_tok);
+    FINTEGER n = FINTEGER(nlist);
+    FINTEGER k = FINTEGER(dim);
 
-    cblas_sgemm(
-        CblasRowMajor,
-        CblasNoTrans,
-        CblasTrans,
-        num_query_tok,
-        nlist,
-        dim,
-        1.0,
-        data, // size: (num_query_tok x dim)
-        dim,
-        coarse_quantizer->get_xb(), // size: (nlist x dim)
-        dim,
-        0.0,
+    FINTEGER lda = FINTEGER(dim);
+    FINTEGER ldb = FINTEGER(dim);
+    FINTEGER ldc = FINTEGER(nlist);
+
+    sgemm_(
+        "T",
+        "N",
+        &n,
+        &m,
+        &k,
+        &alpha,
+        coarse_quantizer->get_xb(), // size: (num_query_tok x dim)
+        &lda,
+        data, // size: (nlist x dim)
+        &ldb,
+        &beta,
         query_scores.data(), // size: (num_query_tok x nlist)
-        nlist);
+        &ldc);
 
     auto comparator = [](std::pair<float, idx_t> p1,
                          std::pair<float, idx_t> p2) {
         return p1.first > p2.first;
     };
 
-    std::vector<std::pair<float, idx_t>> centroid_scores;
-    centroid_scores.reserve(num_query_tok * k_top_centroids);
+    std::vector<std::pair<float, idx_t>> centroid_scores(num_query_tok * k_top_centroids);
+    // centroid_scores.reserve(num_query_tok * k_top_centroids);
 
+#pragma omp parallel
+{
     std::vector<std::pair<float, idx_t>> token_centroid_scores;
     token_centroid_scores.reserve(k_top_centroids);
 
+#pragma omp for
     for (int i = 0; i < num_query_tok; i++) {
         for (int j = 0; j < nlist; j++) {
             idx_t key = j;
@@ -215,22 +220,23 @@ void DefaultEncoder::search(
             }
         }
 
-        std::sort_heap(
-                token_centroid_scores.begin(),
-                token_centroid_scores.end(),
-                comparator);
+        // std::sort_heap(
+        //         token_centroid_scores.begin(),
+        //         token_centroid_scores.end(),
+        //         comparator);
 
         for (idx_t k = 0; k < k_top_centroids; k++) {
             auto top = token_centroid_scores.back();
             float score = top.first;
             idx_t idx = top.second;
             auto pair = std::pair<float, idx_t>(score, idx);
-            centroid_scores.push_back(pair);
+            // centroid_scores.push_back(pair);
+            centroid_scores[i * k_top_centroids + k] = pair;
 
             token_centroid_scores.pop_back();
         }
-        token_centroid_scores.clear();
-    }
+    } // end for loop
+} // end parallel
 
     for (int i = 0; i < num_query_tok; i++) {
         for (int j = 0; j < k_top_centroids; j++) {

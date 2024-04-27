@@ -132,7 +132,7 @@ float score_document_by_residuals(
     float alpha = 1.0;
     float beta = 0.0;
 
-    FINTEGER out = FINTEGER(num_doc_tokens);
+    FINTEGER out = FINTEGER(num_query_tokens);
     FINTEGER lda = FINTEGER(dim);
     FINTEGER ldb = FINTEGER(dim);
 
@@ -141,22 +141,25 @@ float score_document_by_residuals(
     }
 
     std::vector<float> output(m * n, 0);
-    sgemm_(
-    "T",
-    "N",
-    &n, // 8
-    &m, // 4
-    &k, // 128
-    &alpha,
-    doc_residuals, // m x k
-    &lda, // leading dimension is the length of the first dimension
-        // (columns)
-    query_vectors.data(), // should be k x n after transpose
-    &ldb,             // this is the leading dimension of B, not op(b)
-    &beta,
-    output.data(), // m x n
-    &out);
-    
+    // we need to treat this as operating in column major format.
+    // we want doc_res x query_vectors^T = C, but have row major data.
+    // because of that, we want to calculate query_vectors x doc_res = C^T
+        sgemm_(
+        "T",
+        "N",
+        &n, // 8
+        &m, // 4
+        &k, // 128
+        &alpha,
+        query_vectors.data(), // m x k
+        &lda, // leading dimension is the length of the first dimension
+            // (columns)
+        doc_residuals, // should be k x n after transpose
+        &ldb,             // this is the leading dimension of B, not op(b)
+        &beta,
+        output.data(), // m x n. (col major is n x m)
+        &out
+    );
 
     // find the max score for each doc_token.
     std::vector<float> max_scores(n, 0);

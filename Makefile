@@ -44,10 +44,10 @@ format:
 
 valgrind:
 # we need valgrind?-3.20 to process dwarf5
-	valgrind -s --trace-children=yes --track-origins=yes --keep-stacktraces=alloc-and-free --suppressions=debug/valgrind-python.supp env PYTHONPATH="build/lintdb/python/build/lib" python tests/test_index.py
+	valgrind -s --trace-children=yes --track-origins=yes --keep-stacktraces=alloc-and-free --suppressions=debug/valgrind-python.supp env PYTHONPATH="_build_python_/lintdb/python/build/lib/lintdb" python benchmarks/bench_lintdb.py --index-path=experiments/py_index_bench_colbert-lifestyle-2024-04-03
 
-callgrind: build-python
-	PYTHONPATH="builds/python/lintdb/python/build/lib/lintdb" valgrind --tool=callgrind --suppressions=debug/valgrind-python.supp --instr-atstart=no --dump-instr=yes --collect-jumps=yes python ./benchmarks/bench_lintdb.py
+callgrind: build-conda
+	OMP_NUM_THREADS=1 PYTHONPATH="_build_python_/lintdb/python/build/lib/lintdb" valgrind --tool=callgrind --suppressions=debug/valgrind-python.supp --instr-atstart=no --dump-instr=yes --collect-jumps=yes python ./benchmarks/bench_lintdb.py
 	
 py-docs:
 	rm -rf docs/build
@@ -64,8 +64,10 @@ build-conda:
 	  -DENABLE_PYTHON=ON \
       -DBUILD_TESTING=OFF \
       -DCMAKE_BUILD_TYPE=Release \
-      -DPython_EXECUTABLE=$PYTHON \
 	  -DBLA_VENDOR=Intel10_64lp \
+	  -DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
+      -DOpenMP_CXX_LIB_NAMES=libiomp5 \
+      -DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/_build_python_/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
       .
 	CC=clang CXX=clang++ CMAKE_C_COMPILER=clang CMAKE_CXX_COMPILER=clang++ cmake --build _build_python_${PY_VER} --target pylintdb -j12
 	cd _build_python_/lintdb/python && python setup.py build 

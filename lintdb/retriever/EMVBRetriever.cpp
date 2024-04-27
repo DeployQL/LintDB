@@ -71,7 +71,9 @@ std::vector<idx_t> EMVBRetriever::top_passages(
     FINTEGER lda = FINTEGER(encoder_->dim);
     FINTEGER ldb = FINTEGER(encoder_->dim);
     FINTEGER out_dim = FINTEGER(encoder_->nlist);
-
+    // we need to treat this as operating in column major format.
+    // we want doc_res x query_vectors^T = C, but have row major data.
+    // because of that, we want to calculate query_vectors x doc_res = C^T
     sgemm_(
             "T",
             "N",
@@ -79,9 +81,9 @@ std::vector<idx_t> EMVBRetriever::top_passages(
             &m,
             &k,
             &alpha,
-            query_data.data(), // size: (num_query_tok x dim)
-            &lda,
             encoder_->get_centroids(), // size: (nlist x dim)
+            &lda,
+            query_data.data(), // size: (num_query_tok x dim)
             &ldb,
             &beta,
             query_scores.data(), // size: (num_query_tok x nlist)
