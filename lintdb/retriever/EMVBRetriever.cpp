@@ -177,11 +177,7 @@ std::vector<DocCandidate<size_t>> EMVBRetriever::rank_phase_one(
         const RetrieverOptions& opts) {
     std::vector<DocCandidate<size_t>> pid_scores(doc_codes.size());
 
-#ifdef __AVX2__
-#pragma omp parallel for simd schedule(static, 8)
-#else
 #pragma omp parallel for
-#endif
     for (int i = 0; i < doc_codes.size(); i++) {
         auto codes = doc_codes[i]->codes;
 
@@ -217,11 +213,7 @@ std::vector<DocCandidate<float>> EMVBRetriever::rank_by_centroids(
         const RetrieverOptions& opts) {
     std::vector<DocCandidate<float>> pid_scores(doc_codes.size());
 
-#ifdef __AVX2__
-#pragma omp parallel for simd schedule(static, 8)
-#else
-#pragma omp parallel for
-#endif
+#pragma omp parallel for if(candidates.size() > 10000)
     for (int i = 0; i < candidates.size(); i++) {
         auto index = candidates[i].index_position;
         auto codes = doc_codes[index]->codes;

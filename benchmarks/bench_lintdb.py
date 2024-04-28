@@ -47,23 +47,25 @@ def single_search(dataset:str='lifestyle', split:str='dev',profile=False, checkp
         converted = embeddings
 
         start = time.perf_counter()
-        if profile:
-            callgrind_start_instrumentation()
+        # if profile:
+        #     callgrind_start_instrumentation()
+        opts = ldb.SearchOptions()
         results = index.search(
             0,
             converted, 
             32, # nprobe
             100, # k to return
+            opts
         )
-        if profile:
-            callgrind_stop_instrumentation()
-            callgrind_dump_stats("callgrind.out.single_search")
         latencies.append((time.perf_counter() - start)*1000)
+        # if profile:
+        #     callgrind_stop_instrumentation()
+        #     callgrind_dump_stats("callgrind.out.single_search")
         memory.append(get_memory_usage())
         rankings[id] = [x.id for x in results]
         count+=1
-        # if count == 2:
-        #     break
+        if count == 212:
+            break
 
         # Stats(pr).strip_dirs().sort_stats(SortKey.TIME).print_stats(10)
     # _evaluate_dataset(rankings, dataset, 'search', k=5)

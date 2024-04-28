@@ -5,14 +5,13 @@
 #include "lintdb/index.h"
 
 static void BM_lintdb_search(benchmark::State& state) {
-
+    // std::string path = "/mnt/data/py_index_bench_colbert-lifestyle-2024-04-16-pq";
+    std::string path = "experiments/py_index_bench_colbert-lifestyle-2024-04-03";
+    lintdb::IndexIVF index(path);
     for (auto _ : state) {
         state.PauseTiming();
-        std::string path = "experiments/py_index_bench_colbert-lifestyle-2024-04-16-pq";
-        lintdb::IndexIVF index(path);
-
         size_t dims = 128;
-        size_t num_tokens = 12;
+        size_t num_tokens = 32;
         std::vector<float> query(dims * num_tokens, 1);
 
         size_t n_probe = 32;

@@ -47,7 +47,7 @@ valgrind:
 	valgrind -s --trace-children=yes --track-origins=yes --keep-stacktraces=alloc-and-free --suppressions=debug/valgrind-python.supp env PYTHONPATH="_build_python_/lintdb/python/build/lib/lintdb" python benchmarks/bench_lintdb.py --index-path=experiments/py_index_bench_colbert-lifestyle-2024-04-03
 
 callgrind: build-conda
-	OMP_MAX_ACTIVE_LEVELS=2 OMP_THREAD_LIMIT=6 OMP_NUM_THREADS=6 PYTHONPATH="_build_python_/lintdb/python/build/lib/lintdb" valgrind --tool=callgrind --suppressions=debug/valgrind-python.supp --instr-atstart=no --dump-instr=yes --collect-jumps=yes python ./benchmarks/bench_lintdb.py
+	OMP_MAX_ACTIVE_LEVELS=2 OMP_THREAD_LIMIT=6 OMP_NUM_THREADS=6 PYTHONPATH="_build_python_/lintdb/python/build/lib/lintdb" valgrind --tool=callgrind --suppressions=debug/valgrind-python.supp --instr-atstart=yes --dump-instr=yes --collect-jumps=yes python ./benchmarks/bench_lintdb.py
 	
 callgrind-colbert: build-conda
 	PYTHONPATH="_build_python_/lintdb/python/build/lib/lintdb" valgrind --tool=callgrind --suppressions=debug/valgrind-python.supp --instr-atstart=no --dump-instr=yes --collect-jumps=yes python ./benchmarks/run_colbert.py
@@ -67,7 +67,7 @@ build-conda:
 	-DENABLE_PYTHON=ON \
 	-DBUILD_TESTING=OFF \
 	-DCMAKE_BUILD_TYPE=Release \
-	-DBLA_VENDOR=Intel10_64lp_seq \
+	-DBLA_VENDOR=Intel10_64lp \
 	-DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
 	-DOpenMP_CXX_LIB_NAMES=libiomp5 \
 	-DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/_build_python_/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
@@ -85,6 +85,12 @@ build-benchmarks:
 	  -DENABLE_PYTHON=OFF \
 	  -DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
       -DOpenMP_CXX_LIB_NAMES=libiomp5 \
+	  -DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/build_benchmarks/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
 	  -DBLA_VENDOR=Intel10_64lp \
 	  .
-	cmake --build build_benchmarks --target=bench_lintdb -j12
+	CC=clang CXX=clang++ CMAKE_C_COMPILER=clang CMAKE_CXX_COMPILER=clang++ cmake --build build_benchmarks --target=bench_lintdb -j12
+
+run-perf: build-conda
+# make sure your system allows perf to run. ex: sudo sysctl -w kernel.perf_event_paranoid=1 
+	OMP_MAX_ACTIVE_LEVELS=2 OMP_THREAD_LIMIT=12 OMP_NUM_THREADS=6 PYTHONPATH="_build_python_/lintdb/python/build/lib/lintdb" perf record -g -- /home/matt/miniconda3/envs/lintdb-benchmark/bin/python -X perf benchmarks/bench_lintdb.py
+	perf script | ./debug/stackcollapse-perf.pl | ./debug/flamegraph.pl > perf.data.svg 

@@ -187,14 +187,13 @@ void DefaultEncoder::search(
     };
 
     std::vector<std::pair<float, idx_t>> centroid_scores(num_query_tok * k_top_centroids);
-    // centroid_scores.reserve(num_query_tok * k_top_centroids);
 
 #pragma omp parallel
 {
     std::vector<std::pair<float, idx_t>> token_centroid_scores;
     token_centroid_scores.reserve(k_top_centroids);
 
-#pragma omp for schedule(static, 1) 
+#pragma omp for nowait schedule(dynamic, 1) 
     for (int i = 0; i < num_query_tok; i++) {
         for (int j = 0; j < nlist; j++) {
             idx_t key = j;
@@ -223,19 +222,11 @@ void DefaultEncoder::search(
             }
         }
 
-        std::sort_heap(
-                token_centroid_scores.begin(),
-                token_centroid_scores.end(),
-                comparator);
-
         for (idx_t k = 0; k < k_top_centroids; k++) {
-            auto top = token_centroid_scores.back();
+            auto top = token_centroid_scores[k];
             float score = top.first;
             idx_t idx = top.second;
-            // centroid_scores.push_back(pair);
             centroid_scores[i * k_top_centroids + k] = std::pair<float, idx_t>(score, idx);
-
-            token_centroid_scores.pop_back();
         }
         token_centroid_scores.clear();
     } // end for loop
