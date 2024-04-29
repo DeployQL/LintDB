@@ -20,6 +20,7 @@
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
                 "BUILD_SHARED_LIBS": "OFF",
+                "BUILD_TESTING": "ON",
                 "CMAKE_INSTALL_LIBDIR": "lib",
                 "ENABLE_PYTHON": "OFF",
                 "CMAKE_VERBOSE_MAKEFILE":"ON",

@@ -50,6 +50,7 @@ jobs:
           configurePreset: 'debug'
           buildPreset: 'debug'
           testPreset: 'debug'
+         testPresetCmdStringFormat:  "['lintdb-tests', '--test-dir builds/debug']"
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
