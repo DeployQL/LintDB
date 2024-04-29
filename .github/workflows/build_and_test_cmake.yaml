@@ -46,7 +46,7 @@ jobs:
           MKLROOT: ${{ github.workspace }}/builds/debug/vcpkg_installed/x64-linux/lib/intel64
         with:
           cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
-          configurePresetAdditionalArgs: "['-DOpenMP_CXX_FLAGS=-fopenmp=libiomp5', -DOpenMP_CXX_LIB_NAMES=libiomp5', '-DOpenMP_libiomp5_LIBRARY=${{ github.workspace }}/build_benchmarks/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so']"
+          # configurePresetAdditionalArgs: "['-DOpenMP_CXX_FLAGS=-fopenmp=libiomp5', -DOpenMP_CXX_LIB_NAMES=libiomp5', '-DOpenMP_libiomp5_LIBRARY=${{ github.workspace }}/build_benchmarks/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so']"
           configurePreset: 'debug'
           buildPreset: 'debug'
           testPreset: 'debug'
