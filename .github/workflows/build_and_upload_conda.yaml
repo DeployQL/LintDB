@@ -76,39 +76,13 @@ jobs:
         run: |
           conda info
           conda list
-      # - name: Setup Conda
-      #   shell: bash -l {0}
-      #   run: |
-      #     conda env create -f conda/environment.yaml -n lintdb-build
-      #     conda activate lintdb-build
-      # - name: Setup vcpkg
-      #   uses: lukka/run-vcpkg@v11
-      #   id: runvcpkg
-      #   with:
-      #     # This one is not needed, as it is the default value anyway.
-      #     # vcpkgDirectory: '${{ github.workspace }}/vcpkg'
-      #     vcpkgDirectory: '${{ github.workspace }}/tools/vcpkg'
-      #     vcpkgJsonGlob: 'vcpkg.json'
-      # - name: Run CMake
-      #   uses: lukka/run-cmake@v10
-      #   id: runcmake
-
-      # - name: Build and upload the conda packages
-      #   uses: uibcdf/action-build-and-upload-conda-packages@v1.3.0
-      #   with:
-      #     meta_yaml_dir: conda/lintdb
-      #     python-version: ${{ matrix.python-version }} # Values previously defined in `matrix`
-      #     upload: false
-          # user: uibcdf
-          # label: auto
-          # token: ${{ secrets.ANACONDA_TOKEN }} # Replace with the right name of your secret
-
       - name: Conda Build
         id: packages-compilation
         shell: bash -l {0}
         working-directory: ./conda
         env:
           VCPKG_DEFAULT_BINARY_CACHE: /vcpkg-binary-cache
+          MKLROOT: ${{ github.workspace }}/builds/release/vcpkg_installed/x64-linux/lib/intel64
         run: |
           conda activate lintdb-build
           out_dir=`mktemp -d -t compilation-XXXXXXXXXX`

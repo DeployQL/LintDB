@@ -33,6 +33,8 @@ jobs:
       - name: Run CMake+vcpkg+Ninja
         uses: lukka/run-cmake@v10
         id: runcmake
+        env:
+          MKLROOT: ${{ github.workspace }}/builds/debug/vcpkg_installed/x64-linux/lib/intel64
         with:
           cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
           configurePreset: 'debug'
