@@ -11,9 +11,7 @@ jobs:
 
     steps:
       - name: install clang
-        run: |
-        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-        sudo apt-get install clang-18 lldb-18 lld-18 libomp-18-dev
+        run: wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add - && sudo apt-get install clang-18 lldb-18 lld-18 libomp-18-dev
       - uses: actions/checkout@v3
         with:
           submodules: true
