@@ -57,11 +57,13 @@ def single_search(dataset:str='lifestyle', split:str='dev',profile=False, checkp
         if profile:
             callgrind_start_instrumentation()
         start = time.perf_counter()
+        opts = ldb.SearchOptions()
         results = index.search(
             0,
             converted, 
             32, # nprobe
             100, # k to return
+            opts
         )
         latencies.append((time.perf_counter() - start)*1000)
         if profile:
@@ -70,8 +72,8 @@ def single_search(dataset:str='lifestyle', split:str='dev',profile=False, checkp
         memory.append(get_memory_usage())
         rankings[id] = [x.id for x in results]
         count+=1
-        # if count == 2:
-        #     break
+        if count == 212:
+            break
 
         # Stats(pr).strip_dirs().sort_stats(SortKey.TIME).print_stats(10)
     _evaluate_dataset(rankings, dataset, 'search', k=5)
