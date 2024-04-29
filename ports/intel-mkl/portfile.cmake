@@ -44,7 +44,7 @@ vcpkg_download_distfile(installer_path
 )
 
 # Note: intel_thread and lp64 are the defaults.
-set(interface "ilp64") # or ilp64; ilp == 64 bit int api
+set(interface "lp64") # or ilp64; ilp == 64 bit int api
 #https://www.intel.com/content/www/us/en/develop/documentation/onemkl-linux-developer-guide/top/linking-your-application-with-onemkl/linking-in-detail/linking-with-interface-libraries/using-the-ilp64-interface-vs-lp64-interface.html
 if(VCPKG_CRT_LINKAGE STREQUAL "dynamic")
     set(threading "intel_thread") #sequential or intel_thread or tbb_thread or pgi_thread
