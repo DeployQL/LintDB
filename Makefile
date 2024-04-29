@@ -89,7 +89,7 @@ build-benchmarks:
 	  -DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/build_benchmarks/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
 	  -DBLA_VENDOR=Intel10_64lp \
 	  .
-	CC=clang CXX=clang++ CMAKE_C_COMPILER=clang CMAKE_CXX_COMPILER=clang++ cmake --build build_benchmarks --target=bench_lintdb -j12
+	CC=gcc CXX=g++ CMAKE_C_COMPILER=gcc CMAKE_CXX_COMPILER=g++ cmake --build build_benchmarks --target=bench_lintdb -j12
 
 run-perf: build-conda
 # make sure your system allows perf to run. ex: sudo sysctl -w kernel.perf_event_paranoid=1 
