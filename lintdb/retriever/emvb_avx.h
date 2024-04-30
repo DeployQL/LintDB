@@ -1,6 +1,6 @@
 #pragma once
 
-// #ifdef __AVX__
+#ifdef __AVX2__
 
 #include <immintrin.h>
 #include <vector>
@@ -9,7 +9,7 @@
 #include <glog/logging.h>
 
 namespace lintdb {
-    size_t filter_query_scores(const std::vector<float> centroid_scores, const size_t num_centroids, const size_t token_position, const float threshold, std::vector<size_t> sorted_indexes, size_t offset) {
+    size_t filter_query_scores_avx(const std::vector<float> centroid_scores, const size_t num_centroids, const size_t token_position, const float threshold, std::vector<size_t> sorted_indexes, size_t offset) {
         __m256 broad_th = _mm256_set1_ps(threshold);
         __m256 current_values;
         size_t idx = offset;
@@ -34,11 +34,11 @@ namespace lintdb {
         return idx;
     }
 
-    int popcount(uint32_t t) {
+    int popcount_avx(uint32_t t) {
         return _mm_popcnt_u32(t);
     }
 
-    inline std::vector<float> compute_ip_with_centroids(
+    inline std::vector<float> compute_ip_with_centroids_avx(
         const std::vector<code_t> &doc_codes, 
         const std::vector<float> &distances, // (num_tokens x num_centroids) 
         const size_t num_centroids,
@@ -56,7 +56,7 @@ namespace lintdb {
         return centroid_scores;
     }
 
-inline float compute_score_by_column_reduction(const std::vector<float>& centroid_distances, const size_t doclen, const size_t num_query_tokens) {
+inline float compute_score_by_column_reduction_avx(const std::vector<float>& centroid_distances, const size_t doclen, const size_t num_query_tokens) {
     size_t num_values = centroid_distances.size() / num_query_tokens;
 
     __m256 sum = _mm256_setzero_ps();
@@ -70,14 +70,11 @@ inline float compute_score_by_column_reduction(const std::vector<float>& centroi
             // Compare current_j and current
             __m256 cmp_result = _mm256_cmp_ps(current_j, current, _CMP_GT_OS);
 
-           // Convert comparison result to mask
-            int mask = _mm256_movemask_ps(cmp_result);
-
-            // Generate blend mask using bitwise logical operations
-            int blend_mask = ~(1 << 8) | mask;
+            // Convert comparison result to blend mask using bitwise logical operations
+            __m256i blend_mask = _mm256_castps_si256(_mm256_cmp_ps(_mm256_setzero_ps(), cmp_result, _CMP_NEQ_OS)); // 0xFFFFFFFF for greater values, 0x00000000 otherwise
 
             // Blend current_j and current using blend_mask
-            current = _mm256_blend_ps(current, current_j, _mm256_castsi256_ps(_mm256_set1_epi32(blend_mask)));
+            current = _mm256_blendv_ps(current, current_j, _mm256_castsi256_ps(blend_mask));
         }
 
         // Horizontal addition of current
@@ -94,7 +91,7 @@ inline float compute_score_by_column_reduction(const std::vector<float>& centroi
     return result[0]; // Extract the scalar value
 }
 
-inline std::vector<int> filter_centroids_in_scoring(const float th, const float *current_centroid_scores, const size_t doclen)
+inline std::vector<int> filter_centroids_in_scoring_avx(const float th, const float *current_centroid_scores, const size_t doclen)
 {
      const int GLOBAL_INDEXES[8] = {0, 1, 2, 3, 4, 5, 6, 7};
 
@@ -136,4 +133,4 @@ inline std::vector<int> filter_centroids_in_scoring(const float th, const float 
 }
 }
 
-// #endif // __AVX__
+#endif // __AVX2__

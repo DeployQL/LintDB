@@ -7,7 +7,7 @@
 #include <limits>
 
 namespace lintdb {
-    size_t filter_query_scores(const std::vector<float>& centroid_scores, const size_t num_centroids, const size_t token_position, const float threshold, std::vector<size_t>& sorted_indexes, size_t offset) {
+    size_t filter_query_scores_generic(const std::vector<float>& centroid_scores, const size_t num_centroids, const size_t token_position, const float threshold, std::vector<size_t>& sorted_indexes, size_t offset) {
     size_t idx = offset;
 
     for (size_t j = 0; j < num_centroids; j += 8) {
@@ -26,7 +26,7 @@ namespace lintdb {
     return idx;
 }
 
-int popcount(uint32_t t) {
+int popcount_generic(uint32_t t) {
     int count = 0;
     while (t) {
         t &= t - 1;
@@ -35,7 +35,7 @@ int popcount(uint32_t t) {
     return count;
 }
 
-    inline std::vector<float> compute_ip_with_centroids(
+    inline std::vector<float> compute_ip_with_centroids_generic(
         const std::vector<code_t> &doc_codes, 
         const std::vector<float> &distances, // (num_tokens x num_centroids) 
         const size_t num_centroids,
@@ -53,7 +53,7 @@ int popcount(uint32_t t) {
         return centroid_scores;
     }
 
-    inline float compute_score_by_column_reduction(const std::vector<float>& centroid_distances, const size_t doclen, const size_t num_query_tokens) {
+    inline float compute_score_by_column_reduction_generic(const std::vector<float>& centroid_distances, const size_t doclen, const size_t num_query_tokens) {
     size_t num_values = centroid_distances.size() / num_query_tokens;
 
     std::vector<float> max_values(num_query_tokens, std::numeric_limits<float>::lowest());
@@ -73,7 +73,7 @@ int popcount(uint32_t t) {
     return sum;
 }
 
-inline std::vector<int> filter_centroids_in_scoring(const float th, const float* current_centroid_scores, const size_t doclen) {
+inline std::vector<int> filter_centroids_in_scoring_generic(const float th, const float* current_centroid_scores, const size_t doclen) {
     std::vector<int> filtered_indexes;
 
     for (size_t j = 0; j < doclen; j ++) {
