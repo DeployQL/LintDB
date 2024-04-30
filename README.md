@@ -19,6 +19,27 @@ LintDB relies on OpenBLAS for accerlated matrix multiplication. To smooth the pr
 conda install lintdb -c deployql
 ```
 
+## Usage
+LintDB makes it easy to upload data, even if you have multiple tenants.
+
+```python
+index = ldb.IndexIVF(index_path)
+...
+# we use an IVF index, so we need to train the centroids.
+index.train(training_data)
+...
+# add documents to the index.
+doc = ldb.RawPassage(embeddings, id)
+index.add(tenant_id, [doc])
+
+results = index.search(
+    tenant_id,
+    embeddings, 
+    32, # number of centroids to search
+    100, # k to return
+)
+```
+
 # Roadmap
 
 LintDB aims to be a full retrieval platform. 
@@ -44,13 +65,13 @@ Chroma is an embedded vector database available in Python and Javascript. LintDB
 
 However, unlike Chroma, LintDB offers multi-tenancy support.
 
-#Documentation
-For detailed documentation on using LintDB, refer to the official documentation.
+# Documentation
+For detailed documentation on using LintDB, refer to the [official documentation](https://deployql.github.io/LintDB/index.html)
 
-#License
+# License
 LintDB is licensed under the Apache 2.0 License. See the LICENSE file for details.
 
-#We want to offer a managed service
+# We want to offer a managed service
 We need your help! If you'd want a managed LintDB, reach out and let us know. 
 
 Book time on the founder's calendar: https://calendar.app.google/fsymSzTVT8sip9XX6
