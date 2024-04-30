@@ -5,21 +5,21 @@ LintDB
 
 **LintDB** is a multi-vector database meant for Gen AI. LintDB natively supports late interaction like colBERT and PLAID.
 
-#Key Features
+# Key Features
 - **Multi vector support**: LintDB stores multiple vectors per document id and calculates the max similarity across vectors to determine relevance. 
 - **Bit-level Compression**: LintDB fully implements PLAID's bit compression, storing 128 dimension embeddings in as low as 16 bytes.  
 - **Embedded**: LintDB can be embedded directly into your Python application. No need to setup a separate database.  
 - **Full Support for PLAID and ColBERT**: LintDB is built around PLAID and colbert
 for efficient storage and lookup of token level embeddings.
 
-#Installation
+# Installation
 LintDB relies on OpenBLAS for accerlated matrix multiplication. To smooth the process of installation, we only support conda.
 
 ```
 conda install lintdb -c deployql
 ```
 
-#Roadmap
+# Roadmap
 
 LintDB aims to be a full retrieval platform. 
 
@@ -30,7 +30,7 @@ We want to extend LintDB's features to include:
     - Fine tuning and pretraining, like [PreFLMR](https://arxiv.org/pdf/2402.08327.pdf)
 - Increased support for document filtering.
 
-#Comparison with other Vector Databases
+# Comparison with other Vector Databases
 LintDB is one of two databases that support token level embeddings. The other being Vespa.
 ## Token Level Embeddings
 
