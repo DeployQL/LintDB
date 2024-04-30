@@ -61,6 +61,8 @@ data
 models
 tests/__pycache__
 experiments
+build_benchmarks
+_build_python_
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -9,64 +9,63 @@
 
 #include <unordered_set>
 #include "lintdb/EmbeddingBlock.h"
+#include "lintdb/Encoder.h"
 #include "lintdb/RawPassage.h"
+#include "lintdb/SearchOptions.h"
+#include "lintdb/SearchResult.h"
 #include "lintdb/api.h"
 #include "lintdb/exception.h"
 #include "lintdb/invlists/InvertedList.h"
-#include "lintdb/Encoder.h"
-#include "lintdb/SearchResult.h"
-#include "lintdb/SearchOptions.h"
-#include "lintdb/retriever/Retriever.h"
 #include "lintdb/retriever/PlaidRetriever.h"
+#include "lintdb/retriever/Retriever.h"
 
 // forward declare these classes and avoid including the rocksdb headers.
 namespace rocksdb {
-    class DB;
-    class ColumnFamilyHandle;
+class DB;
+class ColumnFamilyHandle;
 
-}
+} // namespace rocksdb
 
 namespace lintdb {
 
 static const std::string METADATA_FILENAME = "_lintdb_metadata.json";
 
 /**
- * Configuration of the Index. 
- * 
-*/
+ * Configuration of the Index.
+ *
+ */
 struct Configuration {
-    size_t nlist = 256; /// the number of centroids to train. 
-    size_t nbits = 2; /// the number of bits to use in residual compression. 
-    size_t niter = 10; /// the number of iterations to use during training. 
-    size_t dim; /// the dimensions expected for incoming vectors. 
-    bool use_compression = true; /// whether to compress residuals. 
+    size_t nlist = 256; /// the number of centroids to train.
+    size_t nbits = 2;   /// the number of bits to use in residual compression.
+    size_t niter = 10;  /// the number of iterations to use during training.
+    size_t dim;         /// the dimensions expected for incoming vectors.
+    size_t num_subquantizers =
+            16; /// the number of subquantizers to use in the product quantizer.
+    IndexEncoding quantizer_type =
+            IndexEncoding::BINARIZER; /// whether to compress residuals.
 
     inline bool operator==(const Configuration& other) const {
-        return nlist == other.nlist && 
-            nbits == other.nbits && 
-            niter == other.niter && 
-            dim == other.dim && 
-            use_compression == other.use_compression;
+        return nlist == other.nlist && nbits == other.nbits &&
+                niter == other.niter && dim == other.dim &&
+                quantizer_type == other.quantizer_type &&
+                num_subquantizers == other.num_subquantizers;
     }
 };
 
 /**
- * IndexIVF is a multi vector index with an inverted file structure. 
- * 
- * This relies on pretrained centroids to accurately retrieve the closest documents.
- * 
- * 
+ * IndexIVF is a multi vector index with an inverted file structure.
+ *
+ * This relies on pretrained centroids to accurately retrieve the closest
+ * documents.
+ *
+ *
  */
 struct IndexIVF {
-    size_t nlist; /// number of centroids to use in L1 quantizing.
-    size_t nbits; /// number of bits used in binarizing the residuals.
-    size_t niter; /// number of iterations to use in k-means clustering.
-    bool use_ivf; /// whether to use the inverted file structure.
-    bool use_compression; /// whether to use the LSH encoding for residuals.
+    Configuration config;
     bool read_only; /// whether to open the index in read-only mode.
 
     /// load an existing index.
-    IndexIVF(std::string path, bool read_only=false);
+    IndexIVF(std::string path, bool read_only = false);
 
     IndexIVF(std::string path, Configuration& config);
 
@@ -74,44 +73,52 @@ struct IndexIVF {
             std::string path, /// path to the database.
             size_t nlist,     /// number of centroids to use in L1 quantizing.
             size_t dim,       /// number of dimensions per embedding.
-            size_t binarize_nbits=2, /// nbits used in the LSH encoding for esiduals.
+            size_t binarize_nbits =
+                    2, /// nbits used in the LSH encoding for esiduals.
             size_t niter = 10,
-            bool use_compression = true,
-            bool read_only = false
-    );
+            size_t num_subquantizers = 16,
+            IndexEncoding quantizer_type = IndexEncoding::BINARIZER,
+            bool read_only = false);
 
     // TODO(mbarta): this breaks SWIG. SWIG needs to ignore this, but won't.
     /**
      * Copy creates a new index at the given path from a trained index. The copy
      * will always be writeable.
-     * 
-     * Will throw an exception if the index isn't trained when this method is called.
-     * 
+     *
+     * Will throw an exception if the index isn't trained when this method is
+     * called.
+     *
      * @param path the path to initialize the index.
-    */
+     */
     IndexIVF(const IndexIVF& other, const std::string path);
 
     /**
-     * Train will learn quantization and compression parameters from the given data.
-     * 
+     * Train will learn quantization and compression parameters from the given
+     * data.
+     *
      * @param n the number of embeddings to train on.
      * @param embeddings the embeddings to train on.
-    */
+     */
     void train(size_t n, std::vector<float>& embeddings);
     void train(float* embeddings, size_t n, size_t dim);
     void train(float* embeddings, int n, int dim);
 
     /**
      * set_centroids overwrites the centroids in the encoder.
-     * 
-     * This is useful if you want to parallelize index writing and merge indices later.
-    */
+     *
+     * This is useful if you want to parallelize index writing and merge indices
+     * later.
+     */
     void set_centroids(float* data, int n, int dim);
 
     /**
-     * set_weights overwrites the compression weights in the encoder, if using compression.
-    */
-    void set_weights(const std::vector<float> weights, const std::vector<float> cutoffs, const float avg_residual);
+     * set_weights overwrites the compression weights in the encoder, if using
+     * compression.
+     */
+    void set_weights(
+            const std::vector<float> weights,
+            const std::vector<float> cutoffs,
+            const float avg_residual);
 
     /**
      * search will find the nearest neighbors for a vector block.
@@ -123,20 +130,20 @@ struct IndexIVF {
      * @param opts any search options to use during searching.
      */
     std::vector<SearchResult> search(
-        const uint64_t tenant,
-        const float* data,
-        const int n,
-        const int dim,
-        const size_t n_probe,
-        const size_t k,
-        const SearchOptions& opts=SearchOptions()) const;
+            const uint64_t tenant,
+            const float* data,
+            const int n,
+            const int dim,
+            const size_t n_probe,
+            const size_t k,
+            const SearchOptions& opts = SearchOptions()) const;
 
     std::vector<SearchResult> search(
-        const uint64_t tenant,
-        const EmbeddingBlock& block,
-        const size_t n_probe,
-        const size_t k,
-        const SearchOptions& opts=SearchOptions()) const;
+            const uint64_t tenant,
+            const EmbeddingBlock& block,
+            const size_t n_probe,
+            const size_t k,
+            const SearchOptions& opts = SearchOptions()) const;
 
     /**
      * Add will add a block of embeddings to the index.
@@ -148,7 +155,7 @@ struct IndexIVF {
 
     /**
      * Add a single document.
-    */
+     */
     void add_single(const uint64_t tenant, const RawPassage& doc);
 
     /**
@@ -166,13 +173,13 @@ struct IndexIVF {
 
     /**
      * Merge will combine the index with another index.
-     * 
-     * We verify that the configuration of each index is correct, but this doesn't
-     * prevent you from merging indices with different centroids. There will be
-     * subtle ways for this to break, but this can enable easier multiprocess
-     * building of indices.
      *
-    */
+     * We verify that the configuration of each index is correct, but this
+     * doesn't prevent you from merging indices with different centroids. There
+     * will be subtle ways for this to break, but this can enable easier
+     * multiprocess building of indices.
+     *
+     */
     void merge(const std::string path);
 
     /**
@@ -197,45 +204,29 @@ struct IndexIVF {
     std::shared_ptr<Encoder> encoder;
     std::unique_ptr<Retriever> retriever;
 
-    size_t dim; /// number of dimensions per embedding.
-
     // helper to initialize the inverted list.
     void initialize_inverted_list();
 
     /// the inverted list data structure.
+    std::shared_ptr<InvertedList> inverted_list_;
     std::shared_ptr<ForwardIndex> index_;
-    std::unordered_set<idx_t> get_pids(const idx_t ivf_id) const;
-    std::vector<std::pair<float, idx_t>> get_top_centroids( 
-        const std::vector<idx_t>& coarse_idx,
-        const std::vector<float>& distances, 
-        const size_t n,
-        const size_t total_centroids_to_calculate,
-        const size_t k_top_centroids,
-        const size_t n_probe) const;
 
     /**
      * Flush data to disk.
-     * 
+     *
      * Note: currently not used. We may want to expose this in the future.
-    */
+     */
     void flush();
 
     /**
-     * lookup_pids accesses the inverted list for a given ivf_id and returns the passage ids.
-     * 
-    */
-    std::vector<idx_t> lookup_pids(const uint64_t tenant, const idx_t ivf_id) const;
-
-    /**
-     * Write_metadata (and read) are helper methods to persist metadata attributes.
-     * 
-    */
+     * Write_metadata (and read) are helper methods to persist metadata
+     * attributes.
+     *
+     */
     void write_metadata();
     Configuration read_metadata(std::string path);
-
-
 };
 
-} /// namespace lintdb
+} // namespace lintdb
 
 #endif

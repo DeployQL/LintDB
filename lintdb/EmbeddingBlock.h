@@ -27,7 +27,6 @@ struct EmbeddingBlock {
         this->embeddings = gsl::span<float>(
                 const_cast<float*>(embeddings), num_tokens * dimensions);
     }
-
 };
 } // namespace lintdb
 

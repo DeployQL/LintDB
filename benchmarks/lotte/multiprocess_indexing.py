@@ -1,4 +1,5 @@
 import lintdb as ldb
+from lintdb import (IndexEncoding_BINARIZER, IndexEncoding_NONE, IndexEncoding_PRODUCT_QUANTIZER)
 from datasets import load_dataset
 from collections import namedtuple
 from colbert import Indexer, Searcher
@@ -91,33 +92,65 @@ def consume_task(result_queue, experiment, nbits, use_compression, checkpoint):
         index.add(0, [doc])
 
 @app.command()
-def run(dataset: str, experiment: str, split: str = 'dev', k: int = 5, start:int=0, stop:int=40000, num_procs:int=10, nbits: int=1, use_compression: bool = True, checkpoint: str = "colbert-ir/colbertv2.0"):
+def run(
+    dataset: str, 
+    experiment: str, 
+    split: str = 'dev', 
+    k: int = 5, 
+    start:int=0, 
+    stop:int=40000, 
+    num_procs:int=10, 
+    nbits: int=1, 
+    index_type="binarizer",
+    checkpoint: str = "colbert-ir/colbertv2.0"):
     print("Loading dataset...")
     d = load_lotte(dataset, split, stop=40000)
     print("Dataset loaded.")
 
     index_path = f"experiments/py_index_bench_{experiment}"
     assert not os.path.exists(index_path)
+
+    index_type_enum = ldb.IndexEncoding_BINARIZER
+    if index_type == "binarizer":
+        index_type_enum = ldb.IndexEncoding_BINARIZER
+    elif index_type == 'pq':
+        index_type_enum = ldb.IndexEncoding_PRODUCT_QUANTIZER
+    elif index_type == 'none':
+        index_type_enum = ldb.IndexEncoding_NONE
+
+    print(f"using index type: {index_type_enum}")
+
         # lifestyle full centroids == 65536
         #lifestyle-40k-benchmark centroids == 32768
-    index = ldb.IndexIVF(index_path, 32768, 128, nbits, 4, use_compression)
+    index = ldb.IndexIVF(index_path, 32768, 128, nbits, 6, 16, index_type_enum)
+    pool = mp.Pool(processes=num_procs, initializer=intialize_model, initargs=(checkpoint,))
+
     # in multiprocessing, we only allow for reuse of centroids.
-    with Run().context(RunConfig(nranks=1, experiment='colbert-lifestyle-40k-benchmark')):
-        checkpoint_config = ColBERTConfig.load_from_checkpoint(checkpoint)
-        config = ColBERTConfig.from_existing(checkpoint_config, None)
-        searcher = Searcher(index='colbert-lifestyle-40k-benchmark', config=config, collection=d.collection)
-        centroids = searcher.ranker.codec.centroids
-        index.set_centroids(centroids)
-        index.set_weights(
-            searcher.ranker.codec.bucket_weights.tolist(), 
-            searcher.ranker.codec.bucket_cutoffs.tolist(), 
-            searcher.ranker.codec.avg_residual
-        )
-        index.save()
+    if index_type_enum == ldb.IndexEncoding_BINARIZER:
+        with Run().context(RunConfig(nranks=1, experiment='colbert-lifestyle-40k-benchmark')):
+            checkpoint_config = ColBERTConfig.load_from_checkpoint(checkpoint)
+            config = ColBERTConfig.from_existing(checkpoint_config, None)
+            searcher = Searcher(index='colbert-lifestyle-40k-benchmark', config=config, collection=d.collection)
+            centroids = searcher.ranker.codec.centroids
+            index.set_centroids(centroids)
+            index.set_weights(
+                searcher.ranker.codec.bucket_weights.tolist(), 
+                searcher.ranker.codec.bucket_cutoffs.tolist(), 
+                searcher.ranker.codec.avg_residual
+            )
+            index.save()
+    else:
+        training_data = random.sample(d.collection, 10000)
+        training_array = []
+        for id, embedding in tqdm(pool.imap_unordered(encode_one, zip(range(10000), training_data))):
+            training_array.append(embedding)
+
+        np_arr = np.concatenate(training_array, axis=0)
+        index.train(np_arr)
+
 
     start = time.perf_counter()
 
-    pool = mp.Pool(processes=num_procs, initializer=intialize_model, initargs=(checkpoint,))
 
     def create_tuples():
         for i, dd in zip(d.dids, d.collection):

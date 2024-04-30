@@ -1,5 +1,6 @@
 {
-    "$schema": "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
+    "$schema":
+            "https://cmake.org/cmake/help/latest/_downloads/3e2d73bff478d88a7de0de736ba5e361/schema.json",
     "version": 8,
     "cmakeMinimumRequired": {
         "major": 3,
@@ -10,29 +11,75 @@
         {
             "name": "debug",
             "displayName": "Ninja Multi-Config",
-            "description": "Configure with vcpkg toolchain and generate Ninja project files for all configurations",
+            "description":
+                    "Configure with vcpkg toolchain and generate Ninja project files for all configurations",
             "binaryDir": "${sourceDir}/builds/${presetName}",
             "generator": "Ninja Multi-Config",
-            "toolchainFile": "${sourceDir}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
-            "cacheVariables" : {
+            "toolchainFile":
+                    "${sourceDir}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
-                "BUILD_SHARED_LIBS": "ON",
+                "BUILD_SHARED_LIBS": "OFF",
+                "BUILD_TESTING": "ON",
                 "CMAKE_INSTALL_LIBDIR": "lib",
-                "ENABLE_PYTHON": "OFF"
+                "ENABLE_PYTHON": "OFF",
+                "CMAKE_VERBOSE_MAKEFILE":"ON",
+                "BLA_VENDOR":"Intel10_64lp"
             }
         },
         {
             "name": "release",
             "displayName": "Ninja Multi-Config",
-            "description": "Configure with vcpkg toolchain and generate Ninja project files for all configurations",
+            "description":
+                    "Configure with vcpkg toolchain and generate Ninja project files for all configurations",
             "binaryDir": "${sourceDir}/builds/${presetName}",
             "generator": "Ninja Multi-Config",
-            "toolchainFile": "${sourceDir}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
-            "cacheVariables" : {
+            "toolchainFile":
+                    "${sourceDir}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
                 "BUILD_SHARED_LIBS": "ON",
                 "CMAKE_INSTALL_LIBDIR": "lib",
-                "ENABLE_PYTHON": "OFF"
+                "CMAKE_VERBOSE_MAKEFILE":"ON",
+                "ENABLE_PYTHON": "OFF",
+                "BLA_VENDOR":"Intel10_64lp"
+            }
+        },
+        {
+            "name": "python",
+            "displayName": "Ninja Multi-Config",
+            "description":
+                    "Configure with vcpkg toolchain and generate Ninja project files for all configurations",
+            "binaryDir": "${sourceDir}/builds/${presetName}",
+            "generator": "Ninja Multi-Config",
+            "toolchainFile":
+                    "${sourceDir}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "BUILD_SHARED_LIBS": "ON",
+                "CMAKE_INSTALL_LIBDIR": "lib",
+                "CMAKE_VERBOSE_MAKEFILE":"ON",
+                "ENABLE_PYTHON": "ON",
+                "BUILD_TESTING": "OFF",
+                "BLA_VENDOR":"Intel10_64lp"
+            }
+        },
+        {
+            "name": "python-blas",
+            "displayName": "Ninja Multi-Config",
+            "description":
+                    "Configure with vcpkg toolchain and generate Ninja project files for all configurations",
+            "binaryDir": "${sourceDir}/builds/${presetName}",
+            "generator": "Ninja Multi-Config",
+            "toolchainFile":
+                    "${sourceDir}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "BUILD_SHARED_LIBS": "ON",
+                "CMAKE_INSTALL_LIBDIR": "lib",
+                "ENABLE_PYTHON": "ON",
+                "BUILD_TESTING": "OFF",
+                "BLA_VENDOR":"OpenBlas"
             }
         }
     ],
@@ -50,6 +97,20 @@
             "displayName": "Build (Release)",
             "description": "Build with Ninja/vcpkg (Release)",
             "configuration": "Release"
+        },
+        {
+            "name": "python",
+            "configurePreset": "python",
+            "displayName": "Build (Release)",
+            "description": "Build with Ninja/vcpkg (Release)",
+            "configuration": "Release"
+        },
+        {
+            "name": "python-blas",
+            "configurePreset": "python-blas",
+            "displayName": "Build (Release)",
+            "description": "Build with Ninja/vcpkg (Release)",
+            "configuration": "Release"
         }
     ],
     "testPresets": [
@@ -58,7 +119,7 @@
             "configurePreset": "release",
             "output": {
                 "outputOnFailure": true
-              },
+            },
             "hidden": true
         },
         {

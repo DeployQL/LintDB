@@ -1,14 +1,39 @@
-#include "lintdb/plaid.h"
+#include "lintdb/retriever/plaid.h"
 #include <faiss/utils/hamming.h>
 #include <glog/logging.h>
+#include <algorithm>
+#include <gsl/span>
 #include <iostream>
+#include <numeric>
 #include <unordered_set>
 #include "lintdb/api.h"
 #include "lintdb/util.h"
-#include <numeric>
-#include <algorithm>
 
 namespace lintdb {
+
+extern "C" {
+    // this is to keep the clang syntax checker happy
+    #ifndef FINTEGER
+    #define FINTEGER int
+    #endif
+
+    /* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
+
+    extern int sgemm_(
+            const char* transa,
+            const char* transb,
+            FINTEGER* m,
+            FINTEGER* n,
+            FINTEGER* k,
+            const float* alpha,
+            const float* a,
+            FINTEGER* lda,
+            const float* b,
+            FINTEGER* ldb,
+            float* beta,
+            float* c,
+            FINTEGER* ldc);
+}
 
 float score_documents_by_codes(
         const gsl::span<float>
@@ -38,8 +63,10 @@ float score_documents_by_codes(
 }
 
 float colbert_centroid_score(
-        const std::vector<code_t>& doc_codes, // of size num_doc_tokens. one code per token.
-        const std::vector<float>& centroid_scores, // of size nquery_vectors x n_centroids
+        const std::vector<code_t>&
+                doc_codes, // of size num_doc_tokens. one code per token.
+        const std::vector<float>&
+                centroid_scores, // of size nquery_vectors x n_centroids
         const size_t nquery_vectors,
         const size_t n_centroids,
         const idx_t doc_id) {
@@ -51,8 +78,9 @@ float colbert_centroid_score(
 
         if (seen_codes.find(code) == seen_codes.end()) {
             for (int k = 0; k < nquery_vectors; k++) {
-                per_doc_approx_scores[k] =
-                    std::max(per_doc_approx_scores[k], centroid_scores[k * n_centroids + code]);
+                per_doc_approx_scores[k] = std::max(
+                        per_doc_approx_scores[k],
+                        centroid_scores[k * n_centroids + code]);
             }
             seen_codes.insert(code);
         }
@@ -98,36 +126,44 @@ float score_document_by_residuals(
         bool normalize) {
     // use BLAS functions to matmul doc residuals with the transposed query
     // vectors. we'll use the sum of the max scores for each centroid.
-    int m = num_doc_tokens; // rows of op(A) and of matrix C.
-    int n = num_query_tokens;   // columns of matrix op(B) and of matrix C.
-    int k = dim; // the number of columns of op(A) and rows of op(B).
+    FINTEGER m = FINTEGER(num_doc_tokens);   // rows of op(A) and of matrix C.
+    FINTEGER n = FINTEGER(num_query_tokens); // columns of matrix op(B) and of matrix C.
+    FINTEGER k = FINTEGER(dim); // the number of columns of op(A) and rows of op(B).
+    float alpha = 1.0;
+    float beta = 0.0;
+
+    FINTEGER out = FINTEGER(num_query_tokens);
+    FINTEGER lda = FINTEGER(dim);
+    FINTEGER ldb = FINTEGER(dim);
 
     if (normalize) {
         normalize_vector(doc_residuals, num_doc_tokens, dim);
     }
 
     std::vector<float> output(m * n, 0);
-    // gives us a num_doc_tokens x num_query_tokens matrix.
-    cblas_sgemm(
-            CblasRowMajor,
-            CblasNoTrans,
-            CblasTrans,
-            m, // 8
-            n, // 4
-            k, // 128
-            1.0,
-            doc_residuals, // m x k
-            k, // leading dimension is the length of the first dimension
-               // (columns)
-            query_vectors.data(), // should be k x n after transpose
-            k,             // this is the leading dimension of B, not op(b)
-            0.000,
-            output.data(), // m x n
-            n);
+    // we need to treat this as operating in column major format.
+    // we want doc_res x query_vectors^T = C, but have row major data.
+    // because of that, we want to calculate query_vectors x doc_res = C^T
+        sgemm_(
+        "T",
+        "N",
+        &n, // 8
+        &m, // 4
+        &k, // 128
+        &alpha,
+        query_vectors.data(), // n x k
+        &lda, // leading dimension is the length of the first dimension
+            // (columns)
+        doc_residuals, // should be k x m after transpose
+        &ldb,             // this is the leading dimension of B, not op(b)
+        &beta,
+        output.data(), // m x n. (col major is n x m)
+        &out
+    );
 
     // find the max score for each doc_token.
     std::vector<float> max_scores(n, 0);
-    for (size_t i = 0; i < m; i++) { // per num_doc_tokens
+    for (size_t i = 0; i < m; i++) {     // per num_doc_tokens
         for (size_t j = 0; j < n; j++) { // per num_query_tokens
             auto score = output[i * n + j];
             if (score > max_scores[j]) {

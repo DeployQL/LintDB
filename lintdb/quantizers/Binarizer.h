@@ -6,11 +6,10 @@
 #include <stddef.h>
 #include <memory>
 #include "lintdb/api.h"
+#include "lintdb/quantizers/Quantizer.h"
 
 namespace lintdb {
-    static const std::string BINARIZER_FILENAME = "_binarizer.bin";
-
-    struct Binarizer {
+    struct Binarizer : public Quantizer {
         std::vector<float> bucket_cutoffs;
         std::vector<float> bucket_weights;
         float avg_residual;
@@ -22,15 +21,17 @@ namespace lintdb {
         Binarizer(size_t nbits, size_t dim);
         
         std::vector<uint8_t> binarize(const std::vector<float>& residuals);
-        void train(size_t n, const float* x, size_t dim);
-        void save(std::string path);
+        void train(const size_t n, const float* x, const size_t dim) override;
+        void save(const std::string path) override;
 
-        void sa_encode(size_t n, const float* x, residual_t* codes);
-        void sa_decode(size_t n, const residual_t* codes, float* x);
+        void sa_encode(size_t n, const float* x, residual_t* codes) override;
+        void sa_decode(size_t n, const residual_t* codes, float* x) override;
 
         static std::unique_ptr<Binarizer> load(std::string path);
 
         void set_weights(const std::vector<float>& weights, const std::vector<float>& cutoffs, const float avg_residual);
+
+        QuantizerType get_type() override;
 
         private:
         void calculate_quantiles(const std::vector<float>& heldoout_residual);

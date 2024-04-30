@@ -12,7 +12,7 @@ class TestIndex(unittest.TestCase):
     def test_index_init(self):
         with tempfile.TemporaryDirectory(prefix="lintdb_test-one") as dir_one:
             # create an index with 32 centroids, 128 dims, 2 bit compression, and 4 iterations during training. True == use compression.
-            index_one = lintdb.IndexIVF(dir_one, 32, 128, 2, 4, True)
+            index_one = lintdb.IndexIVF(dir_one, 32, 128, 2, 4, 16, lintdb.IndexEncoding_NONE)
 
             data = np.random.rand(1500, 128).astype('float32')
             index_one.train(data)
@@ -29,7 +29,7 @@ class TestIndex(unittest.TestCase):
 
     def test_index_load(self):
         with tempfile.TemporaryDirectory(prefix="lintdb_test")as dir:
-            index = lintdb.IndexIVF(dir, 32, 128, 2, 4, False)
+            index = lintdb.IndexIVF(dir, 32, 128, 2, 4, 16)
 
             data = np.random.rand(1500, 128).astype('float32')
             index.train(data)
@@ -45,7 +45,7 @@ class TestIndex(unittest.TestCase):
     def test_index_merge(self):
         with tempfile.TemporaryDirectory(prefix="lintdb_test-one") as dir_one:
             with tempfile.TemporaryDirectory(prefix="lintdb_test-two") as dir_two:
-                index_one = lintdb.IndexIVF(dir_one, 32, 128, 2, 4, True)
+                index_one = lintdb.IndexIVF(dir_one, 32, 128, 2, 4, 16, lintdb.IndexEncoding_BINARIZER)
 
                 data = np.random.rand(1500, 128).astype('float32')
                 index_one.train(data)
@@ -76,7 +76,7 @@ class TestIndex(unittest.TestCase):
     def test_index_multitenancy(self):
         with tempfile.TemporaryDirectory(prefix="lintdb_test-multitenancy") as dir_one:
             # create an index with 32 centroids, 128 dims, 2 bit compression, and 4 iterations during training. True == use compression.
-            index_one = lintdb.IndexIVF(dir_one, 32, 128, 2, 4, True)
+            index_one = lintdb.IndexIVF(dir_one, 32, 128, 2, 4, 16, lintdb.IndexEncoding_BINARIZER)
 
             data = np.random.rand(1500, 128).astype('float32')
             index_one.train(data)

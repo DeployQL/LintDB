@@ -1,5 +1,1 @@
-[pytest]
-pythonpath=[
-    "./build/lintdb/python/build/lib",
-    "."
-]
+[pytest] pythonpath = [ "./build/lintdb/python/build/lib", "." ]

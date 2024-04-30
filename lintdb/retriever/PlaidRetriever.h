@@ -20,11 +20,14 @@ namespace lintdb {
     */
     struct PlaidRetriever: public Retriever {
         public:
-        PlaidRetriever(std::shared_ptr<ForwardIndex> index, std::shared_ptr<Encoder> encoder);
+        PlaidRetriever(
+            std::shared_ptr<InvertedList> inverted_list,
+            std::shared_ptr<ForwardIndex> index, 
+            std::shared_ptr<Encoder> encoder
+        );
+
         std::vector<SearchResult> retrieve(
             const idx_t tenant, 
-            const std::vector<idx_t>& pid_list, 
-            const std::vector<float>& reordered_distances,
             const gsl::span<const float> query_data,
             const size_t n, // num tokens
             const size_t k, // num to return
@@ -32,8 +35,17 @@ namespace lintdb {
         );
 
         private:
+        std::shared_ptr<InvertedList> inverted_list_;
         std::shared_ptr<ForwardIndex> index_;
         std::shared_ptr<Encoder> encoder_;
+
+        std::vector<idx_t> top_passages(
+            const idx_t tenant, 
+            const gsl::span<const float> query_data, 
+            const size_t n, 
+            const RetrieverOptions& opts,
+            std::vector<float>& distances
+        );
 
         std::vector<std::pair<float, idx_t>> rank_phase_one(
              const std::vector<std::unique_ptr<DocumentCodes>>&,
@@ -51,6 +63,21 @@ namespace lintdb {
             const size_t n,
             const RetrieverOptions& opts
         );
+
+        std::vector<std::pair<float, idx_t>> get_top_centroids( 
+            const std::vector<idx_t>& coarse_idx,
+            const std::vector<float>& distances, 
+            const size_t n,
+            const size_t total_centroids_to_calculate,
+            const size_t k_top_centroids,
+            const size_t n_probe) const;
+
+        /**
+         * lookup_pids accesses the inverted list for a given ivf_id and returns the passage ids.
+         * 
+        */
+        std::vector<idx_t> lookup_pids(const uint64_t tenant, const idx_t ivf_id) const;
+
     };
 }
 

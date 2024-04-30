@@ -8,14 +8,14 @@
 namespace lintdb {
 /**
  * RawPassage is a simple struct to hold the raw passage data.
- * 
- * This represents a document before it's indexed. 
- 
+ *
+ * This represents a document before it's indexed.
+
 */
 struct RawPassage {
     /// embedding_block contains the document's embeddings.
-    /// this is an array, and can be any number of embeddings, but they'll all be
-    /// indexed together.
+    /// this is an array, and can be any number of embeddings, but they'll all
+    /// be indexed together.
     EmbeddingBlock embedding_block;
     /// id is a unique identifier for the document or passage.
     /// it must be an integer. we enable document ids to be strings that we can
@@ -26,10 +26,11 @@ struct RawPassage {
 
     RawPassage(
             const float* block, /// the embeddings for the document.
-            int num_tokens, /// the number of tokens in the document.
-            int dim, /// dimensions of the embeddings.
-            int64_t id): embedding_block(block, num_tokens, dim), id(id){}
+            int num_tokens,     /// the number of tokens in the document.
+            int dim,            /// dimensions of the embeddings.
+            int64_t id)
+            : embedding_block(block, num_tokens, dim), id(id) {}
 };
-} /// namespace lintdb
+} // namespace lintdb
 
 #endif

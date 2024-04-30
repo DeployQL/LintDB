@@ -1,7 +1,6 @@
 #ifndef LINTDB_PLAID_H
 #define LINTDB_PLAID_H
 
-#include <cblas.h>
 #include <algorithm>
 #include <bitset>
 #include <gsl/span>

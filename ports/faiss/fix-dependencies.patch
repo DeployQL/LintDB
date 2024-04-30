@@ -19,7 +19,7 @@ index 30d573f..9af8baf 100644
  
  find_package(MKL)
 -if(MKL_FOUND)
-+if(0)
++if(MKL_FOUND)
    target_link_libraries(faiss PRIVATE ${MKL_LIBRARIES})
    target_link_libraries(faiss_avx2 PRIVATE ${MKL_LIBRARIES})
  else()

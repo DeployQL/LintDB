@@ -24,8 +24,9 @@ struct InvertedList {
     virtual void delete_entry(idx_t list_no, const uint64_t tenant, idx_t id) = 0;
 
     virtual std::unique_ptr<Iterator> get_iterator(
-            const std::string& start,
-            const std::string& end) const = 0;
+        const uint64_t tenant,
+        const idx_t inverted_list
+    ) const = 0;
 
     
 

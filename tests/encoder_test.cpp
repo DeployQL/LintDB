@@ -7,7 +7,6 @@
 #include <faiss/utils/random.h>
 #include <vector>
 #include <iostream>
-#include <cblas.h>
 #include <filesystem>
 #include <gsl/span>
 
@@ -32,7 +31,7 @@ TEST(EncoderTest, ResidualsAreEncodedCorrectly) {
         }
     }
 
-    lintdb::DefaultEncoder encoder(2, 2, 2, 128, true);
+    lintdb::DefaultEncoder encoder(2, 2, 2, 128, 0, lintdb::IndexEncoding::BINARIZER);
     encoder.train(buf.data(), num_docs * num_tokens, dim);
 
     std::vector<float> fake_doc(dim * num_tokens, 2);
@@ -64,7 +63,7 @@ TEST(EncoderTest, NoCompressionWorksCorrectly) {
         }
     }
 
-    lintdb::DefaultEncoder encoder(2, 2, 2, 128, false);
+    lintdb::DefaultEncoder encoder(2, 2, 2, 128, 0, lintdb::IndexEncoding::NONE);
     encoder.train(buf.data(), num_docs * num_tokens, dim);
 
     std::vector<float> fake_doc(dim * num_tokens, 2);

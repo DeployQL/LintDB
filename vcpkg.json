@@ -3,13 +3,14 @@
     "version-string": "0.0.1",
     "license": "MIT",
     "dependencies": [
-      "faiss",
-      "rocksdb",
-      "flatbuffers",
-      {"name": "openblas", "features": ["threads"]},
-      "gtest",
-      "glog",
-      "jsoncpp",
-      "ms-gsl"
+        "faiss",
+        "rocksdb",
+        "flatbuffers",
+        "gtest",
+        "glog",
+        "jsoncpp",
+        "ms-gsl",
+        "benchmark",
+        "intel-mkl"
     ]
-  }
+}

@@ -5,13 +5,12 @@
 #include <faiss/utils/random.h>
 #include <vector>
 #include <iostream>
-#include "lintdb/plaid.h"
+#include "lintdb/retriever/plaid.h"
 #include <filesystem>
 #include <faiss/utils/hamming.h>
 #include <iostream>
 #include <algorithm>
 #include <stdlib.h>
-#include <cblas.h>
 #include "lintdb/util.h"
 
 TEST(PlaidTests, ReadsCodesCorrectly) {

@@ -18,21 +18,20 @@ struct RocksDBIterator : public Iterator {
     RocksDBIterator(
             std::shared_ptr<rocksdb::DB> db,
             rocksdb::ColumnFamilyHandle* column_family,
-            const std::string& start_key,
-            const std::string& end_key)
-            : Iterator(), cf(column_family->GetID()), end_slice(end_key) {
-        rocksdb::Slice prefix(start_key);
+            const uint64_t tenant,
+            const idx_t inverted_list);
 
-        auto options = rocksdb::ReadOptions();
-        options.iterate_upper_bound = &this->end_slice;
+    bool has_next() override {
+        bool is_valid = it->Valid();
+        if(!is_valid) {
+            return false;
+        }
+        this->current_key = Key::from_slice(it->key());
+        if (current_key.tenant != tenant || current_key.inverted_list_id != inverted_index) {
+            return false;
+        }
 
-        this->it = std::unique_ptr<rocksdb::Iterator>(
-                db->NewIterator(options, column_family));
-        it->Seek(prefix);
-    }
-
-    bool has_next() const override {
-        return it->Valid();
+        return true;
     }
 
     void next() override {
@@ -40,15 +39,21 @@ struct RocksDBIterator : public Iterator {
     }
 
     Key get_key() const override {
-        rocksdb::Slice key = it->key();
-        return Key::from_slice(key);
+        return current_key;
     }
 
     std::unique_ptr<rocksdb::Iterator> it;
 
    private:
     column_index_t cf;
-    rocksdb::Slice end_slice;
+    std::string prefix;
+    std::string end_key;
+    rocksdb::Slice prefix_slice;
+    Key current_key;
+
+    const idx_t tenant;
+    const idx_t inverted_index;
+
 };
 
 template<typename DBType>
@@ -65,8 +70,8 @@ struct RocksDBInvertedList : public InvertedList, public ForwardIndex {
     void delete_entry(idx_t list_no,const uint64_t tenant, idx_t id) override;
 
     std::unique_ptr<Iterator> get_iterator(
-            const std::string& start,
-            const std::string& end) const override;
+        const uint64_t tenant,
+        const idx_t inverted_list) const override;
             
     std::vector<std::unique_ptr<DocumentCodes>> get_codes(
             const uint64_t tenant,

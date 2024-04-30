@@ -40,17 +40,19 @@ outputs:
         - {{ compiler('fortran')}} 
         - sysroot_linux-64 =2.17 # [linux64]
         - llvm-openmp  # [osx]
-        - libgomp      # [linux]
         - cmake >=3.23.1
         - make  # [not win]
-        - openblas
+        - libopenblas=*=*openmp*
         - lapack # [linux]
         - conda-forge::swig >=4.0.2
         - conda-forge::numpy
+        - mkl-devel =2023  # [x86_64]
       host:
-        - openblas
+        - mkl =2023  # [x86_64]
+        - openblas  # [not x86_64]
       run:
-        - openblas 
+        - mkl =2023  # [x86_64]
+        - openblas  # [not x86_64]
         - __osx >={{ MACOSX_DEPLOYMENT_TARGET|default("10.13") }}  # [osx and x86_64]
     test:
       requires:
@@ -74,8 +76,7 @@ outputs:
         - {{ compiler('cxx') }}
         - {{ compiler('fortran') }}
         - llvm-openmp  # [osx]
-        - openblas
-        - lapack # [linux]
+        # - lapack # [linux]
         - sysroot_linux-64 =2.17 # [linux64]
         - conda-forge::swig >= 4.0.2
         - conda-forge::numpy
@@ -89,7 +90,6 @@ outputs:
         - python {{ python }}
         - conda-forge::numpy
         - packaging
-        - openblas
         - {{ pin_subpackage('liblintdb', exact=True) }}
         - __osx >={{ MACOSX_DEPLOYMENT_TARGET|default("10.13") }}  # [osx and x86_64]
     test:

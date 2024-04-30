@@ -12,17 +12,8 @@ add_executable(
   ${LINT_DB_TESTS}
 )
 
+target_link_libraries(lintdb-tests PRIVATE lintdb)
 
-# we use BLAS and LAPACK
-find_package(BLAS REQUIRED)
-target_link_libraries(lintdb-tests PRIVATE ${BLAS_LIBRARIES})
-find_package(OpenBLAS CONFIG REQUIRED)
-target_link_libraries(lintdb-tests PRIVATE OpenBLAS::OpenBLAS)
-# find_package(LAPACK REQUIRED)
-# target_link_libraries(lintdb-tests PRIVATE ${LAPACK_LIBRARIES})
-
-find_package(Microsoft.GSL CONFIG REQUIRED)
-target_link_libraries(lintdb-tests PRIVATE Microsoft.GSL::GSL)
 
 enable_testing()
 
@@ -39,8 +30,6 @@ FetchContent_Declare(
 
 # target_include_directories(lintdb-tests PUBLIC
 # $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)
-
-target_link_libraries(lintdb-tests PRIVATE lintdb)
 
 target_link_libraries(lintdb-tests PRIVATE GTest::gtest GTest::gtest_main GTest::gmock GTest::gmock_main)
 

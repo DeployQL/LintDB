@@ -2,14 +2,17 @@
 set(
     LINT_DB_SRC
     index.cpp
-    plaid.cpp
-    Binarizer.cpp
+    quantizers/Binarizer.cpp
     Encoder.cpp
+    quantizers/ProductEncoder.cpp
+    quantizers/io.cpp
     util.cpp
     invlists/RocksdbList.cpp
     invlists/util.cpp
     invlists/EncodedDocument.cpp
     retriever/PlaidRetriever.cpp
+    retriever/plaid.cpp
+    retriever/EMVBRetriever.cpp
     schema/util.cpp
 )
 
@@ -19,13 +22,16 @@ set(
     api.h
     assert.h
     exception.h
-    plaid.h
     constants.h
     cf.h
     RawPassage.h
     EmbeddingBlock.h
-    Binarizer.h
     Encoder.h
+    quantizers/Binarizer.h
+    quantizers/Quantizer.h
+    quantizers/ProductEncoder.h
+    quantizers/io.h
+    SearchOptions.h
     SearchResult.h
     util.h
     invlists/InvertedList.h
@@ -35,6 +41,12 @@ set(
     invlists/util.h
     retriever/Retriever.h
     retriever/PlaidRetriever.h
+    retriever/plaid.h
+    retriever/EMVBRetriever.h
+    retriever/emvb_util.h
+    retriever/emvb.h
+    retriever/emvb_generic.h
+    retriever/emvb_avx.h
     schema/forward_index_generated.h
     schema/inverted_index_generated.h
     schema/mapping_generated.h
@@ -45,16 +57,28 @@ set(LINT_DB_HEADERS ${LINT_DB_HEADERS} PARENT_SCOPE)
 
 add_library(lintdb ${LINT_DB_SRC})
 
+string(FIND "${CMAKE_CXX_FLAGS}" "FINTEGER" finteger_idx)
+if (${finteger_idx} EQUAL -1)
+  target_compile_definitions(lintdb PRIVATE FINTEGER=int)
+endif()
+
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
     target_link_libraries(lintdb PUBLIC OpenMP::OpenMP_CXX)
 endif()
 
+message(STATUS "using MKL root: $ENV{MKLROOT}")
+find_package(MKL)
+if (MKL_FOUND)
+  message(STATUS "libraries: ${MKL_LIBRARIES}")
+  target_link_libraries(lintdb PRIVATE ${MKL_LIBRARIES})
+else()
 find_package(OpenBLAS CONFIG REQUIRED)
 target_link_libraries(lintdb PRIVATE OpenBLAS::OpenBLAS)
 
 find_package(LAPACK CONFIG REQUIRED)
 target_link_libraries(lintdb PRIVATE LAPACK::LAPACK)
+endif()
   
 # this is heuristically generated, and may not be correct
 find_package(faiss CONFIG REQUIRED)
@@ -76,11 +100,6 @@ target_link_libraries(lintdb PRIVATE Microsoft.GSL::GSL)
 
 find_package(jsoncpp CONFIG REQUIRED)
 target_link_libraries(lintdb PRIVATE JsonCpp::JsonCpp)
-
-string(FIND "${CMAKE_CXX_FLAGS}" "FINTEGER" finteger_idx)
-if (${finteger_idx} EQUAL -1)
-  target_compile_definitions(lintdb PRIVATE FINTEGER=int)
-endif()
 
 
 if(MSVC)
