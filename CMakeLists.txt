@@ -9,8 +9,10 @@ set(VCPKG_INSTALL_OPTIONS "--allow-unsupported")
 # Setup vcpkg script with CMake (note: should be placed before project() call)
 set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake CACHE STRING "Vcpkg toolchain file")
 
+file(READ "version.txt" version)
+
 project(lintdb
-  VERSION 0.0.1
+  VERSION ${version}
   DESCRIPTION "A multi-vector database for late interaction retrieval"
   LANGUAGES CXX
 )
