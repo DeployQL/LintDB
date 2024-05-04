@@ -11,7 +11,6 @@
 #include "lintdb/exception.h"
 #include "lintdb/quantizers/io.h"
 #include "lintdb/util.h"
-#include <mkl.h>
 
 namespace lintdb {
 

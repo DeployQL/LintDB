@@ -77,3 +77,6 @@ target_include_directories(pylintdb PRIVATE ${PROJECT_SOURCE_DIR}/../..)
 
 configure_file(setup.py setup.py COPYONLY)
 configure_file(__init__.py __init__.py COPYONLY)
+
+# copy our version file
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/version.txt ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)

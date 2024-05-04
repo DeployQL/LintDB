@@ -100,7 +100,7 @@ jobs:
           overwrite: true
       - name: Packages uploading
         id: packages-uploading
-        if: contains(github.ref, "main")
+        if: github.ref == 'refs/heads/main'
         env:
           SHOULD_OVERWRITE: false
           UPLOAD_TOKEN: ${{secrets.ANACONDA_TOKEN}}
