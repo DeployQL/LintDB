@@ -109,19 +109,19 @@ jobs:
         run: |
           echo "::group::Conda packages uploading"
           #cd ${{ steps.packages-compilation.outputs.out_dir }}
-          label=""
+          label="main"
           force=""
           if "$SHOULD_OVERWRITE"; then
             force="--force"
           fi
-            if [ "${{github.event.action}}" == "released" ]; then
-              label="main"
-            elif [ "${{github.event.action}}" == "prereleased" ]; then
-              label="dev"
-            else
-              echo "The trigger type ${{github.event.action}} is not compatible with uploading conda packages. Either use 'released' or 'prereleased' triggers."
-              exit 1
-            fi
+            # if [ "${{github.event.action}}" == "released" ]; then
+            #   label="main"
+            # elif [ "${{github.event.action}}" == "prereleased" ]; then
+            #   label="dev"
+            # else
+            #   echo "The trigger type ${{github.event.action}} is not compatible with uploading conda packages. Either use 'released' or 'prereleased' triggers."
+            #   exit 1
+            # fi
           export ANACONDA_API_TOKEN=$UPLOAD_TOKEN
           SHORT_SHA="$(git rev-parse --short $GITHUB_SHA)"
           for dirname in ${{ steps.packages-compilation.outputs.out_dir }}/*; do
