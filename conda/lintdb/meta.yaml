@@ -42,7 +42,6 @@ outputs:
         - llvm-openmp  # [osx]
         - cmake >=3.23.1
         - make  # [not win]
-        - libopenblas=*=*openmp*
         - lapack # [linux]
         - conda-forge::swig >=4.0.2
         - conda-forge::numpy
