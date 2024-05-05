@@ -82,6 +82,7 @@ outputs:
         - conda-forge::numpy
         - cmake >=3.23.1
         - make  # [not win]
+        - python {{ python }}
       host:
         - python {{ python }}
         - conda-forge::numpy
