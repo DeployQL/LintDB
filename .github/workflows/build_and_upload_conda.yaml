@@ -12,18 +12,10 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            label: linux-64
-            prefix: /usr/share/miniconda3/envs/my-env
-            python-version: "3.10"
-
           - os: macos-14
-            label: osx-64
-            prefix: /usr/local/miniconda/envs/lintdb-build/conda-bld
             python-version: "3.10"
-
-        # os: [macOS-latest, ubuntu-latest]
-        # # python-version: ["3.8", "3.9", "3.10"]
-        # python-version: ["3.10"]
+        os: [macos-14, ubuntu-latest]
+        python-version: ["3.8, "3.9", "3.10", "3.11", "3.12"]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -37,7 +29,6 @@ jobs:
         with:
           activate-environment: lintdb-build
           python-version: ${{ matrix.python-version }}
-          # environment-file: conda/environment.yaml    # Path to the build conda environment
           use-mamba: true
           mamba-version: "*"
           channels: conda-forge,pytorch,defaults
