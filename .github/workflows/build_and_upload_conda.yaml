@@ -13,6 +13,11 @@ jobs:
         os: ["macos-14", "ubuntu-latest"]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Remove unnecessary files
+        if: marix.os == 'ubuntu-latest'
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
       - uses: actions/checkout@v3
         with:
           submodules: true
