@@ -14,7 +14,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Remove unnecessary files
-        if: marix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-latest'
         run: |
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
