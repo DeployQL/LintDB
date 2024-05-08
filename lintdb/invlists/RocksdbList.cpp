@@ -314,6 +314,55 @@ std::vector<std::unique_ptr<DocumentCodes>> RocksDBInvertedList<DBType>::
 }
 
 template <typename DBType>
+std::vector<DocumentMetadata> RocksDBInvertedList<DBType>::get_metadata(
+    const uint64_t tenant,
+    const std::vector<idx_t>& ids) const {
+
+    std::vector<std::string> key_strings;
+    std::vector<rocksdb::Slice> keys;
+    // rocksdb slices don't take ownership of the underlying data, so we need to
+    // keep the strings around.
+    for (idx_t i = 0; i < ids.size(); i++) {
+        auto id = ids[i];
+        key_strings.push_back(ForwardIndexKey{tenant, id}.serialize());
+        keys.push_back(rocksdb::Slice(key_strings[i]));
+    }
+
+    assert(key_strings.size() == ids.size());
+    VLOG(100) << "Getting num docs: " << key_strings.size()
+              << " from the metadata index.";
+
+    std::vector<DocumentMetadata> docs;
+    rocksdb::ReadOptions ro;
+    std::vector<rocksdb::PinnableSlice> values(ids.size());
+    std::vector<rocksdb::Status> statuses(ids.size());
+
+    #pragma omp parallel for
+    for (int i = 0; i < key_strings.size(); i++) {
+        auto key = rocksdb::Slice(key_strings[i].data(), key_strings[i].size());
+
+        statuses[i] = db_->Get(
+                ro, column_families[kDocColumnIndex], key, &values[i]);
+    }
+
+    for (size_t i = 0; i < ids.size(); i++) {
+        if (statuses[i].ok()) {
+            auto doc = doc_schema::Schema::ParseFromString(values[i].data());
+            auto metadata = DocumentMetadata(ids[i], doc);
+            docs.push_back(metadata);
+            // release the memory used by rocksdb for this value.
+            values[i].Reset();
+        } else {
+            LOG(ERROR) << "Could not find codes for doc id: " << ids[i];
+            LOG(ERROR) << "rocksdb: " << statuses[i].ToString();
+            docs.push_back(nullptr);
+        }
+    }
+
+    return docs;
+}
+
+template <typename DBType>
 void RocksDBInvertedList<DBType>::delete_entry(
         idx_t list_no,
         const uint64_t tenant,
@@ -372,77 +421,75 @@ void WritableRocksDBInvertedList::add(
     std::unique_ptr<rocksdb::Transaction> txn =
             std::unique_ptr<rocksdb::Transaction>(db_->BeginTransaction(wo));
 
-    try {
-        // store ivf -> doc mapping.
-        for (code_t idx : unique_coarse_idx) {
-            VLOG(100) << "Adding document with id: " << doc->id
+    rocksdb::WriteBatch batch;
+
+    // store inverted index.
+    for(code_t idx : unique_coarse_idx) {
+        VLOG(100) << "Adding document with id: " << doc->id
                       << " to inverted list " << idx;
-
-            Key key = Key{tenant, idx, doc->id};
-            std::string k_string = key.serialize();
-
-            rocksdb::Status status = txn->Put(
-                    column_families[kIndexColumnIndex],
-                    rocksdb::Slice(k_string),
-                    rocksdb::Slice() // store nothing. we only need the key
-                                     // to tell us what documents exist.
-            );
-            LINTDB_THROW_IF_NOT(status.ok());
-        }
-
-        // this key is used for all forward indices.
-        ForwardIndexKey forward_key = ForwardIndexKey{tenant, doc->id};
-        auto fks = forward_key.serialize();
-
-        // add document mapping to centroids.
-        std::vector<idx_t> unique_coarse_idx_vec(
-                unique_coarse_idx.begin(), unique_coarse_idx.end());
-        auto mapping_ptr = create_doc_mapping(
-                unique_coarse_idx_vec.data(), unique_coarse_idx_vec.size());
-
-        rocksdb::Status mapping_status = txn->Put(
-                column_families[kMappingColumnIndex],
-                rocksdb::Slice(fks),
-                rocksdb::Slice(
-                        reinterpret_cast<const char*>(
-                                mapping_ptr->GetBufferPointer()),
-                        mapping_ptr->GetSize()));
-        assert(mapping_status.ok());
-
-        auto doc_ptr = create_inverted_index_document(
-                doc->codes.data(), doc->codes.size());
-        auto* ptr = doc_ptr->GetBufferPointer();
-        auto size = doc_ptr->GetSize();
-
-        // store document codes.
-
-        const rocksdb::Slice slice(reinterpret_cast<const char*>(ptr), size);
-        rocksdb::Status code_status = txn->Put(
-                column_families[kCodesColumnIndex], rocksdb::Slice(fks), slice);
-        LINTDB_THROW_IF_NOT(code_status.ok());
-
-        assert(doc->residuals.size() > 0);
-        // store document data.
-        auto forward_doc_ptr = create_forward_index_document(
-                doc->num_tokens, doc->residuals.data(), doc->residuals.size());
-
-        auto* forward_ptr = forward_doc_ptr->GetBufferPointer();
-        auto forward_size = forward_doc_ptr->GetSize();
-        const rocksdb::Slice forward_slice(
-                reinterpret_cast<const char*>(forward_ptr), forward_size);
-
-        rocksdb::Status forward_status = txn->Put(
-                column_families[kResidualsColumnIndex],
-                rocksdb::Slice(fks),
-                forward_slice);
-        LINTDB_THROW_IF_NOT(forward_status.ok());
-
-        rocksdb::Status s = txn->Commit();
-        LINTDB_THROW_IF_NOT(s.ok());
-    } catch (lintdb::LintDBException e) {
-        txn->Rollback();
-        throw e;
+        auto index_status = batch.Put(
+            column_families[kIndexColumnIndex],
+            rocksdb::Slice(Key{tenant, idx, doc->id}.serialize()),
+            rocksdb::Slice()
+        );
+        LINTDB_THROW_IF_NOT(index_status.ok());
     }
+
+    // store forward doc id -> coarse idx mapping.
+    ForwardIndexKey forward_key = ForwardIndexKey{tenant, doc->id};
+    auto fks = forward_key.serialize();
+    std::vector<idx_t> unique_coarse_idx_vec(
+                unique_coarse_idx.begin(), unique_coarse_idx.end());
+    auto mapping_ptr = create_doc_mapping(
+            unique_coarse_idx_vec.data(), unique_coarse_idx_vec.size());
+    auto mapping_status = batch.Put(
+        column_families[kMappingColumnIndex],
+        rocksdb::Slice(fks),
+        rocksdb::Slice(
+                reinterpret_cast<const char*>(
+                        mapping_ptr->GetBufferPointer()),
+                mapping_ptr->GetSize())
+    );
+    LINTDB_THROW_IF_NOT(mapping_status.ok());
+
+    // store document codes.
+    auto doc_ptr = create_inverted_index_document(
+            doc->codes.data(), doc->codes.size());
+    auto* ptr = doc_ptr->GetBufferPointer();
+    auto size = doc_ptr->GetSize();
+
+    const rocksdb::Slice slice(reinterpret_cast<const char*>(ptr), size);
+    auto codes_status = batch.Put(column_families[kCodesColumnIndex], rocksdb::Slice(fks), slice);
+    LINTDB_THROW_IF_NOT(codes_status.ok());
+
+    // store document residuals.
+    auto forward_doc_ptr = create_forward_index_document(
+        doc->num_tokens, doc->residuals.data(), doc->residuals.size());
+
+    auto* forward_ptr = forward_doc_ptr->GetBufferPointer();
+    auto forward_size = forward_doc_ptr->GetSize();
+    const rocksdb::Slice forward_slice(
+            reinterpret_cast<const char*>(forward_ptr), forward_size);
+
+    rocksdb::Status forward_status = batch.Put(
+            column_families[kResidualsColumnIndex],
+            rocksdb::Slice(fks),
+            forward_slice);
+    LINTDB_THROW_IF_NOT(forward_status.ok());
+
+    // store document metadata.
+    std::string metadata_serialized = doc->serialize_metadata();
+    const rocksdb::Slice metadata_slice(
+            metadata_serialized.data(), metadata_serialized.size());
+    rocksdb::Status metadata_status = batch.Put(
+            column_families[kDocColumnIndex],
+            rocksdb::Slice(fks),
+            metadata_slice);
+
+    auto status = db_->Write(wo, &batch);
+    assert(status.ok());
+
+    LINTDB_THROW_IF_NOT(status.ok());
 };
 
 ReadOnlyRocksDBInvertedList::ReadOnlyRocksDBInvertedList(

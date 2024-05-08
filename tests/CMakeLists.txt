@@ -5,6 +5,7 @@ set(
     rocksdb_test.cpp
     binarizer_test.cpp
     encoder_test.cpp
+    index_builder_test.cpp
 )
 
 add_executable(
@@ -12,8 +13,10 @@ add_executable(
   ${LINT_DB_TESTS}
 )
 
-target_link_libraries(lintdb-tests PRIVATE lintdb)
+configure_file(${PROJECT_SOURCE_DIR}/assets/colbert_tokenizer.json colbert_tokenizer.json COPYONLY)
+configure_file(${PROJECT_SOURCE_DIR}/assets/model.onnx model.onnx COPYONLY)
 
+target_link_libraries(lintdb-tests PRIVATE lintdb)
 
 enable_testing()
 
@@ -32,7 +35,6 @@ FetchContent_Declare(
 # $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)
 
 target_link_libraries(lintdb-tests PRIVATE GTest::gtest GTest::gtest_main GTest::gmock GTest::gmock_main)
-
 
 include(GoogleTest)
 gtest_discover_tests(lintdb-tests)

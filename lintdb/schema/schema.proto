@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package doc_schema;
+
+// in this directory, run: protoc --proto_path=. --cpp_out=. schema.proto
+
+message Schema {
+    repeated Field fields = 1;
+}
+
+message Field {
+    string key = 1;
+    bytes value = 2;
+}

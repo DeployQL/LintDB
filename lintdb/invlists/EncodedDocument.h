@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 #include "lintdb/api.h"
+#include "lintdb/schema/schema.pb.h"
+#include <map>
 
 namespace lintdb {
 /**
@@ -23,7 +25,9 @@ struct EncodedDocument {
                     residuals, // reflects the residual vector for each token
                                // vector.
             size_t num_tokens,
-            idx_t id);
+            idx_t id,
+            const std::map<std::string, std::string>& metadata = {}
+        );
 
     EncodedDocument(
             const code_t*
@@ -33,13 +37,17 @@ struct EncodedDocument {
                                       // token vector.
             const size_t residuals_size,
             size_t num_tokens,
-            idx_t id
+            idx_t id,
+            const std::map<std::string, std::string>& metadata = {}
         );
+
+    std::string serialize_metadata() const;
 
     const std::vector<code_t> codes;
     const std::vector<residual_t> residuals;
     const size_t num_tokens; // num_tokens
     idx_t id;
+    const std::map<std::string, std::string> metadata;
 };
 
 struct InvertedDocument {
@@ -68,6 +76,13 @@ struct DocumentResiduals {
 
     DocumentResiduals(idx_t id, const residual_t* residuals, size_t residuals_size, size_t num_tokens)
             : id(id), residuals(residuals, residuals + residuals_size), num_tokens(num_tokens) {}
+};
+
+struct DocumentMetadata {
+    const idx_t id;
+    std::map<std::string, std::string> metadata;
+
+    DocumentMetadata(const idx_t id, const doc_schema::Schema metadata);
 };
 
 

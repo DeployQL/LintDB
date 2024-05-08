@@ -201,6 +201,38 @@ std::vector<SearchResult> IndexIVF::search(
             opts);
 }
 
+std::vector<SearchResult> IndexIVF::search(
+    const uint64_t tenant,
+    const EmbeddingBlock& block,
+    const size_t k,
+    const SearchOptions& opts = SearchOptions()) const {
+    return search(
+        tenant,
+        block.embeddings.data(),
+        block.num_tokens,
+        block.dimensions,
+        opts.n_probe,
+        k,
+        opts);
+}
+
+std::vector<SearchResult> IndexIVF::search(
+        const uint64_t tenant,
+        const float* data,
+        const int n,
+        const int dim,
+        const size_t k,
+        const SearchOptions& opts = SearchOptions()) const {
+    return search(
+            tenant,
+            data,
+            n,
+            dim,
+            opts.n_probe,
+            k,
+            opts);
+}
+
 /**
  * Implementation note:
  *
@@ -237,6 +269,17 @@ std::vector<SearchResult> IndexIVF::search(
 
     auto results =
             this->retriever->retrieve(tenant, query_span, n, k, plaid_options);
+
+    std::vector<idx_t> ids = std::transform(
+            results.begin(),
+            results.end(),
+            std::vector<idx_t>(results.size()),
+            [](const SearchResult& sr) { return sr.id; });
+    auto metadata = this->index_->get_metadata(tenant, ids);
+
+    for (size_t i = 0; i < results.size(); i++) {
+        results[i].metadata = metadata[i].metadata;
+    }
 
     return results;
 }

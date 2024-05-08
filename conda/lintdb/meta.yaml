@@ -46,12 +46,15 @@ outputs:
         - conda-forge::swig >=4.0.2
         - conda-forge::numpy
         - mkl-devel =2023  # [x86_64]
+        - onnxruntime
       host:
         - mkl =2023  # [x86_64]
         - openblas  # [not x86_64]
+        - onnxruntime
       run:
         - mkl =2023  # [x86_64]
         - openblas  # [not x86_64]
+        - onnxruntime
         - __osx >={{ MACOSX_DEPLOYMENT_TARGET|default("10.13") }}  # [osx and x86_64]
     test:
       requires:

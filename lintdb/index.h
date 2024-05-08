@@ -64,6 +64,8 @@ struct IndexIVF {
     Configuration config;
     bool read_only; /// whether to open the index in read-only mode.
 
+    friend struct Collection; // our Collection wants access to the index.
+
     /// load an existing index.
     IndexIVF(std::string path, bool read_only = false);
 
@@ -134,10 +136,26 @@ struct IndexIVF {
             const float* data,
             const int n,
             const int dim,
+            const size_t k,
+            const SearchOptions& opts = SearchOptions()) const;
+
+    std::vector<SearchResult> search(
+        const uint64_t tenant,
+        const EmbeddingBlock& block,
+        const size_t k,
+        const SearchOptions& opts = SearchOptions()) const;
+
+    [[deprecated("Use search with n_probe in Options.")]]
+    std::vector<SearchResult> search(
+            const uint64_t tenant,
+            const float* data,
+            const int n,
+            const int dim,
             const size_t n_probe,
             const size_t k,
             const SearchOptions& opts = SearchOptions()) const;
 
+    [[deprecated("Use search with n_probe in Options.")]]
     std::vector<SearchResult> search(
             const uint64_t tenant,
             const EmbeddingBlock& block,

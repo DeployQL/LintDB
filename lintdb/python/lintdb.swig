@@ -8,6 +8,7 @@
 #include "lintdb/index.h"
 #include "lintdb/SearchOptions.h"
 #include "lintdb/RawPassage.h"
+#include "lintdb/index_builder/IndexBuilder.h"
 #include "lintdb/exception.h"
 #include <stdint.h>
 #include <omp.h>
@@ -129,3 +130,4 @@ namespace std {
 %include "lintdb/SearchOptions.h"
 %include "lintdb/SearchResult.h"
 %include "lintdb/index.h"
+%include "lintdb/index_builder/IndexBuilder.h"
