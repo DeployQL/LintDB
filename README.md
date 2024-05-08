@@ -16,7 +16,7 @@ for efficient storage and lookup of token level embeddings.
 LintDB relies on OpenBLAS for accerlated matrix multiplication. To smooth the process of installation, we only support conda.
 
 ```
-conda install lintdb -c deployql
+conda install lintdb -c deployql -c conda-forge
 ```
 
 ## Usage
