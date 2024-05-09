@@ -1,7 +1,17 @@
 '''
 .. module:: lintdb
 '''
-from lintdb.lintdb import IndexIVF, RawPassage, Configuration, SearchOptions, IndexEncoding_NONE, IndexEncoding_BINARIZER, IndexEncoding_PRODUCT_QUANTIZER, IndexBuilder
+from lintdb.lintdb import (
+    IndexIVF, 
+    RawPassage, 
+    Configuration, 
+    SearchOptions, 
+    IndexEncoding_NONE, 
+    IndexEncoding_BINARIZER, 
+    IndexEncoding_PRODUCT_QUANTIZER,
+    Collection,
+    CollectionOptions,
+)
 
 __all__ = [
     'IndexIVF', 
@@ -11,5 +21,6 @@ __all__ = [
     'IndexEncoding_NONE', 
     'IndexEncoding_BINARIZER', 
     'IndexEncoding_PRODUCT_QUANTIZER',
-    'IndexBuilder'
+    'Collection',
+    'CollectionOptions',
 ]

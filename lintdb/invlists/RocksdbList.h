@@ -7,10 +7,12 @@
 #include <rocksdb/utilities/optimistic_transaction_db.h>
 #include <iostream>
 #include <memory>
+#include <string>
 #include "lintdb/constants.h"
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/invlists/util.h"
 #include "lintdb/schema/util.h"
+#include "lintdb/invlists/Iterator.h"
 
 namespace lintdb {
 
@@ -80,6 +82,9 @@ struct RocksDBInvertedList : public InvertedList, public ForwardIndex {
             const uint64_t tenant,
             const std::vector<idx_t>& ids) const override;
     std::vector<idx_t> get_mapping(const uint64_t tenant, idx_t id) const override;
+    std::vector<std::unique_ptr<DocumentMetadata>> get_metadata(
+            const uint64_t tenant,
+            const std::vector<idx_t>& ids) const override;
 
     protected:
     std::shared_ptr<DBType> db_;

@@ -107,9 +107,12 @@ target_link_libraries(lintdb PRIVATE Microsoft.GSL::GSL)
 find_package(jsoncpp CONFIG REQUIRED)
 target_link_libraries(lintdb PRIVATE JsonCpp::JsonCpp)
 
+find_package(Bitsery CONFIG REQUIRED)
+target_link_libraries(lintdb PRIVATE Bitsery::bitsery)
+
 # # this is heuristically generated, and may not be correct
-find_package(protobuf CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE protobuf::libprotoc protobuf::libprotobuf protobuf::libprotobuf-lite)
+# find_package(protobuf CONFIG REQUIRED)
+# target_link_libraries(lintdb PRIVATE protobuf::libprotoc protobuf::libprotobuf protobuf::libprotobuf-lite)
 
 # this is always dynamically linked! This places more responsbility on the user's environment!
 find_library(ONNXRUNTIME_LIBRARY onnxruntime)

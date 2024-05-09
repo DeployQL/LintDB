@@ -41,7 +41,6 @@ std::vector<rocksdb::ColumnFamilyDescriptor> create_column_families() {
         rocksdb::ColumnFamilyDescriptor(
                     kDocColumnFamily, rocksdb::ColumnFamilyOptions())
 };
-};
 }
 
 } // namespace lintdb

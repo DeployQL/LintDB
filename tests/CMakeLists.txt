@@ -18,6 +18,9 @@ configure_file(${PROJECT_SOURCE_DIR}/assets/model.onnx model.onnx COPYONLY)
 
 target_link_libraries(lintdb-tests PRIVATE lintdb)
 
+find_package(Bitsery CONFIG REQUIRED)
+target_link_libraries(lintdb-tests PRIVATE Bitsery::bitsery)
+
 enable_testing()
 
 find_package(GTest CONFIG REQUIRED)

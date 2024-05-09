@@ -38,11 +38,11 @@ namespace lintdb {
              Output Node Name/Shape (0):
                     contextual : -1x-1x128
         */
-        LOG(INFO) << "Input Node Name/Shape (" << input_names.size() << "):";
+        VLOG(20) << "Input Node Name/Shape (" << input_names.size() << "):";
         for (std::size_t i = 0; i < session->GetInputCount(); i++) {
             input_names.emplace_back(session->GetInputNameAllocated(i, allocator).get());
             input_shapes = session->GetInputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape();
-            LOG(INFO) << "\t" << input_names.at(i) << " : " << print_shape(input_shapes);
+            VLOG(20) << "\t" << input_names.at(i) << " : " << print_shape(input_shapes);
         }
         // some models might have negative shape values to indicate dynamic shape, e.g., for variable batch size.
         for (auto& s : input_shapes) {
@@ -53,11 +53,11 @@ namespace lintdb {
 
         // print name/shape of outputs
         std::vector<std::string> output_names;
-        LOG(INFO) << "Output Node Name/Shape (" << output_names.size() << "):";
+        VLOG(20) << "Output Node Name/Shape (" << output_names.size() << "):";
         for (std::size_t i = 0; i < session->GetOutputCount(); i++) {
             output_names.emplace_back(session->GetOutputNameAllocated(i, allocator).get());
             auto output_shapes = session->GetOutputTypeInfo(i).GetTensorTypeAndShapeInfo().GetShape();
-            LOG(INFO) << "\t" << output_names.at(i) << " : " << print_shape(output_shapes);
+            VLOG(20) << "\t" << output_names.at(i) << " : " << print_shape(output_shapes);
         }
 
         // Assume model has 2 input node and 1 output node.

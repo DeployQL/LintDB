@@ -16,6 +16,8 @@ include(${SWIG_USE_FILE})
 
 include(UseSWIG)
 
+set(CMAKE_SWIG_FLAGS "-debug-tmsearch")
+
 set(UseSWIG_TARGET_NAME_PREFERENCE STANDARD)
 set(SWIG_SOURCE_FILE_EXTENSIONS swig)
 

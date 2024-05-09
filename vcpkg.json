@@ -12,7 +12,7 @@
     "ms-gsl",
     "benchmark",
     "intel-mkl",
-    "protobuf",
-    "onnxruntime"
+    "onnxruntime",
+    "bitsery"
   ]
 }

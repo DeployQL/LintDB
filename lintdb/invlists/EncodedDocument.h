@@ -4,11 +4,12 @@
 #include <stddef.h>
 #include <string>
 #include <vector>
+#include <memory>
 #include "lintdb/api.h"
-#include "lintdb/schema/schema.pb.h"
 #include <map>
 
 namespace lintdb {
+
 /**
  * EncodedDocument is the interface between indexes and the inverted list. The
  * data owned by this struct will eventually be stored.
@@ -78,15 +79,25 @@ struct DocumentResiduals {
             : id(id), residuals(residuals, residuals + residuals_size), num_tokens(num_tokens) {}
 };
 
+/**
+ * DocumentMetadata is a struct that holds metadata for a document.
+ * 
+ * When creating a DocumentMetadata object, the metadata is owned by this object.
+*/
 struct DocumentMetadata {
-    const idx_t id;
     std::map<std::string, std::string> metadata;
 
-    DocumentMetadata(const idx_t id, const doc_schema::Schema metadata);
+    DocumentMetadata() = default;
+
+    DocumentMetadata(const std::map<std::string, std::string>& md)
+            : metadata(md) {}
+
+    static std::unique_ptr<DocumentMetadata> deserialize(std::string& metadata);
 };
 
 
 
 } // namespace lintdb
+
 
 #endif

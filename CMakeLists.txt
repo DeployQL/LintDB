@@ -35,8 +35,11 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET 10.13)
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # download assets from huggingface.
-file(DOWNLOAD "https://huggingface.co/colbert-ir/colbertv2.0/resolve/main/tokenizer.json" "assets/colbert_tokenizer.json" SHOW_PROGRESS)
-file(DOWNLOAD "https://huggingface.co/colbert-ir/colbertv2.0/resolve/main/model.onnx" "assets/model.onnx" SHOW_PROGRESS)
+if(NOT EXISTS "assets/colbert_tokenizer.json")
+message("Downloading assets from huggingface.")
+file(DOWNLOAD "https://huggingface.co/colbert-ir/colbertv2.0/resolve/main/tokenizer.json" "assets/colbert_tokenizer.json")
+file(DOWNLOAD "https://huggingface.co/colbert-ir/colbertv2.0/resolve/main/model.onnx" "assets/model.onnx")
+endif()
 
 set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
 

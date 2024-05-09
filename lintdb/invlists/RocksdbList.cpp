@@ -7,7 +7,6 @@
 #include "lintdb/exception.h"
 #include "lintdb/schema/forward_index_generated.h"
 #include "lintdb/schema/util.h"
-// #include <rocksdb/utilities/transactions/optimistic_transaction.h>
 #include <rocksdb/slice.h>
 #include <rocksdb/utilities/transaction.h>
 
@@ -110,7 +109,7 @@ void RocksDBInvertedList<DBType>::add(
 
     assert(doc->residuals.size() > 0);
     VLOG(100) << "Residuals size: " << doc->residuals.size();
-    // store document data.
+    // store document residual data.
     auto forward_doc_ptr = create_forward_index_document(
             doc->num_tokens, doc->residuals.data(), doc->residuals.size());
 
@@ -157,7 +156,7 @@ void RocksDBInvertedList<DBType>::remove(
             std::string value;
             rocksdb::Status status = db_->Delete(
                     wo,
-                    column_families[kMappingColumnIndex],
+                    column_families[i],
                     rocksdb::Slice(serialized_key));
         }
     }
@@ -314,7 +313,7 @@ std::vector<std::unique_ptr<DocumentCodes>> RocksDBInvertedList<DBType>::
 }
 
 template <typename DBType>
-std::vector<DocumentMetadata> RocksDBInvertedList<DBType>::get_metadata(
+std::vector<std::unique_ptr<DocumentMetadata>> RocksDBInvertedList<DBType>::get_metadata(
     const uint64_t tenant,
     const std::vector<idx_t>& ids) const {
 
@@ -332,7 +331,7 @@ std::vector<DocumentMetadata> RocksDBInvertedList<DBType>::get_metadata(
     VLOG(100) << "Getting num docs: " << key_strings.size()
               << " from the metadata index.";
 
-    std::vector<DocumentMetadata> docs;
+    std::vector<std::unique_ptr<DocumentMetadata>> docs;
     rocksdb::ReadOptions ro;
     std::vector<rocksdb::PinnableSlice> values(ids.size());
     std::vector<rocksdb::Status> statuses(ids.size());
@@ -346,14 +345,20 @@ std::vector<DocumentMetadata> RocksDBInvertedList<DBType>::get_metadata(
     }
 
     for (size_t i = 0; i < ids.size(); i++) {
-        if (statuses[i].ok()) {
-            auto doc = doc_schema::Schema::ParseFromString(values[i].data());
-            auto metadata = DocumentMetadata(ids[i], doc);
-            docs.push_back(metadata);
+        if (statuses[i].ok() && values[i].size() > 0) {
+            // auto doc = values[i].data();
+            auto doc = values[i].ToString();
+            std::unique_ptr<DocumentMetadata> metadata = DocumentMetadata::deserialize(doc);
+
+            for(auto& [key, value]: metadata->metadata) {
+                VLOG(100) << "Metadata: " << key << " -> " << value;
+            }
+
+            docs.push_back(std::move(metadata));
             // release the memory used by rocksdb for this value.
             values[i].Reset();
         } else {
-            LOG(ERROR) << "Could not find codes for doc id: " << ids[i];
+            LOG(ERROR) << "Could not find metadata for doc id: " << ids[i];
             LOG(ERROR) << "rocksdb: " << statuses[i].ToString();
             docs.push_back(nullptr);
         }
@@ -479,8 +484,8 @@ void WritableRocksDBInvertedList::add(
 
     // store document metadata.
     std::string metadata_serialized = doc->serialize_metadata();
-    const rocksdb::Slice metadata_slice(
-            metadata_serialized.data(), metadata_serialized.size());
+
+    const rocksdb::Slice metadata_slice(metadata_serialized);
     rocksdb::Status metadata_status = batch.Put(
             column_families[kDocColumnIndex],
             rocksdb::Slice(fks),

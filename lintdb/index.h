@@ -145,7 +145,6 @@ struct IndexIVF {
         const size_t k,
         const SearchOptions& opts = SearchOptions()) const;
 
-    [[deprecated("Use search with n_probe in Options.")]]
     std::vector<SearchResult> search(
             const uint64_t tenant,
             const float* data,
@@ -155,7 +154,6 @@ struct IndexIVF {
             const size_t k,
             const SearchOptions& opts = SearchOptions()) const;
 
-    [[deprecated("Use search with n_probe in Options.")]]
     std::vector<SearchResult> search(
             const uint64_t tenant,
             const EmbeddingBlock& block,

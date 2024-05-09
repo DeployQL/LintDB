@@ -205,7 +205,7 @@ std::vector<SearchResult> IndexIVF::search(
     const uint64_t tenant,
     const EmbeddingBlock& block,
     const size_t k,
-    const SearchOptions& opts = SearchOptions()) const {
+    const SearchOptions& opts) const {
     return search(
         tenant,
         block.embeddings.data(),
@@ -222,7 +222,7 @@ std::vector<SearchResult> IndexIVF::search(
         const int n,
         const int dim,
         const size_t k,
-        const SearchOptions& opts = SearchOptions()) const {
+        const SearchOptions& opts) const {
     return search(
             tenant,
             data,
@@ -270,15 +270,17 @@ std::vector<SearchResult> IndexIVF::search(
     auto results =
             this->retriever->retrieve(tenant, query_span, n, k, plaid_options);
 
-    std::vector<idx_t> ids = std::transform(
-            results.begin(),
-            results.end(),
-            std::vector<idx_t>(results.size()),
-            [](const SearchResult& sr) { return sr.id; });
+    std::vector<idx_t> ids;
+    for (auto& result : results) {
+        ids.push_back(result.id);
+    }
     auto metadata = this->index_->get_metadata(tenant, ids);
 
     for (size_t i = 0; i < results.size(); i++) {
-        results[i].metadata = metadata[i].metadata;
+        auto md= metadata[i]->metadata;
+        for(auto& m : md) {
+            results[i].metadata[m.first] = m.second;
+        }
     }
 
     return results;
@@ -331,7 +333,7 @@ void IndexIVF::merge(const std::string path) {
 
     rocksdb::Options options;
     options.create_if_missing = false;
-    options.create_missing_column_families = false;
+    options.create_missing_column_families = true;
 
     auto cfs = create_column_families();
     std::vector<rocksdb::ColumnFamilyHandle*> other_cfs;

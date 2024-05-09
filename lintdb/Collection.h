@@ -6,6 +6,7 @@
 #include "lintdb/api.h"
 #include <string>
 #include <vector>
+#include <map>
 
 namespace lintdb {
     struct CollectionOptions {
@@ -26,7 +27,7 @@ namespace lintdb {
          * @param id The document id.
          * @param text The text to add.
         */
-        void add(const uint64_t tenant, const uint64_t id, const std::string& text) const;
+        void add(const uint64_t tenant, const uint64_t id, const std::string& text, const std::map<std::string, std::string>& metadata) const;
 
         /**
          * Search the index for similar documents.
@@ -41,6 +42,8 @@ namespace lintdb {
             const std::string& text, 
             const size_t k, 
             const SearchOptions& opts=SearchOptions()) const;
+
+        void train(const std::vector<std::string> texts);
 
         private:
             IndexIVF* index;

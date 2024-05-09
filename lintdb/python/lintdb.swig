@@ -5,13 +5,21 @@
 #define SWIG_FILE_WITH_INIT
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 
+#include <stdint.h>
+#include <omp.h>
+#include <map>
+#include <utility>
+#include <string>
+#include <memory>
+#include <cstdint>
+
+#include "lintdb/SearchResult.h"
 #include "lintdb/index.h"
 #include "lintdb/SearchOptions.h"
 #include "lintdb/RawPassage.h"
-#include "lintdb/index_builder/IndexBuilder.h"
+#include "lintdb/Collection.h"
 #include "lintdb/exception.h"
-#include <stdint.h>
-#include <omp.h>
+
 #include <faiss/impl/FaissException.h>
 #include <numpy/arrayobject.h>
 
@@ -25,7 +33,9 @@ typedef int64_t idx_t;
 %include "std_unique_ptr.i"
 %include "numpy.i"
 %include <typemaps.i>
-%include <std_string.i>
+%include std_string.i
+%include std_pair.i
+%include std_map.i
 %include cpointer.i
 
 %include <stdint.i>
@@ -34,11 +44,11 @@ typedef int64_t idx_t;
 %apply int64_t { idx_t };
 
 %include <std_vector.i>
-// the below typedef let's us compile, but python will segfault. perhaps this isn't aproblem
-// with SWIG, but we never enter the function in c++.
-// typedef lintdb::RawPassage RawPassage;
 
 namespace std {
+    
+    %template(MetadataMap) std::map<std::string, std::string>;
+
     %template(FloatVector) vector<float>;
     %template(IdxVector) vector<idx_t>;
     // the below work to use append to our own vector, but not for add.
@@ -46,14 +56,43 @@ namespace std {
     %template(RawPassagePtrVector) vector<lintdb::RawPassage *>;
     %template(RawPassageConstPtrVector) vector<lintdb::RawPassage const *>;
     %template(SearchResultVector) vector<lintdb::SearchResult>;
+    %template() vector<std::string>;
 }
-// these do not work fo rappending.
-// %template(RawPassageVector) std::vector<RawPassage>;
+
 
 %init %{
     /* needed, else crash at runtime */
     import_array();
 %}
+
+%template() std::map<std::string, std::string>;
+// %template() std::pair<swig::SwigPtr_PyObject, swig::SwigPtr_PyObject>;
+// %template(pymap) std::map<swig::SwigPtr_PyObject, swig::SwigPtr_PyObject>;
+
+// Apply a typemap for SearchResult map results.
+%typemap(out) std::map lintdb::SearchResult::metadata  {
+    PyObject* obj = PyDict_New();
+    for (const auto& it : $1) {
+        PyObject* key = PyUnicode_FromString(it->first.c_str());
+        PyObject* value = PyUnicode_FromString(it->second.c_str());
+        PyDict_SetItem(obj, key, value);
+        Py_XDECREF(key);
+        Py_XDECREF(value);
+    }
+    $result = SWIG_Python_AppendOutput($result, obj);
+}
+
+%typemap(out) std::map *lintdb::SearchResult::metadata  {
+    PyObject* obj = PyDict_New();
+    for (const auto& it : *$1) {
+        PyObject* key = PyUnicode_FromString(it.first.c_str());
+        PyObject* value = PyUnicode_FromString(it.second.c_str());
+        PyDict_SetItem(obj, key, value);
+        Py_XDECREF(key);
+        Py_XDECREF(value);
+    }
+    $result = SWIG_Python_AppendOutput($result, obj);
+}
 
 // RawPassage constructor.
 %apply (float* IN_ARRAY2, int DIM1, int DIM2) {(const float* block, int num_tokens, int dim)};
@@ -66,11 +105,6 @@ namespace std {
 %apply (float* IN_ARRAY2, int DIM1, int DIM2) {(float* data, int n, int dim)};
 
 
-// %nodefaultctor IndexIVF;
-
-// %ignore IndexIVF(std::string path, Configuration& config);
-// %ignore IndexIVF::IndexIVF(const IndexIVF&, const std::string);
-// %ignore IndexIVF(const IndexIVF& other, const std::string path);
 // below works to completely ignore the search methods overall.
 // %ignore search;
 %ignore search(
@@ -130,4 +164,4 @@ namespace std {
 %include "lintdb/SearchOptions.h"
 %include "lintdb/SearchResult.h"
 %include "lintdb/index.h"
-%include "lintdb/index_builder/IndexBuilder.h"
+%include "lintdb/Collection.h"
