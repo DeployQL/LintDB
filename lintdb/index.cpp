@@ -26,6 +26,7 @@
 #include "lintdb/retriever/Retriever.h"
 #include "lintdb/schema/util.h"
 #include "lintdb/util.h"
+#include "lintdb/version.h"
 
 namespace lintdb {
 std::ostream& operator<<(std::ostream& os, const Configuration& config) {
@@ -52,7 +53,7 @@ IndexIVF::IndexIVF(std::string path, bool read_only)
             this->config.num_subquantizers};
     this->encoder = DefaultEncoder::load(path, config);
 
-    initialize_inverted_list();
+    initialize_inverted_list(index_config.lintdb_version);
 }
 
 IndexIVF::IndexIVF(std::string path, Configuration& config)
@@ -77,16 +78,18 @@ IndexIVF::IndexIVF(
         IndexEncoding quantizer_type,
         bool read_only)
         : read_only(read_only), path(path) {
-    LINTDB_THROW_IF_NOT(nlist <= std::numeric_limits<code_t>::max());
+        LINTDB_THROW_IF_NOT(nlist <= std::numeric_limits<code_t>::max());
 
-    Configuration config = Configuration{
-            .nlist = nlist,
-            .nbits = binarize_nbits,
-            .niter = niter,
-            .dim = dim,
-            .num_subquantizers = num_subquantizers,
-            .quantizer_type = quantizer_type};
-    this->config = config;
+        Configuration config;
+        config.nlist = nlist;
+        config.nbits = binarize_nbits;
+        config.niter = niter;
+        config.dim = dim;
+        config.num_subquantizers = num_subquantizers;
+        config.quantizer_type = quantizer_type;
+        config.lintdb_version = LINTDB_VERSION;
+
+        this->config = config;
 
     this->encoder = std::make_unique<DefaultEncoder>(
             nlist,
@@ -96,7 +99,7 @@ IndexIVF::IndexIVF(
             num_subquantizers,
             quantizer_type);
 
-    initialize_inverted_list();
+    initialize_inverted_list(config.lintdb_version);
 }
 
 IndexIVF::IndexIVF(const IndexIVF& other, const std::string path) {
@@ -115,12 +118,12 @@ IndexIVF::IndexIVF(const IndexIVF& other, const std::string path) {
             this->config.quantizer_type,
             this->config.num_subquantizers};
     this->encoder = DefaultEncoder::load(other.path, config);
-    this->initialize_inverted_list();
+    this->initialize_inverted_list(this->config.lintdb_version);
 
     this->save();
 }
 
-void IndexIVF::initialize_inverted_list() {
+void IndexIVF::initialize_inverted_list(Version& version) {
     rocksdb::Options options;
     options.create_if_missing = true;
     options.create_missing_column_families = true;
@@ -139,7 +142,7 @@ void IndexIVF::initialize_inverted_list() {
                 std::shared_ptr<rocksdb::OptimisticTransactionDB>(ptr2);
         this->db = owned_ptr;
         auto index = std::make_shared<WritableRocksDBInvertedList>(
-                WritableRocksDBInvertedList(owned_ptr, this->column_families));
+                WritableRocksDBInvertedList(owned_ptr, this->column_families, version));
         this->index_ = index;
         this->inverted_list_ = index;
     } else {
@@ -151,7 +154,7 @@ void IndexIVF::initialize_inverted_list() {
         auto owned_ptr = std::shared_ptr<rocksdb::DB>(ptr);
         this->db = owned_ptr;
         auto index = std::make_shared<ReadOnlyRocksDBInvertedList>(
-                ReadOnlyRocksDBInvertedList(owned_ptr, this->column_families));
+                ReadOnlyRocksDBInvertedList(owned_ptr, this->column_families, version));
         this->index_ = index;
         this->inverted_list_ = index;
     }
@@ -254,10 +257,6 @@ std::vector<SearchResult> IndexIVF::search(
     // block: (num_tokens x dimensions)
     // centroids: (nlist x dimensions)
     // result: (num_tokens x nlist)
-    const float centroid_score_threshold = opts.centroid_score_threshold;
-    const size_t total_centroids_to_calculate = config.nlist;
-    const size_t k_top_centroids = opts.k_top_centroids;
-
     gsl::span<const float> query_span = gsl::span(data, n);
     RetrieverOptions plaid_options = RetrieverOptions{
             .total_centroids_to_calculate = config.nlist,
@@ -274,12 +273,14 @@ std::vector<SearchResult> IndexIVF::search(
     for (auto& result : results) {
         ids.push_back(result.id);
     }
-    auto metadata = this->index_->get_metadata(tenant, ids);
+    if(config.lintdb_version.metadata_enabled) {
+        auto metadata = this->index_->get_metadata(tenant, ids);
 
-    for (size_t i = 0; i < results.size(); i++) {
-        auto md= metadata[i]->metadata;
-        for(auto& m : md) {
-            results[i].metadata[m.first] = m.second;
+        for (size_t i = 0; i < results.size(); i++) {
+            auto md= metadata[i]->metadata;
+            for(auto& m : md) {
+                results[i].metadata[m.first] = m.second;
+            }
         }
     }
 
@@ -366,6 +367,7 @@ void IndexIVF::write_metadata() {
 
     auto quantizer_type = serialize_encoding(this->config.quantizer_type);
     metadata["quantizer_type"] = Json::String(quantizer_type);
+    metadata["lintdb_version"] = Json::String(LINTDB_VERSION_STRING);
 
     Json::StyledWriter writer;
     out << writer.write(metadata);
@@ -394,6 +396,9 @@ Configuration IndexIVF::read_metadata(std::string path) {
 
     auto quantizer_type = metadata["quantizer_type"].asString();
     config.quantizer_type = deserialize_encoding(quantizer_type);
+
+    std::string version = metadata.get("lintdb_version", "0.0.0").asString();
+    config.lintdb_version = Version(version);
 
     return config;
 }

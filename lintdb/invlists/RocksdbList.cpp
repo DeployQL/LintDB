@@ -37,8 +37,9 @@ RocksDBIterator::RocksDBIterator(
 template <typename DBType>
 RocksDBInvertedList<DBType>::RocksDBInvertedList(
         std::shared_ptr<DBType> db,
-        std::vector<rocksdb::ColumnFamilyHandle*>& column_families)
-        : db_(db), column_families(column_families) {}
+        std::vector<rocksdb::ColumnFamilyHandle*>& column_families,
+        Version& version)
+        : db_(db), column_families(column_families), version(version) {}
 
 template <typename DBType>
 std::unique_ptr<Iterator> RocksDBInvertedList<DBType>::get_iterator(
@@ -409,10 +410,12 @@ void RocksDBInvertedList<DBType>::merge(
 
 WritableRocksDBInvertedList::WritableRocksDBInvertedList(
         std::shared_ptr<rocksdb::OptimisticTransactionDB> db,
-        std::vector<rocksdb::ColumnFamilyHandle*>& column_families)
+        std::vector<rocksdb::ColumnFamilyHandle*>& column_families,
+        Version& version)
         : RocksDBInvertedList<rocksdb::OptimisticTransactionDB>(
                   db,
-                  column_families) {}
+                  column_families,
+                  version) {}
 
 void WritableRocksDBInvertedList::add(
         const uint64_t tenant,
@@ -483,24 +486,27 @@ void WritableRocksDBInvertedList::add(
     LINTDB_THROW_IF_NOT(forward_status.ok());
 
     // store document metadata.
-    std::string metadata_serialized = doc->serialize_metadata();
+    if (this->version.metadata_enabled) {
+        std::string metadata_serialized = doc->serialize_metadata();
 
-    const rocksdb::Slice metadata_slice(metadata_serialized);
-    rocksdb::Status metadata_status = batch.Put(
-            column_families[kDocColumnIndex],
-            rocksdb::Slice(fks),
-            metadata_slice);
+        const rocksdb::Slice metadata_slice(metadata_serialized);
+        rocksdb::Status metadata_status = batch.Put(
+                column_families[kDocColumnIndex],
+                rocksdb::Slice(fks),
+                metadata_slice);
 
-    auto status = db_->Write(wo, &batch);
-    assert(status.ok());
+        auto status = db_->Write(wo, &batch);
+        assert(status.ok());
 
-    LINTDB_THROW_IF_NOT(status.ok());
+        LINTDB_THROW_IF_NOT(status.ok());
+    }
 };
 
 ReadOnlyRocksDBInvertedList::ReadOnlyRocksDBInvertedList(
         std::shared_ptr<rocksdb::DB> db,
-        std::vector<rocksdb::ColumnFamilyHandle*>& column_families)
-        : RocksDBInvertedList<rocksdb::DB>(db, column_families) {}
+        std::vector<rocksdb::ColumnFamilyHandle*>& column_families,
+        Version& version)
+        : RocksDBInvertedList<rocksdb::DB>(db, column_families, version) {}
 
 void ReadOnlyRocksDBInvertedList::add(
         const uint64_t tenant,

@@ -1,12 +1,15 @@
 #include "lintdb/Collection.h"
 #include "lintdb/RawPassage.h"
 #include <glog/logging.h>
+#include <iostream>
+#include "lintdb/utils/progress_bar.h"
+#include <chrono>
 
 namespace lintdb {
     Collection::Collection(IndexIVF* index, const CollectionOptions& opts) {
         this->index = index;
         this->model = std::make_unique<EmbeddingModel>(opts.model_file);
-        this->tokenizer = std::make_unique<Tokenizer>(opts.tokenizer_file);
+        this->tokenizer = std::make_unique<Tokenizer>(opts.tokenizer_file, opts.max_length);
     }
 
     void Collection::add(const uint64_t tenant, const uint64_t id, const std::string& text, const std::map<std::string, std::string>& metadata) const {
@@ -58,7 +61,14 @@ namespace lintdb {
     void Collection::train(const std::vector<std::string> texts) {
         std::vector<float> embeddings;
         size_t num_embeddings = 0;
+
+        progressbar bar(texts.size());
+        bar.set_todo_char(" ");
+        bar.set_done_char("█");
+
         for(auto text: texts) {
+            bar.update();
+
             auto ids = tokenizer->encode(text);
 
             ModelInput input;

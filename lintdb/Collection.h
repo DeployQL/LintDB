@@ -12,6 +12,7 @@ namespace lintdb {
     struct CollectionOptions {
         std::string model_file;
         std::string tokenizer_file;
+        size_t max_length = 512;
     };
     /**
      * Collection is a collection of documents. Instead of dealing directly with vectors, this

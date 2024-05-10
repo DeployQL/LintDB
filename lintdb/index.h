@@ -18,6 +18,7 @@
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/retriever/PlaidRetriever.h"
 #include "lintdb/retriever/Retriever.h"
+#include "lintdb/version.h"
 
 // forward declare these classes and avoid including the rocksdb headers.
 namespace rocksdb {
@@ -35,6 +36,7 @@ static const std::string METADATA_FILENAME = "_lintdb_metadata.json";
  *
  */
 struct Configuration {
+    Version lintdb_version; /// the current version of the index. Used internally for feature compatibility.
     size_t nlist = 256; /// the number of centroids to train.
     size_t nbits = 2;   /// the number of bits to use in residual compression.
     size_t niter = 10;  /// the number of iterations to use during training.
@@ -50,6 +52,8 @@ struct Configuration {
                 quantizer_type == other.quantizer_type &&
                 num_subquantizers == other.num_subquantizers;
     }
+
+    Configuration() = default;
 };
 
 /**
@@ -221,7 +225,7 @@ struct IndexIVF {
     std::unique_ptr<Retriever> retriever;
 
     // helper to initialize the inverted list.
-    void initialize_inverted_list();
+    void initialize_inverted_list(Version& version);
 
     /// the inverted list data structure.
     std::shared_ptr<InvertedList> inverted_list_;

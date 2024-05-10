@@ -57,6 +57,8 @@ set(
     schema/inverted_index_generated.h
     schema/mapping_generated.h
     schema/util.h
+    utils/progress_bar.h
+    version.h
 )
 
 set(LINT_DB_HEADERS ${LINT_DB_HEADERS} PARENT_SCOPE)

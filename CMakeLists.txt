@@ -16,6 +16,9 @@ project(lintdb
   DESCRIPTION "A multi-vector database for late interaction retrieval"
   LANGUAGES CXX
 )
+set(LINTDB_VERSION ${version})
+configure_file(lintdb/version.h.in ${CMAKE_CURRENT_SOURCE_DIR}/lintdb/version.h @ONLY)
+
 include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 17)

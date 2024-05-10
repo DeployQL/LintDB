@@ -18,7 +18,7 @@ namespace lintdb {
      * This equates to running a huggingface tokenizer.
     */
     struct Tokenizer {
-        Tokenizer(const std::string& path);
+        Tokenizer(const std::string& path, const size_t max_length);
         InputIds encode(const std::string& text) const;
         std::string decode(const InputIds& ids) const;
 
@@ -26,6 +26,7 @@ namespace lintdb {
 
         private:
             std::unique_ptr<tokenizers::Tokenizer> tokenizer;
+            const size_t max_length;
     };
 
     std::string LoadBytesFromFile(const std::string& path);

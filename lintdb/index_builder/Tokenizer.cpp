@@ -5,13 +5,18 @@
 
 
 namespace lintdb {
-    Tokenizer::Tokenizer(const std::string& path) {
+    Tokenizer::Tokenizer(const std::string& path, const size_t max_length): max_length(max_length) {
         auto blob = LoadBytesFromFile(path);
         tokenizer = tokenizers::Tokenizer::FromBlobJSON(blob);
     }
 
     InputIds Tokenizer::encode(const std::string& text) const {
-        return tokenizer->Encode(text);
+        InputIds ids = tokenizer->Encode(text);
+        if(ids.size() > max_length) {
+            ids.resize(max_length);
+        }
+
+        return ids;
     }
 
     std::string Tokenizer::decode(const InputIds& ids) const {

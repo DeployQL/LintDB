@@ -6,7 +6,7 @@
 
 TEST(TokenizerTest, TestTokenizers) {
     std::string path = "colbert_tokenizer.json";
-    lintdb::Tokenizer tokenizer(path);
+    lintdb::Tokenizer tokenizer(path, 512);
     std::string text = "hello, world!";
     auto ids = tokenizer.encode(text);
     auto decoded = tokenizer.decode(ids);
@@ -18,7 +18,7 @@ TEST(EmbeddingModelTest, TestModel) {
     lintdb::EmbeddingModel model(path);
 
     std::string tok_path = "colbert_tokenizer.json";
-    lintdb::Tokenizer tokenizer(tok_path);
+    lintdb::Tokenizer tokenizer(tok_path, 512);
     std::string text = "hello, world!";
     auto ids = tokenizer.encode(text);
 
