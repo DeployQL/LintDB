@@ -19,12 +19,12 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: actions/checkout@v3
         with:
-          submodules: true
+          submodules: recursive
           # This is useful to avoid https://github.com/microsoft/vcpkg/issues/25349
           # which is caused by missing Git history on the vcpkg submodule which ports 
           # try to access. 
           # Do not use if not needed, since it slows down the checkout of sources.
-          fetch-depth: 0
+          fetch-depth: 1
 
       - uses: lukka/get-cmake@latest
       - name: Setup vcpkg
