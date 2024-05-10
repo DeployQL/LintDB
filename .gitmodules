@@ -3,4 +3,4 @@
 	url = https://github.com/Microsoft/vcpkg.git
 [submodule "lib/tokenizers-cpp"]
 	path = lib/tokenizers-cpp
-	url = git@github.com:DeployQL/tokenizers-cpp.git
+	url = https://github.com/DeployQL/tokenizers-cpp.git
