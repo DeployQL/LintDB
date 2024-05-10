@@ -22,8 +22,8 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: actions/checkout@v3
         with:
-          submodules: true
-          fetch-depth: 0
+          submodules: 'recursive'
+          fetch-depth: 1
       - uses: lukka/get-cmake@latest
 
       - name: Conda environment creation and activation
