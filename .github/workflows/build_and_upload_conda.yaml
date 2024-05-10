@@ -24,6 +24,9 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 1
+      - name: submodule init
+        run: |
+          git submodule update --init --recursive
       - uses: lukka/get-cmake@latest
 
       - name: Conda environment creation and activation
