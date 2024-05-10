@@ -25,7 +25,9 @@ jobs:
           # try to access. 
           # Do not use if not needed, since it slows down the checkout of sources.
           fetch-depth: 1
-
+      - name: submodule init
+        run: |
+          git submodule update --init --recursive
       - uses: lukka/get-cmake@latest
       - name: Setup vcpkg
         uses: lukka/run-vcpkg@v11
