@@ -12,6 +12,7 @@
 #include <gsl/span>
 #include "lintdb/util.h"
 #include <unordered_set>
+#include <map>
 
 using ::testing::TestWithParam;
 using ::testing::Values;
@@ -337,6 +338,58 @@ INSTANTIATE_TEST_SUITE_P(IndexTest, IndexTest, Values(
         return serialized;
     }
 );
+
+
+TEST_P(IndexTest, SearchWithMetadataCorrectly) {
+    size_t dim = 128;
+    // we'll generate num_docs * num_tokens random vectors for training.
+    // keep in mind this needs to be larger than the number of dimensions.
+    size_t num_docs = 100;
+    size_t num_tokens = 100;
+
+    size_t kclusters = 250; // number of centroids to calculate.
+
+    size_t centroid_bits = 2;
+    std::filesystem::path path = std::filesystem::temp_directory_path();
+    auto temp_db = path.append("test_index");
+    // buffer for the randomly created vectors.
+    // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
+    std::vector<float> buf(dim * (num_docs * num_tokens));
+    // fake data where every vector is either all 1s,2s...9s. 
+    for(size_t i=0; i<num_docs * num_tokens; i++) {
+        for(size_t j=0; j<dim; j++) {
+            buf[i*dim + j] = i%11 + 1;
+        }
+    }
+    // normalize before training. ColBERT returns normalized embeddings.
+    lintdb::normalize_vector(buf.data(), num_docs * num_tokens, dim);
+
+    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
+
+    index.train(num_docs * num_tokens, buf);
+
+    EXPECT_EQ(index.config.nlist, 250);
+
+    std::vector<float> fake_doc(dim * num_tokens, 3);
+    lintdb::normalize_vector(fake_doc.data(), num_tokens, dim);
+
+    lintdb::EmbeddingBlock block{fake_doc.data(), num_tokens, dim};
+
+    lintdb::RawPassage doc(fake_doc.data(), num_tokens, dim, 1, std::map<std::string, std::string>{{"title", "test"}});
+    std::vector<lintdb::RawPassage> docs = { doc };
+    index.add(lintdb::kDefaultTenant, docs);
+
+    auto opts = lintdb::SearchOptions();
+    opts.centroid_score_threshold = 0;
+    opts.k_top_centroids = 250;
+    auto results = index.search(lintdb::kDefaultTenant, block, 64, 5, opts);
+
+    EXPECT_GT(results.size(), 0);
+
+    auto actual = results[0].id;
+    EXPECT_EQ(actual, 1);
+    EXPECT_EQ(results[0].metadata.at("title"), "test");
+}
 
 
 int main(int argc, char **argv) {

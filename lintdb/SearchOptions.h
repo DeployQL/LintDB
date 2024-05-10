@@ -30,9 +30,10 @@ struct SearchOptions {
                             /// useful for debugging.
     float centroid_score_threshold =
             0.45;               /// the threshold for centroid scores.
-    size_t k_top_centroids = 2; /// the number of top centroids to consider.
+    size_t k_top_centroids = 2; /// the number of top centroids to consider per token.
     size_t num_second_pass =
             1024; /// the number of second pass candidates to consider.
+    size_t n_probe = 32; /// the number of centroids to search overall.
 
     SearchOptions() : expected_id(-1){};
 };

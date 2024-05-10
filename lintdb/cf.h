@@ -24,19 +24,23 @@ rocksdb::ColumnFamilyOptions create_index_table_options() {
 };
 } // namespace
 std::vector<rocksdb::ColumnFamilyDescriptor> create_column_families() {
-    return {rocksdb::ColumnFamilyDescriptor(
+    return {
+        rocksdb::ColumnFamilyDescriptor(
                     rocksdb::kDefaultColumnFamilyName,
                     rocksdb::ColumnFamilyOptions()),
-            rocksdb::ColumnFamilyDescriptor(
+        rocksdb::ColumnFamilyDescriptor(
                     kIndexColumnFamily, create_index_table_options()),
-            rocksdb::ColumnFamilyDescriptor(
+        rocksdb::ColumnFamilyDescriptor(
                     kForwardColumnFamily, rocksdb::ColumnFamilyOptions()),
-            rocksdb::ColumnFamilyDescriptor(
+        rocksdb::ColumnFamilyDescriptor(
                     kCodesColumnFamily, rocksdb::ColumnFamilyOptions()),
-            rocksdb::ColumnFamilyDescriptor(
+        rocksdb::ColumnFamilyDescriptor(
                     kResidualsColumnFamily, rocksdb::ColumnFamilyOptions()),
-            rocksdb::ColumnFamilyDescriptor(
-                    kMappingColumnFamily, rocksdb::ColumnFamilyOptions())};
+        rocksdb::ColumnFamilyDescriptor(
+                    kMappingColumnFamily, rocksdb::ColumnFamilyOptions()),
+        rocksdb::ColumnFamilyDescriptor(
+                    kDocColumnFamily, rocksdb::ColumnFamilyOptions())
+};
 }
 
 } // namespace lintdb

@@ -44,6 +44,9 @@ struct ForwardIndex {
     virtual std::vector<std::unique_ptr<DocumentResiduals>> get_residuals(
         const uint64_t tenant,
         const std::vector<idx_t>& ids) const = 0;
+    virtual std::vector<std::unique_ptr<DocumentMetadata>> get_metadata(
+        const uint64_t tenant,
+        const std::vector<idx_t>& ids) const = 0;
     virtual std::vector<idx_t> get_mapping(const uint64_t tenant, idx_t id) const = 0;
 
     virtual void add(const uint64_t tenant, std::unique_ptr<EncodedDocument> docs) = 0;

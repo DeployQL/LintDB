@@ -16,3 +16,6 @@ target_link_libraries(bench_lintdb PRIVATE OpenBLAS::OpenBLAS)
 find_package(LAPACK CONFIG REQUIRED)
 target_link_libraries(bench_lintdb PRIVATE LAPACK::LAPACK)
 endif()
+
+# configure_file(${PROJECT_SOURCE_DIR}/assets/colbert_tokenizer.json colbert_tokenizer.json COPYONLY)
+# configure_file(${PROJECT_SOURCE_DIR}/assets/model.onnx model.onnx COPYONLY)

@@ -93,7 +93,7 @@ std::unique_ptr<EncodedDocument> DefaultEncoder::encode_vectors(
                 num_tokens, raw_residuals.data(), residual_codes.data());
 
         return std::make_unique<EncodedDocument>(EncodedDocument(
-                coarse_idx, residual_codes, num_tokens, doc.id));
+                coarse_idx, residual_codes, num_tokens, doc.id, doc.metadata));
     } else {
         const residual_t* byte_ptr =
                 reinterpret_cast<const residual_t*>(raw_residuals.data());
@@ -101,7 +101,7 @@ std::unique_ptr<EncodedDocument> DefaultEncoder::encode_vectors(
                 byte_ptr, byte_ptr + sizeof(float) * raw_residuals.size());
 
         return std::make_unique<EncodedDocument>(EncodedDocument(
-                coarse_idx, residual_codes, num_tokens, doc.id));
+                coarse_idx, residual_codes, num_tokens, doc.id, doc.metadata));
     }
 }
 

@@ -1,12 +1,15 @@
 
 set(
     LINT_DB_SRC
+    Collection.cpp
     index.cpp
     quantizers/Binarizer.cpp
     Encoder.cpp
     quantizers/ProductEncoder.cpp
     quantizers/io.cpp
     util.cpp
+    index_builder/EmbeddingModel.cpp
+    index_builder/Tokenizer.cpp
     invlists/RocksdbList.cpp
     invlists/util.cpp
     invlists/EncodedDocument.cpp
@@ -22,6 +25,7 @@ set(
     api.h
     assert.h
     exception.h
+    Collection.h
     constants.h
     cf.h
     RawPassage.h
@@ -34,6 +38,8 @@ set(
     SearchOptions.h
     SearchResult.h
     util.h
+    index_builder/EmbeddingModel.h
+    index_builder/Tokenizer.h
     invlists/InvertedList.h
     invlists/Iterator.h
     invlists/EncodedDocument.h
@@ -51,6 +57,8 @@ set(
     schema/inverted_index_generated.h
     schema/mapping_generated.h
     schema/util.h
+    utils/progress_bar.h
+    version.h
 )
 
 set(LINT_DB_HEADERS ${LINT_DB_HEADERS} PARENT_SCOPE)
@@ -101,6 +109,22 @@ target_link_libraries(lintdb PRIVATE Microsoft.GSL::GSL)
 find_package(jsoncpp CONFIG REQUIRED)
 target_link_libraries(lintdb PRIVATE JsonCpp::JsonCpp)
 
+find_package(Bitsery CONFIG REQUIRED)
+target_link_libraries(lintdb PRIVATE Bitsery::bitsery)
+
+# # this is heuristically generated, and may not be correct
+# find_package(protobuf CONFIG REQUIRED)
+# target_link_libraries(lintdb PRIVATE protobuf::libprotoc protobuf::libprotobuf protobuf::libprotobuf-lite)
+
+# this is always dynamically linked! This places more responsbility on the user's environment!
+find_library(ONNXRUNTIME_LIBRARY onnxruntime)
+target_link_libraries(lintdb PRIVATE ${ONNXRUNTIME_LIBRARY})
+
+
+set(TOKENZIER_CPP_PATH ${PROJECT_SOURCE_DIR}/lib/tokenizers-cpp)
+add_subdirectory(${TOKENZIER_CPP_PATH} tokenizers EXCLUDE_FROM_ALL)
+target_include_directories(lintdb PRIVATE ${TOKENZIER_CPP_PATH}/include)
+target_link_libraries(lintdb PRIVATE tokenizers_cpp)
 
 if(MSVC)
   target_compile_options(lintdb PRIVATE /W4 /WX)
@@ -123,7 +147,8 @@ foreach(header ${LINT_DB_HEADERS})
   )
 endforeach()
 
-install(TARGETS lintdb
+
+install(TARGETS lintdb tokenizers_cpp tokenizers_c sentencepiece-static
   EXPORT lintdb-targets
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

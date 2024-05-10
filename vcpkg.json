@@ -1,16 +1,18 @@
 {
-    "name": "lintdb",
-    "version-string": "0.0.1",
-    "license": "MIT",
-    "dependencies": [
-        "faiss",
-        "rocksdb",
-        "flatbuffers",
-        "gtest",
-        "glog",
-        "jsoncpp",
-        "ms-gsl",
-        "benchmark",
-        "intel-mkl"
-    ]
+  "name": "lintdb",
+  "version-string": "0.0.1",
+  "license": "MIT",
+  "dependencies": [
+    "faiss",
+    "rocksdb",
+    "flatbuffers",
+    "gtest",
+    "glog",
+    "jsoncpp",
+    "ms-gsl",
+    "benchmark",
+    "intel-mkl",
+    "onnxruntime",
+    "bitsery"
+  ]
 }

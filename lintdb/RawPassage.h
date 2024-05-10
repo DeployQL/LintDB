@@ -4,6 +4,7 @@
 #include <vector>
 #include "lintdb/EmbeddingBlock.h"
 #include "lintdb/api.h"
+#include <map>
 
 namespace lintdb {
 /**
@@ -22,14 +23,17 @@ struct RawPassage {
     /// lookup after retrieval.
     idx_t id;
 
+    std::map<std::string, std::string> metadata;
+
     RawPassage() = default;
 
     RawPassage(
             const float* block, /// the embeddings for the document.
             int num_tokens,     /// the number of tokens in the document.
             int dim,            /// dimensions of the embeddings.
-            int64_t id)
-            : embedding_block(block, num_tokens, dim), id(id) {}
+            int64_t id,
+            const std::map<std::string, std::string>& metadata = {})
+            : embedding_block(block, num_tokens, dim), id(id), metadata(metadata) {}
 };
 } // namespace lintdb
 

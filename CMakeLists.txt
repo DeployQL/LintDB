@@ -16,13 +16,16 @@ project(lintdb
   DESCRIPTION "A multi-vector database for late interaction retrieval"
   LANGUAGES CXX
 )
+set(LINTDB_VERSION ${version})
+configure_file(lintdb/version.h.in ${CMAKE_CURRENT_SOURCE_DIR}/lintdb/version.h @ONLY)
+
 include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 17)
 
 # set(BLA_VENDOR OpenBLAS)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -O3 -D_LIBCPP_DISABLE_AVAILABILITY")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -std=c++17 -O3 -D_LIBCPP_DISABLE_AVAILABILITY")
 
 # the below is caused by github actions failing to build flatbuffers.
 # therefore, we set this value so that we use a higher sdk version to build it.
@@ -33,6 +36,13 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET 10.13)
 # endif()
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+
+# download assets from huggingface.
+if(NOT EXISTS "assets/colbert_tokenizer.json")
+message("Downloading assets from huggingface.")
+file(DOWNLOAD "https://huggingface.co/colbert-ir/colbertv2.0/resolve/main/tokenizer.json" "assets/colbert_tokenizer.json")
+file(DOWNLOAD "https://huggingface.co/colbert-ir/colbertv2.0/resolve/main/model.onnx" "assets/model.onnx")
+endif()
 
 set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
 

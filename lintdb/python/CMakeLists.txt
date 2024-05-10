@@ -16,6 +16,9 @@ include(${SWIG_USE_FILE})
 
 include(UseSWIG)
 
+# below is useful for debugging typemaps. It will log how each object resolves its typemap.
+# set(CMAKE_SWIG_FLAGS "-debug-tmsearch")
+
 set(UseSWIG_TARGET_NAME_PREFERENCE STANDARD)
 set(SWIG_SOURCE_FILE_EXTENSIONS swig)
 

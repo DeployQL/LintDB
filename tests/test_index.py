@@ -75,7 +75,7 @@ class TestIndex(unittest.TestCase):
 
     def test_index_multitenancy(self):
         with tempfile.TemporaryDirectory(prefix="lintdb_test-multitenancy") as dir_one:
-            # create an index with 32 centroids, 128 dims, 2 bit compression, and 4 iterations during training. True == use compression.
+            # create an index with 32 centroids, 128 dims, 2 bit compression, and 4 iterations during training. 
             index_one = lintdb.IndexIVF(dir_one, 32, 128, 2, 4, 16, lintdb.IndexEncoding_BINARIZER)
 
             data = np.random.rand(1500, 128).astype('float32')
@@ -95,6 +95,33 @@ class TestIndex(unittest.TestCase):
             assert(len(result) == 1)
 
             assert(result[0].id == 3)
+
+    def test_collection(self):
+        with tempfile.TemporaryDirectory(prefix="lintdb_test-collection") as dir_one:
+            # create an index with 32 centroids, 128 dims, 2 bit compression, and 4 iterations during training.
+            index_one = lintdb.IndexIVF(dir_one, 32, 128, 2, 4, 16, lintdb.IndexEncoding_BINARIZER)
+
+            collection_options = lintdb.CollectionOptions()
+            collection_options.model_file = "assets/model.onnx"
+            collection_options.tokenizer_file = "assets/colbert_tokenizer.json"
+            collection = lintdb.Collection(index_one, collection_options)
+
+            collection.train(['hello world!'] * 1500)
+
+            collection.add(0, 1, "hello world!", {"key": "test"})
+
+            opts = lintdb.SearchOptions()
+            opts.n_probe = 250
+            results = collection.search(0, "hello world!", 10, opts)
+
+
+            assert(len(results) == 1)
+            assert(results[0].id == 1)
+            print("hello", results[0].metadata.keys())
+            print("hello", str(results[0].metadata.values()))
+            print("hello", results[0].metadata['key'])
+            assert(results[0].metadata['key'] == 'test')
+
 
 
 if __name__ == '__main__':

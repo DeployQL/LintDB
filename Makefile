@@ -21,7 +21,7 @@ build-python-mac:
 	cd builds/python/lintdb/python && python setup.py build
 
 test:
-	cd builds/debug && cmake -E env GLOG_v=100 GLOG_logtostderr=1 MKL_THREADING_LAYER=GNU ctest --output-on-failure
+	cd builds/debug && cmake -E env GLOG_logtostderr=1 MKL_THREADING_LAYER=GNU ctest --output-on-failure
 
 test-python: build-python
 # had to fix up conda to make this work--

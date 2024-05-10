@@ -7,10 +7,13 @@
 #include <rocksdb/utilities/optimistic_transaction_db.h>
 #include <iostream>
 #include <memory>
+#include <string>
 #include "lintdb/constants.h"
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/invlists/util.h"
 #include "lintdb/schema/util.h"
+#include "lintdb/invlists/Iterator.h"
+#include "lintdb/version.h"
 
 namespace lintdb {
 
@@ -60,7 +63,8 @@ template<typename DBType>
 struct RocksDBInvertedList : public InvertedList, public ForwardIndex {
     RocksDBInvertedList(
             std::shared_ptr<DBType> db,
-            std::vector<rocksdb::ColumnFamilyHandle*>& column_families);
+            std::vector<rocksdb::ColumnFamilyHandle*>& column_families,
+            Version& version);
 
     void add(const uint64_t tenant, std::unique_ptr<EncodedDocument> docs) override;
     void remove(const uint64_t tenant, std::vector<idx_t> ids) override;
@@ -80,8 +84,12 @@ struct RocksDBInvertedList : public InvertedList, public ForwardIndex {
             const uint64_t tenant,
             const std::vector<idx_t>& ids) const override;
     std::vector<idx_t> get_mapping(const uint64_t tenant, idx_t id) const override;
+    std::vector<std::unique_ptr<DocumentMetadata>> get_metadata(
+            const uint64_t tenant,
+            const std::vector<idx_t>& ids) const override;
 
     protected:
+    Version version;
     std::shared_ptr<DBType> db_;
     std::vector<rocksdb::ColumnFamilyHandle*>& column_families;
 };
@@ -89,7 +97,8 @@ struct RocksDBInvertedList : public InvertedList, public ForwardIndex {
 struct WritableRocksDBInvertedList : public RocksDBInvertedList<rocksdb::OptimisticTransactionDB> {
     WritableRocksDBInvertedList(
             std::shared_ptr<rocksdb::OptimisticTransactionDB> db,
-            std::vector<rocksdb::ColumnFamilyHandle*>& column_families);
+            std::vector<rocksdb::ColumnFamilyHandle*>& column_families,
+            Version& version);
 
     /**
      * Add transactionally adds data to the database.
@@ -102,7 +111,8 @@ struct WritableRocksDBInvertedList : public RocksDBInvertedList<rocksdb::Optimis
 struct ReadOnlyRocksDBInvertedList : public RocksDBInvertedList<rocksdb::DB> {
     ReadOnlyRocksDBInvertedList(
             std::shared_ptr<rocksdb::DB> db,
-            std::vector<rocksdb::ColumnFamilyHandle*>& column_families);
+            std::vector<rocksdb::ColumnFamilyHandle*>& column_families,
+            Version& version);
 
     void add(const uint64_t tenant, std::unique_ptr<EncodedDocument> docs) override;
     void remove(const uint64_t tenant, std::vector<idx_t> ids) override;

@@ -1,0 +1,8 @@
+{
+  "name": "onnxruntime",
+  "version": "1.17.3",
+  "description": "onnxruntime",
+  "homepage": "https://github.com/microsoft/onnxruntime",
+  "license": "MIT",
+  "supports": "(windows | linux | osx)"
+}
