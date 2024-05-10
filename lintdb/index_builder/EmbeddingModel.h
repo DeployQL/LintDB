@@ -4,6 +4,7 @@
 #include <string>
 #include <memory>
 #include "lintdb/index_builder/Tokenizer.h"
+#include <cstdint>
 
 namespace Ort {
     class Env;
@@ -19,7 +20,7 @@ namespace lintdb {
         AttentionMask attention_mask;        
     };
 
-    std::string print_shape(const std::vector<std::int64_t>& shape);
+    std::string print_shape(const std::vector<int64_t>& shape);
 
     Ort::Value vec_to_tensor(const std::vector<int32_t>& vec, const std::vector<int64_t>& shape);
 
