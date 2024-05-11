@@ -99,7 +99,7 @@ class TestIndex(unittest.TestCase):
     def test_collection(self):
         with tempfile.TemporaryDirectory(prefix="lintdb_test-collection") as dir_one:
             # create an index with 32 centroids, 128 dims, 2 bit compression, and 4 iterations during training.
-            index_one = lintdb.IndexIVF(dir_path, 32, 128, 2, 4, 16, lintdb.IndexEncoding_BINARIZER)
+            index_one = lintdb.IndexIVF(dir_one, 32, 128, 2, 4, 16, lintdb.IndexEncoding_BINARIZER)
 
             collection_options = lintdb.CollectionOptions()
             collection_options.model_file = "model.onnx"
@@ -117,9 +117,6 @@ class TestIndex(unittest.TestCase):
 
             assert(len(results) == 1)
             assert(results[0].id == 1)
-            print("hello", results[0].metadata.keys())
-            print("hello", str(results[0].metadata.values()))
-            print("hello", results[0].metadata['key'])
             assert(results[0].metadata['key'] == 'test')
 
 
