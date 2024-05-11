@@ -99,16 +99,16 @@ class TestIndex(unittest.TestCase):
     def test_collection(self):
         with tempfile.TemporaryDirectory(prefix="lintdb_test-collection") as dir_one:
             # create an index with 32 centroids, 128 dims, 2 bit compression, and 4 iterations during training.
-            index_one = lintdb.IndexIVF(dir_one, 32, 128, 2, 4, 16, lintdb.IndexEncoding_BINARIZER)
+            index_one = lintdb.IndexIVF(dir_path, 32, 128, 2, 4, 16, lintdb.IndexEncoding_BINARIZER)
 
             collection_options = lintdb.CollectionOptions()
-            collection_options.model_file = "assets/model.onnx"
-            collection_options.tokenizer_file = "assets/colbert_tokenizer.json"
+            collection_options.model_file = "model.onnx"
+            collection_options.tokenizer_file = "colbert_tokenizer.json"
             collection = lintdb.Collection(index_one, collection_options)
 
             collection.train(['hello world!'] * 1500)
 
-            collection.add(0, 1, "hello world!", {"key": "test"})
+            collection.add(0, 1, "hello world!", {"key": "metadata"})
 
             opts = lintdb.SearchOptions()
             opts.n_probe = 250
