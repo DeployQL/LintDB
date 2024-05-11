@@ -2,6 +2,12 @@ import unittest
 import lintdb
 import numpy as np
 import tempfile
+import os
+import urllib.request
+
+def get_file_if_not_exists(url, file):
+    if not os.path.exists(file):
+        urllib.request.urlretrieve(url, file)
 
 def normalized(a, axis=-1, order=2):
     l2 = np.atleast_1d(np.linalg.norm(a, order, axis))
@@ -97,6 +103,9 @@ class TestIndex(unittest.TestCase):
             assert(result[0].id == 3)
 
     def test_collection(self):
+        get_file_if_not_exists("https://huggingface.co/colbert-ir/colbertv2.0/resolve/main/model.onnx", "model.onnx")
+        get_file_if_not_exists("https://huggingface.co/colbert-ir/colbertv2.0/resolve/main/tokenizer.json", "colbert_tokenizer.json")
+        
         with tempfile.TemporaryDirectory(prefix="lintdb_test-collection") as dir_one:
             # create an index with 32 centroids, 128 dims, 2 bit compression, and 4 iterations during training.
             index_one = lintdb.IndexIVF(dir_one, 32, 128, 2, 4, 16, lintdb.IndexEncoding_BINARIZER)
