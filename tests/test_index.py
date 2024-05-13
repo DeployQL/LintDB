@@ -126,7 +126,7 @@ class TestIndex(unittest.TestCase):
 
             assert(len(results) == 1)
             assert(results[0].id == 1)
-            assert(results[0].metadata['key'] == 'test')
+            assert(results[0].metadata['key'] == 'metadata')
 
 
 
