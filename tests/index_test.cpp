@@ -32,7 +32,7 @@ class IndexTest : public TestWithParam<lintdb::IndexEncoding> {
 TEST_P(IndexTest, InitializesCorrectly) {
     size_t nbits = 4; // the number of bits to encode residual codes into.
     std::filesystem::path path = std::filesystem::temp_directory_path();
-    auto temp_db = path.append("test_index");
+    auto temp_db = path.append("XXXXXX.db");
 
     lintdb::IndexIVF index(temp_db.string(), 5, 128, 2, 4, 16, type);
 
@@ -50,7 +50,7 @@ TEST_P(IndexTest, TrainsCorrectly) {
 
     size_t centroid_bits = 1;
     std::filesystem::path path = std::filesystem::temp_directory_path();
-    auto temp_db = path.append("test_index");
+    auto temp_db = path.append("XXXXXX.db");
     // buffer for the randomly created vectors.
     // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
     std::vector<float> buf(dim * (num_docs * num_tokens));
@@ -110,7 +110,7 @@ TEST_P(IndexTest, TrainsWithCompressionCorrectly) {
 
     size_t centroid_bits = 2;
     std::filesystem::path path = std::filesystem::temp_directory_path();
-    auto temp_db = path.append("test_index");
+    auto temp_db = path.append("XXXXXX.db");
     // buffer for the randomly created vectors.
     // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
     std::vector<float> buf(dim * (num_docs * num_tokens));
@@ -183,7 +183,7 @@ TEST_P(IndexTest, SearchCorrectly) {
 
     size_t centroid_bits = 2;
     std::filesystem::path path = std::filesystem::temp_directory_path();
-    auto temp_db = path.append("test_index");
+    auto temp_db = path.append("XXXXXX.db");
     // buffer for the randomly created vectors.
     // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
     std::vector<float> buf(dim * (num_docs * num_tokens));
@@ -233,7 +233,7 @@ TEST_P(IndexTest, LoadsCorrectly) {
 
     size_t centroid_bits = 1;
     std::filesystem::path path = std::filesystem::temp_directory_path();
-    auto temp_db = path.append("test_index");
+    auto temp_db = path.append("XXXXXX.db");
     // buffer for the randomly created vectors.
     // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
     std::vector<float> buf(dim * (num_docs * num_tokens));
@@ -267,7 +267,7 @@ TEST_P(IndexTest, MergeCorrectly) {
 
     size_t centroid_bits = 2;
     std::filesystem::path path = std::filesystem::temp_directory_path();
-    auto temp_db = path.append("test_index_one");
+    auto temp_db = path.append("XXXXXX.db_one");
     // buffer for the randomly created vectors.
     // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
     std::vector<float> buf(dim * (num_docs * num_tokens));
@@ -298,7 +298,7 @@ TEST_P(IndexTest, MergeCorrectly) {
 
     // create a second db.
     std::filesystem::path path_two = std::filesystem::temp_directory_path();
-    auto second_db = path_two.append("test_index_two");
+    auto second_db = path_two.append("XXXXXX.db_two");
     // copy the first index to create the second db.
     auto index_two = lintdb::IndexIVF(index, second_db.string());
     lintdb::RawPassage doc_two(fake_doc.data(), num_tokens, dim, 2);
@@ -351,7 +351,7 @@ TEST_P(IndexTest, SearchWithMetadataCorrectly) {
 
     size_t centroid_bits = 2;
     std::filesystem::path path = std::filesystem::temp_directory_path();
-    auto temp_db = path.append("test_index");
+    auto temp_db = path.append("XXXXXX.db");
     // buffer for the randomly created vectors.
     // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
     std::vector<float> buf(dim * (num_docs * num_tokens));

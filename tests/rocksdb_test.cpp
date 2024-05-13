@@ -11,6 +11,7 @@
 #include "lintdb/invlists/RocksdbList.h"
 #include "lintdb/invlists/util.h"
 #include <rocksdb/slice.h>
+#include <map>
 
 TEST(RocksDBTests, KeyEncodesAndDecodesCorrectly) {
     // this loop exists because we hit a decoding error, and I want to make sure
@@ -81,25 +82,17 @@ TEST(RocksDBTests, ConcatNumbers) {
     EXPECT_EQ(decoded_id, id);
 }
 
-// TEST(RocksDBTests, InvertedListsWork) {
-//     std::filesystem::path path = std::filesystem::temp_directory_path();
-//     auto temp_db = path.append("test_index");
-//     rocksdb::Options options;
-//     options.create_if_missing = true;
-//     options.create_missing_column_families = true;
+TEST(RocksDBTests, MetadataSerialization) {
+    std::map<std::string, std::string> metadata = {
+        {"key", "metadata"},
+    };
+    lintdb::EncodedDocument test(std::vector<int64_t>(), std::vector<uint8_t>(), 1, 1, metadata);
 
-//     std::vector<rocksdb::ColumnFamilyHandle*> column_family_handles;
-//     auto cfs = lintdb::create_column_families();
-//     rocksdb::DB* db;
-//     std::string path = "ssomethign";
-//     rocksdb::Status s = rocksdb::DB::Open(
-//             options, path, cfs, &column_family_handles, &db);
-//     assert(s.ok());
+    std::string serialized = test.serialize_metadata();
+    auto slice = rocksdb::Slice(serialized);
 
-//     std::unique_ptr<lintdb::RocksDBInvertedList> ivf(new lintdb::RocksDBInvertedList(*db, column_family_handles));
+    auto st = slice.ToString();
+    auto decoded = lintdb::DocumentMetadata::deserialize(st);
 
-//     for(int i=0; i<100; i++) {
-
-//     }
-//     ivf->add(std::make_unique<lintdb::EncodedDocument>(1, 2, 3, 4, 5, 6, 7, 8, 9, 10));
-// }
+    EXPECT_EQ(metadata, decoded->metadata);
+}

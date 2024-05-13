@@ -103,6 +103,7 @@ class TestIndex(unittest.TestCase):
             assert(result[0].id == 3)
 
     def test_collection(self):
+        # these exist because in conda, we don't download the files using cmake.
         get_file_if_not_exists("https://huggingface.co/colbert-ir/colbertv2.0/resolve/main/model.onnx", "model.onnx")
         get_file_if_not_exists("https://huggingface.co/colbert-ir/colbertv2.0/resolve/main/tokenizer.json", "colbert_tokenizer.json")
         
@@ -117,7 +118,7 @@ class TestIndex(unittest.TestCase):
 
             collection.train(['hello world!'] * 1500)
 
-            collection.add(0, 1, "hello world!", {"key": "metadata"})
+            collection.add(0, 1, "hello world!", {"title": "metadata"})
 
             opts = lintdb.SearchOptions()
             opts.n_probe = 250
@@ -126,7 +127,7 @@ class TestIndex(unittest.TestCase):
 
             assert(len(results) == 1)
             assert(results[0].id == 1)
-            assert(results[0].metadata['key'] == 'metadata')
+            assert(results[0].metadata['title'] == 'metadata')
 
 
 

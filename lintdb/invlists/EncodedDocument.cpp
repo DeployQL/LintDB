@@ -62,7 +62,7 @@ std::unique_ptr<DocumentMetadata> DocumentMetadata::deserialize(std::string& met
     }
     using InputAdapter = bitsery::InputBufferAdapter<std::string>;
     std::map<std::string, std::string> md_obj;
-    auto state = bitsery::quickDeserialization(InputAdapter{metadata.begin(), 12}, md_obj);
+    auto state = bitsery::quickDeserialization(InputAdapter{metadata.begin(), metadata.size()}, md_obj);
 
     assert(state.first == bitsery::ReaderError::NoError && state.second);
 

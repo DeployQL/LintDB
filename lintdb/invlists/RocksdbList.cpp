@@ -347,13 +347,8 @@ std::vector<std::unique_ptr<DocumentMetadata>> RocksDBInvertedList<DBType>::get_
 
     for (size_t i = 0; i < ids.size(); i++) {
         if (statuses[i].ok() && values[i].size() > 0) {
-            // auto doc = values[i].data();
             auto doc = values[i].ToString();
             std::unique_ptr<DocumentMetadata> metadata = DocumentMetadata::deserialize(doc);
-
-            for(auto& [key, value]: metadata->metadata) {
-                VLOG(100) << "Metadata: " << key << " -> " << value;
-            }
 
             docs.push_back(std::move(metadata));
             // release the memory used by rocksdb for this value.
