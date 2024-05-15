@@ -58,14 +58,19 @@ IndexIVF::IndexIVF(std::string path, bool read_only)
 
 IndexIVF::IndexIVF(std::string path, Configuration& config)
         : config(config), path(path) {
-    IndexIVF(
-            path,
+    LINTDB_THROW_IF_NOT(config.nlist <= std::numeric_limits<code_t>::max());
+
+    this->config = config;
+
+    this->encoder = std::make_unique<DefaultEncoder>(
+            config.nlist,
+            config.nbits,
             config.nlist,
             config.dim,
-            config.nbits,
-            config.niter,
             config.num_subquantizers,
             config.quantizer_type);
+
+    initialize_inverted_list(config.lintdb_version);
 }
 
 IndexIVF::IndexIVF(

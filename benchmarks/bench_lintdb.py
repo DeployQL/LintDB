@@ -1,21 +1,12 @@
 import lintdb as ldb
-from datasets import load_dataset
-from collections import namedtuple
-from colbert import Indexer, Searcher
-from colbert.infra import Run, RunConfig, ColBERTConfig
-from colbert.data import Queries, Collection
-import os
-import sys
-import jsonlines
-from collections import defaultdict
-from tqdm import tqdm
+
 import time
 import numpy as np
 import typer
 import random 
+import tempfile
 from typing import List, Annotated
 from common import get_memory_usage
-from lotte.common import _evaluate_dataset, load_lotte
 
 try:
     from valgrind import callgrind_start_instrumentation, callgrind_stop_instrumentation, callgrind_dump_stats
@@ -80,6 +71,39 @@ def single_search(dataset:str='lifestyle', split:str='dev',profile=False, checkp
     print(f"Median memory usage: {np.median(memory):.2f}MB")
     print(f"95th percentile memory usage: {np.percentile(memory, 95):.2f}MB")
     print(f"99th percentile memory usage: {np.percentile(memory, 99):.2f}MB")
+
+
+@app.command()
+def collection(dataset:str='lifestyle', split:str='dev',profile=False, checkpoint:str='colbert-ir/colbertv2.0', index_path:str='experiments/py_index_bench_colbert-lifestyle-2024-04-03'):
+    latencies = []
+    memory = []
+
+    with tempfile.TemporaryDirectory(prefix="lintdb_bench_collection") as dir_one:
+        index = ldb.IndexIVF(index_path, 32768, 128, 2, 6, 16, ldb.IndexEncoding_BINARIZER)
+        opts = ldb.CollectionOptions()
+        opts.model_file = 'assets/model.onnx'
+        opts.tokenizer_file = 'assets/colbert_tokenizer.json'
+        collection = ldb.Collection(index, opts)
+        collection.train(['hello world!'] * 35000)
+        rankings = {}
+
+        count=0
+        for id in range(1000):
+            
+            start = time.perf_counter()
+            collection.add(0, id, "hello world!", {"title": "metadata"})
+            latencies.append((time.perf_counter() - start)*1000)
+
+            memory.append(get_memory_usage())
+
+            if count == 212:
+                break
+
+    
+    print(f"Average add latency: {np.mean(latencies):.2f}ms")
+    print(f"Median add latency: {np.median(latencies):.2f}ms")
+    print(f"95th percentile add latency: {np.percentile(latencies, 95):.2f}ms")
+    print(f"99th percentile add latency: {np.percentile(latencies, 99):.2f}ms")
 
     
 if __name__ == "__main__":
