@@ -116,7 +116,7 @@ std::vector<float> max_score_by_centroid(
     return max_scores;
 }
 
-float score_document_by_residuals(
+DocumentScore score_document_by_residuals(
         const gsl::span<const float>
                 query_vectors, // size: (num_query_tokens, num_dim)
         const size_t num_query_tokens,
@@ -161,22 +161,29 @@ float score_document_by_residuals(
         &out
     );
 
+    DocumentScore doc;
     // find the max score for each doc_token.
     std::vector<float> max_scores(n, 0);
     for (size_t i = 0; i < m; i++) {     // per num_doc_tokens
+        float max_token_score = 0.0;
         for (size_t j = 0; j < n; j++) { // per num_query_tokens
             auto score = output[i * n + j];
             if (score > max_scores[j]) {
                 max_scores[j] = score;
             }
+            if (score > max_token_score) {
+                max_token_score = score;
+            }
         }
+        doc.tokens.push_back(max_token_score);
     }
 
     float maxsim = 0;
     for (size_t i = 0; i < n; i++) {
         maxsim += max_scores[i];
     }
-    return maxsim;
+    doc.score = maxsim;
+    return doc;
 }
 
 } // namespace lintdb

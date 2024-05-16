@@ -36,7 +36,12 @@ float colbert_centroid_score(
         const size_t n_centroids, /// how many centroids there are. this may change based on how many scores we choose to calculate.
         const idx_t expected_id);
 
-float score_document_by_residuals(
+struct DocumentScore {
+        float score;
+        std::vector<float> tokens;
+};
+
+DocumentScore score_document_by_residuals(
         const gsl::span<const float>
                 query_vectors, // size: (num_query_tokens, num_dim)
         const size_t num_query_tokens,

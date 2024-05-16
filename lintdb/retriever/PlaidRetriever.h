@@ -8,6 +8,7 @@
 #include "lintdb/retriever/Retriever.h"
 #include <stddef.h>
 #include <gsl/span>
+#include <tuple>
 
 namespace lintdb {    
     /**
@@ -54,7 +55,7 @@ namespace lintdb {
             const RetrieverOptions& opts
         );
 
-        std::vector<std::pair<float, idx_t>> rank_phase_two(
+        std::vector<std::tuple<float, idx_t, DocumentScore>> rank_phase_two(
             const std::vector<idx_t>& top_25_ids,
             const std::vector<std::unique_ptr<DocumentCodes>>& doc_codes,
             const std::vector<std::unique_ptr<DocumentResiduals>>& doc_residuals,

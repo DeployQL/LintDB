@@ -27,6 +27,7 @@ namespace lintdb {
          * @param tenant The tenant id.
          * @param id The document id.
          * @param text The text to add.
+         * @param metadata a dictionary of metadata to store with the document. only accepts strings.
         */
         void add(const uint64_t tenant, const uint64_t id, const std::string& text, const std::map<std::string, std::string>& metadata) const;
 

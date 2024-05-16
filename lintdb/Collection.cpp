@@ -58,6 +58,24 @@ namespace lintdb {
         return index->search(tenant, output.data(), ids.size(), model->get_dims(), opts.n_probe, k, opts);
     }
 
+    std::vector<TokenScore> Collection::interpret(
+        const std::string& text,
+        const std::vector<float> scores
+    ) {
+        auto ids = tokenizer->encode(text);
+        std::vector<std::string> tokens;
+        for(auto id: ids) {
+            tokens.push_back(tokenizer->decode({id}));
+        }
+
+        std::vector<TokenScore> results;
+        for(size_t i = 0; i < ids.size(); i++) {
+            results.push_back({tokens[i], scores[i]});
+        }
+
+        return results;
+    }
+
     void Collection::train(const std::vector<std::string> texts) {
         std::vector<float> embeddings;
         size_t num_embeddings = 0;
