@@ -14,6 +14,12 @@ namespace lintdb {
         std::string tokenizer_file;
         size_t max_length = 512;
     };
+
+    struct TokenScore {
+        std::string token;
+        float score;
+    };
+
     /**
      * Collection is a collection of documents. Instead of dealing directly with vectors, this
      * class allows you to add and search for documents by text.
@@ -44,6 +50,11 @@ namespace lintdb {
             const std::string& text, 
             const size_t k, 
             const SearchOptions& opts=SearchOptions()) const;
+
+        std::vector<TokenScore> interpret(
+            const std::string& text,
+            const std::vector<float> scores
+        );
 
         void train(const std::vector<std::string> texts);
 
