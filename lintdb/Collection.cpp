@@ -1,5 +1,6 @@
 #include "lintdb/Collection.h"
 #include "lintdb/RawPassage.h"
+#include "lintdb/EmbeddingBlock.h"
 #include <glog/logging.h>
 #include <iostream>
 #include "lintdb/utils/progress_bar.h"
@@ -29,9 +30,46 @@ namespace lintdb {
         input.attention_mask = attn;
 
         auto output = model->encode(input);
-        
-        auto passage = RawPassage(output.data(), ids.size(), model->get_dims(), id, metadata);
+    
+        auto passage = RawPassage<EmbeddingBlock>(output.data(), ids.size(), model->get_dims(), id, metadata);
         index->add(tenant, {passage});
+    }
+
+    void Collection::add_batch(
+        const uint64_t tenant, 
+        const std::vector<RawPassage<std::string>> passages
+        ) const {
+        
+        std::vector<ModelInput> inputs;
+        for(auto passage: passages) {
+            auto ids = tokenizer->encode(passage.embedding_block);
+
+            ModelInput input;
+            input.input_ids = ids;
+
+            std::vector<int32_t> attn;
+            for(auto id: ids) {
+                if(id == 0) {
+                    attn.push_back(0);
+                } else {
+                    attn.push_back(1);
+                }
+            }
+            input.attention_mask = attn;
+
+            inputs.push_back(input);
+        }
+
+        auto output = model->encode(inputs);
+
+        std::vector<RawPassage<EmbeddingBlock>> embedded_passages;
+        for (size_t i = 0; i < passages.size(); i++) {
+            auto encoded_vector = output.get(i);
+            auto passage = RawPassage<EmbeddingBlock>(encoded_vector.data(), inputs[i].input_ids.size(), model->get_dims(), passages[i].id, passages[i].metadata);
+            embedded_passages.push_back(passage);
+        }
+
+        index->add(tenant, embedded_passages);
     }
 
     std::vector<SearchResult> Collection::search(
@@ -70,6 +108,9 @@ namespace lintdb {
 
         std::vector<TokenScore> results;
         for(size_t i = 0; i < ids.size(); i++) {
+            if (tokenizer->is_special(ids[i])) {
+                continue;
+            }
             results.push_back({tokens[i], scores[i]});
         }
 

@@ -36,7 +36,7 @@ TEST(EncoderTest, ResidualsAreEncodedCorrectly) {
 
     std::vector<float> fake_doc(dim * num_tokens, 2);
 
-    auto pass = lintdb::RawPassage(fake_doc.data(), num_tokens, dim, 1);
+    auto pass = lintdb::RawPassage<lintdb::EmbeddingBlock>(fake_doc.data(), num_tokens, dim, 1);
     auto encoded_doc = encoder.encode_vectors(pass);
 
     EXPECT_EQ(encoded_doc->residuals.size(), num_tokens * dim / (8 / binarize_bits)); // 100 tokens * 128 dim / 4 dimensions per byte = 3200 bytes.
@@ -68,7 +68,7 @@ TEST(EncoderTest, NoCompressionWorksCorrectly) {
 
     std::vector<float> fake_doc(dim * num_tokens, 2);
 
-    auto pass = lintdb::RawPassage(fake_doc.data(), num_tokens, dim, 1);
+    auto pass = lintdb::RawPassage<lintdb::EmbeddingBlock>(fake_doc.data(), num_tokens, dim, 1);
     auto encoded_doc = encoder.encode_vectors(pass);
 
     // our encoded residuals should be the same size they were before encoding, taking the float size into account.

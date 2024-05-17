@@ -7,6 +7,7 @@
 #include <string>
 #include <vector>
 #include "lintdb/RawPassage.h"
+#include "lintdb/EmbeddingBlock.h"
 #include "lintdb/SearchOptions.h"
 #include "lintdb/api.h"
 #include "lintdb/invlists/EncodedDocument.h"
@@ -42,7 +43,7 @@ struct Encoder {
      * the internal representation that we expect to see in the inverted lists.
      */
     virtual std::unique_ptr<EncodedDocument> encode_vectors(
-            const RawPassage& doc) = 0;
+            const RawPassage<EmbeddingBlock>& doc) = 0;
 
     /**
      * Decode vectors translates out of our internal representation.
@@ -138,7 +139,7 @@ struct DefaultEncoder : public Encoder {
     }
 
     std::unique_ptr<EncodedDocument> encode_vectors(
-            const RawPassage& doc) override;
+            const RawPassage<EmbeddingBlock>& doc) override;
 
     std::vector<float> decode_vectors(
             gsl::span<const code_t> codes,

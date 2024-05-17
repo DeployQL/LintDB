@@ -171,12 +171,12 @@ struct IndexIVF {
      * @param tenant the tenant to assign the document to.
      * @param docs a vector of RawPassages. This includes embeddings and ids.
      */
-    void add(const uint64_t tenant, const std::vector<RawPassage>& docs);
+    void add(const uint64_t tenant, const std::vector<RawPassage<EmbeddingBlock>>& docs);
 
     /**
      * Add a single document.
      */
-    void add_single(const uint64_t tenant, const RawPassage& doc);
+    void add_single(const uint64_t tenant, const RawPassage<EmbeddingBlock>& doc);
 
     /**
      * Remove deletes documents from the index by id.
@@ -189,7 +189,7 @@ struct IndexIVF {
     /**
      * Update is a convenience function for remove and add.
      */
-    void update(const uint64_t tenant, const std::vector<RawPassage>& docs);
+    void update(const uint64_t tenant, const std::vector<RawPassage<EmbeddingBlock>>& docs);
 
     /**
      * Merge will combine the index with another index.

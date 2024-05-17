@@ -175,7 +175,6 @@ DocumentScore score_document_by_residuals(
                 max_token_score = score;
             }
         }
-        doc.tokens.push_back(max_token_score);
     }
 
     float maxsim = 0;

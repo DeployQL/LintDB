@@ -6,6 +6,7 @@
 #include "lintdb/Encoder.h"
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/retriever/Retriever.h"
+#include "lintdb/retriever/plaid.h"
 #include <stddef.h>
 #include <gsl/span>
 #include <tuple>

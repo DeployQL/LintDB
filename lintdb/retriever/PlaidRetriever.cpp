@@ -154,6 +154,7 @@ std::vector<std::tuple<float, idx_t, DocumentScore>> PlaidRetriever::rank_phase_
         const gsl::span<const float> query_data,
         const size_t n,
         const RetrieverOptions& opts) {
+        
     std::vector<std::tuple<float, idx_t, DocumentScore>> actual_scores(top_25_ids.size());
 #pragma omp for schedule(dynamic, LINTDB_CHUNK_SIZE)
     for (int i = 0; i < top_25_ids.size(); i++) {
@@ -179,11 +180,14 @@ std::vector<std::tuple<float, idx_t, DocumentScore>> PlaidRetriever::rank_phase_
 
         actual_scores[i] = std::tuple<float, idx_t, DocumentScore>(score.score, top_25_ids[i], score);
     }
-    // according to the paper, we take the top 25%.
+
+    auto comparator = [](std::tuple<float, idx_t, DocumentScore> p1, std::tuple<float, idx_t, DocumentScore> p2) {
+        return std::get<0>(p1) > std::get<0>(p2);
+    };
     std::sort(
             actual_scores.begin(),
             actual_scores.end(),
-            std::greater<std::tuple<float, idx_t, DocumentScore>>());
+            comparator);
 
     return actual_scores;
 }
@@ -291,7 +295,7 @@ std::vector<SearchResult> PlaidRetriever::retrieve(
                 SearchResult res;
                 res.id = pid;
                 res.score = score;
-                res.tokens = doc_score.tokens;
+                res.token_scores = doc_score.tokens;
                 return res;
             });
 
