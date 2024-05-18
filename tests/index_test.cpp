@@ -4,6 +4,7 @@
 #include "lintdb/index.h"
 #include "lintdb/SearchOptions.h"
 #include "lintdb/EmbeddingBlock.h"
+#include "lintdb/Passages.h"
 #include "lintdb/invlists/RocksdbList.h"
 #include <faiss/utils/random.h>
 #include <vector>
@@ -68,8 +69,8 @@ TEST_P(IndexTest, TrainsCorrectly) {
     // this doc is row-major on disk, and we can read memory as (num_tokensxdim)
     lintdb::EmbeddingBlock block(fake_doc.data(), num_tokens, dim);
 
-    lintdb::RawPassage<lintdb::EmbeddingBlock> doc(fake_doc.data(), num_tokens, dim, 1);
-    std::vector<lintdb::RawPassage<lintdb::EmbeddingBlock>> docs = { doc };
+    lintdb::EmbeddingPassage doc(fake_doc.data(), num_tokens, dim, 1);
+    std::vector<lintdb::EmbeddingPassage> docs = { doc };
     index.add(lintdb::kDefaultTenant, docs);
 
     // without knowing what ivf list we assigned the doc to, make sure one document is indexed.
@@ -128,8 +129,8 @@ TEST_P(IndexTest, TrainsWithCompressionCorrectly) {
     // this doc is row-major on disk, and we can read memory as (num_tokensxdim)
     lintdb::EmbeddingBlock block(fake_doc.data(), num_tokens, dim);
 
-    lintdb::RawPassage<lintdb::EmbeddingBlock> doc(fake_doc.data(), num_tokens, dim, 1);
-    std::vector<lintdb::RawPassage<lintdb::EmbeddingBlock>> docs = { doc };
+    lintdb::EmbeddingPassage doc(fake_doc.data(), num_tokens, dim, 1);
+    std::vector<lintdb::EmbeddingPassage> docs = { doc };
     index.add(lintdb::kDefaultTenant, docs);
 
     // without knowing what ivf list we assigned the doc to, make sure one document is indexed.
@@ -152,9 +153,9 @@ TEST_P(IndexTest, TrainsWithCompressionCorrectly) {
 
 TEST(IndexTest, RawPassagesConstruct) {
     float data = 1.0;
-    auto block_passage = lintdb::RawPassage<lintdb::EmbeddingBlock>(&data, 1, 1, 1, {});
+    auto block_passage = lintdb::EmbeddingPassage(&data, 1, 1, 1, {});
 
-    auto text_passage = lintdb::RawPassage<std::string>("test", 1, {});
+    auto text_passage = lintdb::TextPassage("test", 1, {});
 }
 
 TEST_P(IndexTest, SearchCorrectly) {
@@ -192,8 +193,8 @@ TEST_P(IndexTest, SearchCorrectly) {
 
     lintdb::EmbeddingBlock block{fake_doc.data(), num_tokens, dim};
 
-    lintdb::RawPassage<lintdb::EmbeddingBlock> doc(fake_doc.data(), num_tokens, dim, 1);
-    std::vector<lintdb::RawPassage<lintdb::EmbeddingBlock>> docs = { doc };
+    lintdb::EmbeddingPassage doc(fake_doc.data(), num_tokens, dim, 1);
+    std::vector<lintdb::EmbeddingPassage> docs = { doc };
     index.add(lintdb::kDefaultTenant, docs);
 
     auto opts = lintdb::SearchOptions();
@@ -276,8 +277,8 @@ TEST_P(IndexTest, MergeCorrectly) {
 
     lintdb::EmbeddingBlock block{fake_doc.data(), num_tokens, dim};
 
-    lintdb::RawPassage<lintdb::EmbeddingBlock> doc(fake_doc.data(), num_tokens, dim, 1);
-    std::vector<lintdb::RawPassage<lintdb::EmbeddingBlock>> docs = { doc };
+    lintdb::EmbeddingPassage doc(fake_doc.data(), num_tokens, dim, 1);
+    std::vector<lintdb::EmbeddingPassage> docs = { doc };
     index.add(lintdb::kDefaultTenant, docs);
 
 
@@ -286,8 +287,8 @@ TEST_P(IndexTest, MergeCorrectly) {
     auto second_db = path_two.append("XXXXXX.db_two");
     // copy the first index to create the second db.
     auto index_two = lintdb::IndexIVF(index, second_db.string());
-    lintdb::RawPassage<lintdb::EmbeddingBlock> doc_two(fake_doc.data(), num_tokens, dim, 2);
-    std::vector<lintdb::RawPassage<lintdb::EmbeddingBlock>> docs_two = { doc_two };
+    lintdb::EmbeddingPassage doc_two(fake_doc.data(), num_tokens, dim, 2);
+    std::vector<lintdb::EmbeddingPassage> docs_two = { doc_two };
     index_two.add(lintdb::kDefaultTenant, docs_two);
 
     // merge the two indices.
@@ -348,8 +349,8 @@ TEST_P(IndexTest, SearchWithMetadataCorrectly) {
 
     lintdb::EmbeddingBlock block{fake_doc.data(), num_tokens, dim};
 
-    lintdb::RawPassage<lintdb::EmbeddingBlock> doc(fake_doc.data(), num_tokens, dim, 1, std::map<std::string, std::string>{{"title", "test"}});
-    std::vector<lintdb::RawPassage<lintdb::EmbeddingBlock>> docs = { doc };
+    lintdb::EmbeddingPassage doc(fake_doc.data(), num_tokens, dim, 1, std::map<std::string, std::string>{{"title", "test"}});
+    std::vector<lintdb::EmbeddingPassage> docs = { doc };
     index.add(lintdb::kDefaultTenant, docs);
 
     auto opts = lintdb::SearchOptions();
