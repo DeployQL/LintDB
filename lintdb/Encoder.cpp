@@ -66,7 +66,7 @@ DefaultEncoder::DefaultEncoder(
 }
 
 std::unique_ptr<EncodedDocument> DefaultEncoder::encode_vectors(
-        const RawPassage<EmbeddingBlock>& doc) {
+        const EmbeddingPassage& doc) {
     LINTDB_THROW_IF_NOT(nlist <= std::numeric_limits<code_t>::max());
     auto num_tokens = doc.embedding_block.num_tokens;
 

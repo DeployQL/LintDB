@@ -5,6 +5,7 @@
 #include "lintdb/api.h"
 #include <map>
 #include <string>
+#include <vector>
 
 namespace lintdb {
 

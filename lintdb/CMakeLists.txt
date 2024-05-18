@@ -28,9 +28,9 @@ set(
     Collection.h
     constants.h
     cf.h
-    RawPassage.h
     EmbeddingBlock.h
     Encoder.h
+    Passages.h
     quantizers/Binarizer.h
     quantizers/Quantizer.h
     quantizers/ProductEncoder.h

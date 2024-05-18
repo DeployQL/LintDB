@@ -3,7 +3,7 @@
 '''
 from lintdb.lintdb import (
     IndexIVF, 
-    RawPassage, 
+    EmbeddingPassage as RP, 
     Configuration, 
     SearchOptions, 
     IndexEncoding_NONE, 
@@ -13,9 +13,11 @@ from lintdb.lintdb import (
     CollectionOptions,
 )
 
+def EmbeddingPassage()
+
 __all__ = [
     'IndexIVF', 
-    'RawPassage', 
+    'EmbeddingPassage', 
     'Configuration', 
     'SearchOptions', 
     'IndexEncoding_NONE', 

@@ -129,6 +129,33 @@ class TestIndex(unittest.TestCase):
             assert(results[0].id == 1)
             assert(results[0].metadata['title'] == 'metadata')
 
+    def test_collection_batch(self):
+        get_file_if_not_exists("https://huggingface.co/colbert-ir/colbertv2.0/resolve/main/model.onnx", "model.onnx")
+        get_file_if_not_exists("https://huggingface.co/colbert-ir/colbertv2.0/resolve/main/tokenizer.json", "colbert_tokenizer.json")
+        
+        with tempfile.TemporaryDirectory(prefix="lintdb_test-collection") as dir_one:
+            # create an index with 32 centroids, 128 dims, 2 bit compression, and 4 iterations during training.
+            index_one = lintdb.IndexIVF(dir_one, 32, 128, 2, 4, 16, lintdb.IndexEncoding_BINARIZER)
+
+            collection_options = lintdb.CollectionOptions()
+            collection_options.model_file = "model.onnx"
+            collection_options.tokenizer_file = "colbert_tokenizer.json"
+            collection = lintdb.Collection(index_one, collection_options)
+
+            collection.train(['hello world!'] * 1500)
+
+            collection.add_batch(0, [
+                {"id": 1, "text": "hello world!", "metadata": {"title": "metadata"}},
+                {"id": 2, "text": "hello world!", "metadata": {"title": "metadata"}}
+            ])
+
+            opts = lintdb.SearchOptions()
+            opts.n_probe = 250
+            results = collection.search(0, "hello world!", 10, opts)
+
+
+            assert(len(results) == 2)
+
 
 
 if __name__ == '__main__':

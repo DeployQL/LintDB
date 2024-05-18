@@ -1,5 +1,4 @@
 #include "lintdb/Collection.h"
-#include "lintdb/RawPassage.h"
 #include "lintdb/EmbeddingBlock.h"
 #include <glog/logging.h>
 #include <iostream>
@@ -31,18 +30,18 @@ namespace lintdb {
 
         auto output = model->encode(input);
     
-        auto passage = RawPassage<EmbeddingBlock>(output.data(), ids.size(), model->get_dims(), id, metadata);
+        auto passage = EmbeddingPassage(output.data(), ids.size(), model->get_dims(), id, metadata);
         index->add(tenant, {passage});
     }
 
     void Collection::add_batch(
         const uint64_t tenant, 
-        const std::vector<RawPassage<std::string>> passages
+        const std::vector<TextPassage> passages
         ) const {
         
         std::vector<ModelInput> inputs;
         for(auto passage: passages) {
-            auto ids = tokenizer->encode(passage.embedding_block);
+            auto ids = tokenizer->encode(passage.data);
 
             ModelInput input;
             input.input_ids = ids;
@@ -62,10 +61,10 @@ namespace lintdb {
 
         auto output = model->encode(inputs);
 
-        std::vector<RawPassage<EmbeddingBlock>> embedded_passages;
+        std::vector<EmbeddingPassage> embedded_passages;
         for (size_t i = 0; i < passages.size(); i++) {
             auto encoded_vector = output.get(i);
-            auto passage = RawPassage<EmbeddingBlock>(encoded_vector.data(), inputs[i].input_ids.size(), model->get_dims(), passages[i].id, passages[i].metadata);
+            auto passage = EmbeddingPassage(encoded_vector.data(), inputs[i].input_ids.size(), model->get_dims(), passages[i].id, passages[i].metadata);
             embedded_passages.push_back(passage);
         }
 

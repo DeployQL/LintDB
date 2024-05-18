@@ -150,27 +150,12 @@ TEST_P(IndexTest, TrainsWithCompressionCorrectly) {
 
 }
 
+TEST(IndexTest, RawPassagesConstruct) {
+    float data = 1.0;
+    auto block_passage = lintdb::RawPassage<lintdb::EmbeddingBlock>(&data, 1, 1, 1, {});
 
-// EmbeddingBlocks store data in column major format, so contiguous memory is
-// a column of data. we should expect the first column to be the first elements generated.
-// TEST(IndexTest, EmbeddingBlocksAreRowMajor) {
-//     size_t dim = 128;
-//     size_t num_docs = 100;
-//     size_t num_tokens = 100;
-
-//     size_t num_bits = 2;
-
-//     std::vector<float> buf(dim * num_tokens);
-
-//     faiss::rand_smooth_vectors(num_tokens, dim, buf.data(), 1234);
-//     // let's reuse the buffer to grab what we'd consider a a block of embeddings.
-//     lintdb::EmbeddingBlock block{buf.data(), num_tokens, dim};
-//     //check that the first row is correct in the block.
-//     for (size_t i = 0; i < num_tokens; i++) {
-//         auto scal = block.embeddings[i];
-//         EXPECT_EQ(scal, buf[i]);
-//     }
-// }
+    auto text_passage = lintdb::RawPassage<std::string>("test", 1, {});
+}
 
 TEST_P(IndexTest, SearchCorrectly) {
     size_t dim = 128;
@@ -328,18 +313,6 @@ TEST_P(IndexTest, MergeCorrectly) {
     EXPECT_EQ(results.size(), 2);
 }
 
-INSTANTIATE_TEST_SUITE_P(IndexTest, IndexTest, Values(
-    lintdb::IndexEncoding::NONE, 
-    lintdb::IndexEncoding::BINARIZER, 
-    lintdb::IndexEncoding::PRODUCT_QUANTIZER
-    ),
-    [](const testing::TestParamInfo<IndexTest::ParamType>& info) {
-        auto serialized = lintdb::serialize_encoding(info.param);
-        return serialized;
-    }
-);
-
-
 TEST_P(IndexTest, SearchWithMetadataCorrectly) {
     size_t dim = 128;
     // we'll generate num_docs * num_tokens random vectors for training.
@@ -391,6 +364,16 @@ TEST_P(IndexTest, SearchWithMetadataCorrectly) {
     EXPECT_EQ(results[0].metadata.at("title"), "test");
 }
 
+INSTANTIATE_TEST_SUITE_P(IndexTest, IndexTest, Values(
+    lintdb::IndexEncoding::NONE, 
+    lintdb::IndexEncoding::BINARIZER, 
+    lintdb::IndexEncoding::PRODUCT_QUANTIZER
+    ),
+    [](const testing::TestParamInfo<IndexTest::ParamType>& info) {
+        auto serialized = lintdb::serialize_encoding(info.param);
+        return serialized;
+    }
+);
 
 int main(int argc, char **argv) {
     testing::InitGoogleTest(&argc, argv);

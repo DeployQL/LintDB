@@ -3,6 +3,7 @@
 #include "lintdb/index.h"
 #include "lintdb/index_builder/EmbeddingModel.h"
 #include "lintdb/index_builder/Tokenizer.h"
+#include "lintdb/Passages.h"
 #include "lintdb/api.h"
 #include <string>
 #include <vector>
@@ -41,11 +42,11 @@ namespace lintdb {
          * Add a batch of texts to the index.
          * 
          * @param tenant The tenant id.
-         * @param passages A list of RawPassage objects to add.
+         * @param passages A list of EmbeddingPassage objects to add.
         */
         void add_batch(
             const uint64_t tenant, 
-            const std::vector<RawPassage<std::string>> passages
+            const std::vector<TextPassage> passages
         ) const;
         /**
          * Search the index for similar documents.
