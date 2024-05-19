@@ -1,13 +1,13 @@
-lintdb package
+python package
 ==============
 
 Submodules
 ----------
 
-lintdb.lintdb module
---------------------
+python.setup module
+-------------------
 
-.. automodule:: lintdb.lintdb
+.. automodule:: python.setup
    :members:
    :undoc-members:
    :show-inheritance:
@@ -15,7 +15,7 @@ lintdb.lintdb module
 Module contents
 ---------------
 
-.. automodule:: lintdb
+.. automodule:: python
    :members:
    :undoc-members:
    :show-inheritance:

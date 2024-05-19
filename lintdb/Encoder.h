@@ -6,7 +6,8 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "lintdb/RawPassage.h"
+#include "lintdb/Passages.h"
+#include "lintdb/EmbeddingBlock.h"
 #include "lintdb/SearchOptions.h"
 #include "lintdb/api.h"
 #include "lintdb/invlists/EncodedDocument.h"
@@ -38,11 +39,11 @@ struct Encoder {
     virtual size_t get_num_centroids() const = 0;
     virtual size_t get_nbits() const = 0;
     /**
-     * Encode vectors translates the embeddings given to us in RawPassage to
+     * Encode vectors translates the embeddings given to us in EmbeddingPassage to
      * the internal representation that we expect to see in the inverted lists.
      */
     virtual std::unique_ptr<EncodedDocument> encode_vectors(
-            const RawPassage& doc) = 0;
+            const EmbeddingPassage& doc) = 0;
 
     /**
      * Decode vectors translates out of our internal representation.
@@ -138,7 +139,7 @@ struct DefaultEncoder : public Encoder {
     }
 
     std::unique_ptr<EncodedDocument> encode_vectors(
-            const RawPassage& doc) override;
+            const EmbeddingPassage& doc) override;
 
     std::vector<float> decode_vectors(
             gsl::span<const code_t> codes,

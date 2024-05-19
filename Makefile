@@ -54,8 +54,9 @@ callgrind-colbert: build-conda
 
 py-docs:
 	rm -rf docs/build
-	sphinx-apidoc -o docs/source/ ./build/lintdb/python/lintdb
+	sphinx-apidoc -o docs/source/ ./builds/python/lintdb/python/lintdb
 	cd docs && make html
+	cp icon.svg docs/build/html/icon.svg
 
 debug-conda:
 	conda debug lintdb --python 3.10 --output-id 'lintdb-*-py*' 

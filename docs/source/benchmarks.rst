@@ -2,7 +2,7 @@ Benchmarks
 =============
 
 Mac OS
-=======
+-------
 
 Benchmark: LoTTE Lifestyle 40k
 -------------------------------
@@ -36,7 +36,7 @@ lintdb:
 
 
 Linux
-======
+------
 
 Benchmark: LoTTE Lifestyle 40k
 -------------------------------

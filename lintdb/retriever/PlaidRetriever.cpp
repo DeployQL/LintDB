@@ -5,6 +5,7 @@
 #include "lintdb/invlists/EncodedDocument.h"
 #include "lintdb/retriever/Retriever.h"
 #include "lintdb/retriever/plaid.h"
+#include <tuple>
 
 #ifndef LINTDB_CHUNK_SIZE
 #define LINTDB_CHUNK_SIZE 1000
@@ -145,7 +146,7 @@ std::vector<std::pair<float, idx_t>> PlaidRetriever::rank_phase_one(
     return pid_scores;
 }
 
-std::vector<std::pair<float, idx_t>> PlaidRetriever::rank_phase_two(
+std::vector<std::tuple<float, idx_t, DocumentScore>> PlaidRetriever::rank_phase_two(
         const std::vector<idx_t>& top_25_ids,
         const std::vector<std::unique_ptr<DocumentCodes>>& doc_codes,
         const std::vector<std::unique_ptr<DocumentResiduals>>& doc_residuals,
@@ -153,7 +154,8 @@ std::vector<std::pair<float, idx_t>> PlaidRetriever::rank_phase_two(
         const gsl::span<const float> query_data,
         const size_t n,
         const RetrieverOptions& opts) {
-    std::vector<std::pair<float, idx_t>> actual_scores(top_25_ids.size());
+        
+    std::vector<std::tuple<float, idx_t, DocumentScore>> actual_scores(top_25_ids.size());
 #pragma omp for schedule(dynamic, LINTDB_CHUNK_SIZE)
     for (int i = 0; i < top_25_ids.size(); i++) {
         auto residuals = doc_residuals[i]->residuals;
@@ -168,7 +170,7 @@ std::vector<std::pair<float, idx_t>> PlaidRetriever::rank_phase_two(
 
         const auto data_span =
                 gsl::span(query_data.data(), n * encoder_->get_dim());
-        float score = score_document_by_residuals(
+        DocumentScore score = score_document_by_residuals(
                 data_span,
                 n,
                 decompressed.data(),
@@ -176,13 +178,16 @@ std::vector<std::pair<float, idx_t>> PlaidRetriever::rank_phase_two(
                 encoder_->get_dim(),
                 true);
 
-        actual_scores[i] = std::pair<float, idx_t>(score, top_25_ids[i]);
+        actual_scores[i] = std::tuple<float, idx_t, DocumentScore>(score.score, top_25_ids[i], score);
     }
-    // according to the paper, we take the top 25%.
+
+    auto comparator = [](std::tuple<float, idx_t, DocumentScore> p1, std::tuple<float, idx_t, DocumentScore> p2) {
+        return std::get<0>(p1) > std::get<0>(p2);
+    };
     std::sort(
             actual_scores.begin(),
             actual_scores.end(),
-            std::greater<std::pair<float, idx_t>>());
+            comparator);
 
     return actual_scores;
 }
@@ -262,13 +267,13 @@ std::vector<SearchResult> PlaidRetriever::retrieve(
         auto it = std::find_if(
                 actual_scores.begin(),
                 actual_scores.end(),
-                [opts](std::pair<float, idx_t> p) {
-                    return p.second == opts.expected_id;
+                [opts](std::tuple<float, idx_t, DocumentScore> p) {
+                    return std::get<1>(p) == opts.expected_id;
                 });
         if (it != actual_scores.end()) {
             auto pos = it - actual_scores.begin();
             LOG(INFO) << "expected id found in residual scores: " << pos
-                      << " with score: " << it->first;
+                      << " with score: " << std::get<0>(*it);
             if (pos > num_rerank) {
                 LOG(INFO) << "top 25 cutoff: " << num_rerank
                           << ". expected id has been dropped";
@@ -277,7 +282,7 @@ std::vector<SearchResult> PlaidRetriever::retrieve(
     }
 
     size_t num_to_return = std::min<size_t>(actual_scores.size(), k);
-    std::vector<std::pair<float, idx_t>> top_k_scores(
+    std::vector<std::tuple<float, idx_t, DocumentScore>> top_k_scores(
             actual_scores.begin(), actual_scores.begin() + num_to_return);
 
     std::vector<SearchResult> results;
@@ -285,8 +290,13 @@ std::vector<SearchResult> PlaidRetriever::retrieve(
             top_k_scores.begin(),
             top_k_scores.end(),
             std::back_inserter(results),
-            [](std::pair<float, idx_t> p) {
-                return SearchResult{p.second, p.first};
+            [](std::tuple<float, idx_t, DocumentScore> p) {
+                const auto [score, pid, doc_score] = p;
+                SearchResult res;
+                res.id = pid;
+                res.score = score;
+                res.token_scores = doc_score.tokens;
+                return res;
             });
 
     return results;

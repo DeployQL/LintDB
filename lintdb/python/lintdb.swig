@@ -16,7 +16,8 @@
 #include "lintdb/SearchResult.h"
 #include "lintdb/index.h"
 #include "lintdb/SearchOptions.h"
-#include "lintdb/RawPassage.h"
+#include "lintdb/EmbeddingBlock.h"
+#include "lintdb/Passages.h"
 #include "lintdb/Collection.h"
 #include "lintdb/exception.h"
 
@@ -49,14 +50,12 @@ namespace std {
     
     %template(MetadataMap) std::map<std::string, std::string>;
 
-    %template(FloatVector) vector<float>;
-    %template(IdxVector) vector<idx_t>;
-    // the below work to use append to our own vector, but not for add.
-    %template(RawPassageVector) vector<lintdb::RawPassage>;
-    %template(RawPassagePtrVector) vector<lintdb::RawPassage *>;
-    %template(RawPassageConstPtrVector) vector<lintdb::RawPassage const *>;
-    %template(SearchResultVector) vector<lintdb::SearchResult>;
+    %template() vector<float>;
+    %template() vector<idx_t>;
+    %template() vector<lintdb::SearchResult>;
+    %template() vector<lintdb::EmbeddingPassage>;
     %template() vector<std::string>;
+    %template() vector<lintdb::TextPassage>;
 }
 
 
@@ -94,7 +93,124 @@ namespace std {
     $result = SWIG_Python_AppendOutput($result, obj);
 }
 
-// RawPassage constructor.
+%typemap(in) lintdb::TextPassage* {
+    if (!PyDict_Check($input)) {
+        PyErr_SetString(PyExc_TypeError, "Expected a dictionary");
+        return NULL;
+    }
+
+    PyObject* py_text = PyDict_GetItemString($input, "text");
+    PyObject* py_id = PyDict_GetItemString($input, "id");
+    PyObject* py_metadata = PyDict_GetItemString($input, "metadata");
+
+    if (!py_text || !PyUnicode_Check(py_text) ||
+        !py_id || !PyLong_Check(py_id) ||
+        !py_metadata || !PyDict_Check(py_metadata)) {
+        PyErr_SetString(PyExc_TypeError, "Dictionary keys are missing or of incorrect type");
+        return NULL;
+    }
+
+    std::string text = PyUnicode_AsUTF8(py_text);
+    int64_t id = PyLong_AsLongLong(py_id);
+    std::map<std::string, std::string> metadata;
+
+    PyObject *key, *value;
+    Py_ssize_t pos = 0;
+    while (PyDict_Next(py_metadata, &pos, &key, &value)) {
+        if (!PyUnicode_Check(key) || !PyUnicode_Check(value)) {
+            PyErr_SetString(PyExc_TypeError, "Metadata keys and values must be strings");
+            return NULL;
+        }
+        metadata[PyUnicode_AsUTF8(key)] = PyUnicode_AsUTF8(value);
+    }
+
+    $1 = new TextPassage(text, id, metadata);
+}
+
+%typemap(freearg) lintdb::TextPassage* {
+    delete $1;
+}
+
+%typemap(in) lintdb::TextPassage {
+    if (!PyDict_Check($input)) {
+        PyErr_SetString(PyExc_TypeError, "Expected a dictionary");
+        return NULL;
+    }
+
+    PyObject* py_text = PyDict_GetItemString($input, "text");
+    PyObject* py_id = PyDict_GetItemString($input, "id");
+    PyObject* py_metadata = PyDict_GetItemString($input, "metadata");
+
+    if (!py_text || !PyUnicode_Check(py_text) ||
+        !py_id || !PyLong_Check(py_id) ||
+        !py_metadata || !PyDict_Check(py_metadata)) {
+        PyErr_SetString(PyExc_TypeError, "Dictionary keys are missing or of incorrect type");
+        return NULL;
+    }
+
+    std::string text = PyUnicode_AsUTF8(py_text);
+    int64_t id = PyLong_AsLongLong(py_id);
+    std::map<std::string, std::string> metadata;
+
+    PyObject *key, *value;
+    Py_ssize_t pos = 0;
+    while (PyDict_Next(py_metadata, &pos, &key, &value)) {
+        if (!PyUnicode_Check(key) || !PyUnicode_Check(value)) {
+            PyErr_SetString(PyExc_TypeError, "Metadata keys and values must be strings");
+            return NULL;
+        }
+        metadata[PyUnicode_AsUTF8(key)] = PyUnicode_AsUTF8(value);
+    }
+
+    $1 = TextPassage(text, id, metadata);
+}
+
+%typemap(in) std::vector<lintdb::TextPassage> (std::vector<lintdb::TextPassage> vec) {
+    if (!PyList_Check($input)) {
+        PyErr_SetString(PyExc_TypeError, "Expected a list");
+        return NULL;
+    }
+
+    Py_ssize_t size = PyList_Size($input);
+    for (Py_ssize_t i = 0; i < size; i++) {
+        PyObject* item = PyList_GetItem($input, i);
+        if (!PyDict_Check(item)) {
+            PyErr_SetString(PyExc_TypeError, "List items must be dictionaries");
+            return NULL;
+        }
+
+        PyObject* py_text = PyDict_GetItemString(item, "text");
+        PyObject* py_id = PyDict_GetItemString(item, "id");
+        PyObject* py_metadata = PyDict_GetItemString(item, "metadata");
+
+        if (!py_text || !PyUnicode_Check(py_text) ||
+            !py_id || !PyLong_Check(py_id) ||
+            !py_metadata || !PyDict_Check(py_metadata)) {
+            PyErr_SetString(PyExc_TypeError, "Dictionary keys are missing or of incorrect type");
+            return NULL;
+        }
+
+        std::string text = PyUnicode_AsUTF8(py_text);
+        int64_t id = PyLong_AsLongLong(py_id);
+        std::map<std::string, std::string> metadata;
+
+        PyObject *key, *value;
+        Py_ssize_t pos = 0;
+        while (PyDict_Next(py_metadata, &pos, &key, &value)) {
+            if (!PyUnicode_Check(key) || !PyUnicode_Check(value)) {
+                PyErr_SetString(PyExc_TypeError, "Metadata keys and values must be strings");
+                return NULL;
+            }
+            metadata[PyUnicode_AsUTF8(key)] = PyUnicode_AsUTF8(value);
+        }
+
+        vec.emplace_back(text, id, metadata);
+    }
+    $1 = vec;
+}
+
+
+// EmbeddingPassage constructor.
 %apply (float* IN_ARRAY2, int DIM1, int DIM2) {(const float* block, int num_tokens, int dim)};
 // arguments have to be exact to the C++ function signature. e.g. embeddings, n, dim.
 %apply (float* IN_ARRAY2, int DIM1, int DIM2) {(float* embeddings, int n, int dim)};
@@ -115,11 +231,9 @@ namespace std {
         const SearchOptions& opts=SearchOptions()) const;
 %ignore train(float*, size_t, size_t);
 %ignore train(size_t n,std::vector<float>& embeddings);
-%ignore RawPassage::RawPassage();
 %ignore IndexIVF::invlists;
 %ignore IndexIVF::decode_vectors;
 %ignore IndexIVF::get_pids;
-
 
 %ignore EmbeddingBlock::EmbeddingBlock(const float* embeddings, size_t num_tokens, size_t dimensions);
 
@@ -159,8 +273,9 @@ namespace std {
     Py_END_ALLOW_THREADS
 }
 
+%rename (RawPassage) lintdb::EmbeddingPassage;
 // Define the C++ class
-%include "lintdb/RawPassage.h"  
+%include "lintdb/Passages.h"
 %include "lintdb/SearchOptions.h"
 %include "lintdb/SearchResult.h"
 %include "lintdb/index.h"

@@ -72,7 +72,7 @@ namespace lintdb {
 
     }
 
-    std::vector<float> EmbeddingModel::encode(ModelInput& inputs) const {
+    std::vector<float> EmbeddingModel::encode(const ModelInput& inputs) const {
         std::vector<Ort::Value> input_tensors;
         input_tensors.reserve(this->input_names.size());
 
@@ -124,6 +124,85 @@ namespace lintdb {
         }
 
         return {};
+    }
+
+    BatchOutput EmbeddingModel::encode(const std::vector<ModelInput>& inputs) const {
+        std::vector<Ort::Value> input_tensors;
+        input_tensors.reserve(this->input_names.size());
+
+        std::vector<int64_t> casted_ids;
+        std::vector<int64_t> casted_attn;
+
+        int64_t max_len = 0;
+        std::vector<size_t> lengths;
+        for (auto& input : inputs) {
+            max_len = std::max(max_len, int64_t(input.input_ids.size()));
+            lengths.push_back(input.input_ids.size());
+        }
+
+        for (auto& input : inputs) {
+            std::transform(std::begin(input.input_ids), std::end(input.input_ids), std::back_inserter(casted_ids), [](int32_t i) { return int64_t(i); });
+            if (input.input_ids.size() < max_len) {
+                for (size_t i = input.input_ids.size(); i < max_len; i++) {
+                    casted_ids.push_back(0);
+                }
+            }
+
+            std::transform(std::begin(input.attention_mask), std::end(input.attention_mask), std::back_inserter(casted_attn), [](int32_t i) { return int64_t(i); });
+            if (input.attention_mask.size() < max_len) {
+                for (size_t i = input.attention_mask.size(); i < max_len; i++) {
+                    casted_attn.push_back(0);
+                }
+            }
+
+        }
+        int64_t batch_size = static_cast<int64_t>(inputs.size());
+
+        auto id_shape = std::vector<std::int64_t>{batch_size, max_len};
+        input_tensors.push_back(vec_to_tensor(casted_ids, id_shape));
+
+        
+        auto attn_shape = std::vector<std::int64_t>{batch_size, max_len};
+        input_tensors.push_back(vec_to_tensor(casted_attn, attn_shape));
+
+        std::vector<const char*> input_names_char(input_names.size());
+        std::transform(std::begin(this->input_names), std::end(this->input_names), std::begin(input_names_char),
+            [&](const std::string& str) { return str.c_str(); });
+
+        std::vector<const char*> output_names_char(output_names.size());
+        std::transform(std::begin(this->output_names), std::end(this->output_names), std::begin(output_names_char),
+            [&](const std::string& str) { return str.c_str(); });
+
+        try{
+            auto output_tensors = session->Run(
+                Ort::RunOptions{nullptr}, 
+                input_names_char.data(), 
+                input_tensors.data(), 
+                input_tensors.size(), 
+                output_names_char.data(), 
+                output_names_char.size()
+            );
+
+
+            assert(output_tensors.size() == 1);
+
+            std::vector<int64_t> tensor_shape = output_tensors.front().GetTensorTypeAndShapeInfo().GetShape();
+
+            auto data = output_tensors.front().GetTensorMutableData<float>();
+
+            assert(tensor_shape.size() == 3); // e.g. (batch, max_length, 128)
+            auto size = tensor_shape[0] * tensor_shape[1] * tensor_shape[2];
+
+            std::vector<float> vec(data, data + size);
+
+            return BatchOutput(vec, static_cast<std::vector<int64_t>>(tensor_shape), lengths);
+
+        } catch (const Ort::Exception& e) {
+            LOG(ERROR) << "Error while running model: " << e.what();
+            throw LintDBException("Error while running model");
+        }
+
+        return BatchOutput();
     }
 
     template <typename T>

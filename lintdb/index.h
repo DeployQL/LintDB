@@ -10,7 +10,7 @@
 #include <unordered_set>
 #include "lintdb/EmbeddingBlock.h"
 #include "lintdb/Encoder.h"
-#include "lintdb/RawPassage.h"
+#include "lintdb/Passages.h"
 #include "lintdb/SearchOptions.h"
 #include "lintdb/SearchResult.h"
 #include "lintdb/api.h"
@@ -169,14 +169,14 @@ struct IndexIVF {
      * Add will add a block of embeddings to the index.
      *
      * @param tenant the tenant to assign the document to.
-     * @param docs a vector of RawPassages. This includes embeddings and ids.
+     * @param docs a vector of EmbeddingPassages. This includes embeddings and ids.
      */
-    void add(const uint64_t tenant, const std::vector<RawPassage>& docs);
+    void add(const uint64_t tenant, const std::vector<EmbeddingPassage>& docs);
 
     /**
      * Add a single document.
      */
-    void add_single(const uint64_t tenant, const RawPassage& doc);
+    void add_single(const uint64_t tenant, const EmbeddingPassage& doc);
 
     /**
      * Remove deletes documents from the index by id.
@@ -189,7 +189,7 @@ struct IndexIVF {
     /**
      * Update is a convenience function for remove and add.
      */
-    void update(const uint64_t tenant, const std::vector<RawPassage>& docs);
+    void update(const uint64_t tenant, const std::vector<EmbeddingPassage>& docs);
 
     /**
      * Merge will combine the index with another index.

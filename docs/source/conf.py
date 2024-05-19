@@ -1,7 +1,7 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join('..', '..', '_build_python/lintdb/python/build/lib')))
+sys.path.insert(0, os.path.abspath(os.path.join('..', '..', 'builds/python/lintdb/python/build/lib')))
 
 # Configuration file for the Sphinx documentation builder.
 #
@@ -27,7 +27,7 @@ copyright = '2024, DeployQL'
 author = 'DeployQL'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1'
+release = '0.3.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -119,19 +119,19 @@ html_theme_options = {
         },
     ],
     # BEGIN: version_dropdown
-    # "version_dropdown": True,
-    # "version_info": [
-    #     {
-    #         "version": "https://sphinx-immaterial.rtfd.io",
-    #         "title": "ReadTheDocs",
-    #         "aliases": [],
-    #     },
-    #     {
-    #         "version": "https://jbms.github.io/sphinx-immaterial",
-    #         "title": "Github Pages",
-    #         "aliases": [],
-    #     },
-    # ],
+    "version_dropdown": True,
+    "version_info": [
+        {
+            "version": "LintDB/v0.3.0",
+            "title": "v0.3.0",
+            "aliases": [],
+        },
+         {
+            "version": "LintDB/v0.2.1",
+            "title": "v0.2.1",
+            "aliases": [],
+        },
+    ],
     # END: version_dropdown
     "toc_title_is_page_title": True
     # BEGIN: social icons

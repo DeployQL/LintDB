@@ -226,5 +226,5 @@ TEST(PlaidTests, ResidualScoresTheSame) {
 
     auto actual = lintdb::score_document_by_residuals(query_vectors, num_query_tokens, doc_vectors.data(), num_doc_tokens, dim, false);
 
-    EXPECT_FLOAT_EQ(actual, colbert_score);
+    EXPECT_FLOAT_EQ(actual.score, colbert_score);
 }

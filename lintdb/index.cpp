@@ -1,4 +1,3 @@
-
 #include "lintdb/index.h"
 #include <glog/logging.h>
 #include <json/json.h>
@@ -303,7 +302,7 @@ void IndexIVF::set_weights(
     encoder->set_weights(weights, cutoffs, avg_residual);
 }
 
-void IndexIVF::add(const uint64_t tenant, const std::vector<RawPassage>& docs) {
+void IndexIVF::add(const uint64_t tenant, const std::vector<EmbeddingPassage>& docs) {
     LINTDB_THROW_IF_NOT(this->encoder->is_trained);
 
     for (auto doc : docs) {
@@ -311,7 +310,7 @@ void IndexIVF::add(const uint64_t tenant, const std::vector<RawPassage>& docs) {
     }
 }
 
-void IndexIVF::add_single(const uint64_t tenant, const RawPassage& doc) {
+void IndexIVF::add_single(const uint64_t tenant, const EmbeddingPassage& doc) {
     auto encoded = encoder->encode_vectors(doc);
 
     index_->add(tenant, std::move(encoded));
@@ -323,7 +322,7 @@ void IndexIVF::remove(const uint64_t tenant, const std::vector<idx_t>& ids) {
 
 void IndexIVF::update(
         const uint64_t tenant,
-        const std::vector<RawPassage>& docs) {
+        const std::vector<EmbeddingPassage>& docs) {
     std::vector<idx_t> ids;
     for (auto doc : docs) {
         ids.push_back(doc.id);
