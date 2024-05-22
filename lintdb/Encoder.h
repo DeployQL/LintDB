@@ -22,7 +22,7 @@ struct EncoderConfig {
     size_t niter;
     size_t dim;
     IndexEncoding type;
-    size_t num_subquantizers; // used in ProductEncoder
+    size_t num_subquantizers;
 };
 
 struct Encoder {
@@ -89,7 +89,9 @@ struct Encoder {
     virtual void train(
             const float* embeddings,
             const size_t n,
-            const size_t dim) = 0;
+            const size_t dim,
+            const size_t n_list,
+            const size_t n_iter) = 0;
 
     virtual void set_centroids(float* data, int n, int dim) = 0;
     virtual void set_weights(
@@ -113,11 +115,19 @@ struct DefaultEncoder : public Encoder {
                                   // residuals with.
 
     std::unique_ptr<faiss::IndexFlat> coarse_quantizer;
-    // create a new encoder
+
+    [[deprecated]]
     DefaultEncoder(
             size_t nlist,
             size_t nbits,
-            size_t niter,
+            size_t n_iter,
+            size_t dim,
+            size_t num_subquantizers,
+            IndexEncoding type = IndexEncoding::BINARIZER);
+
+    // create a new encoder
+    DefaultEncoder(
+            size_t nbits,
             size_t dim,
             size_t num_subquantizers,
             IndexEncoding type = IndexEncoding::BINARIZER);
@@ -167,7 +177,7 @@ struct DefaultEncoder : public Encoder {
     static std::unique_ptr<Encoder> load(
             std::string path,
             EncoderConfig& config);
-    void train(const float* embeddings, const size_t n, const size_t dim)
+    void train(const float* embeddings, const size_t n, const size_t dim, const size_t n_list=0, const size_t n_iter=10)
             override;
 
     /**

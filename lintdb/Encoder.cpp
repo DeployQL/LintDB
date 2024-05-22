@@ -46,9 +46,31 @@ DefaultEncoder::DefaultEncoder(
         size_t num_subquantizers,
         IndexEncoding type)
         : Encoder(),
-          nlist(nlist),
           nbits(nbits),
-          niter(niter),
+          dim(dim),
+          num_subquantizers(num_subquantizers),
+          quantizer_type(type) {
+    this->nlist = nlist;
+    this->niter = niter;
+    // colBERT uses L2 during clustering.
+    // for normalized vectors, this should be the same as IP.
+    this->coarse_quantizer = std::make_unique<faiss::IndexFlatIP>(dim);
+    auto quantizer_config = QuantizerConfig{
+            .nbits = nbits,
+            .dim = dim,
+            .num_subquantizers = num_subquantizers,
+    };
+
+    this->quantizer = create_quantizer(type, quantizer_config);
+}
+
+DefaultEncoder::DefaultEncoder(
+        size_t nbits,
+        size_t dim,
+        size_t num_subquantizers,
+        IndexEncoding type)
+        : Encoder(),
+          nbits(nbits),
           dim(dim),
           num_subquantizers(num_subquantizers),
           quantizer_type(type) {
@@ -56,9 +78,7 @@ DefaultEncoder::DefaultEncoder(
     // for normalized vectors, this should be the same as IP.
     this->coarse_quantizer = std::make_unique<faiss::IndexFlatIP>(dim);
     auto quantizer_config = QuantizerConfig{
-            .nlist = nlist,
             .nbits = nbits,
-            .niter = niter,
             .dim = dim,
             .num_subquantizers = num_subquantizers,
     };
@@ -285,18 +305,14 @@ std::unique_ptr<Encoder> DefaultEncoder::load(
     }
 
     auto encoder = std::make_unique<DefaultEncoder>(DefaultEncoder(
-            config.nlist,
             config.nbits,
-            config.niter,
             config.dim,
             config.num_subquantizers,
             config.type));
     encoder->coarse_quantizer = std::move(coarse_quantizer);
 
     auto quantizer_config = QuantizerConfig{
-            .nlist = config.nlist,
             .nbits = config.nbits,
-            .niter = config.niter,
             .dim = config.dim,
             .num_subquantizers = config.num_subquantizers,
     };
@@ -314,13 +330,25 @@ std::unique_ptr<Encoder> DefaultEncoder::load(
 void DefaultEncoder::train(
         const float* embeddings,
         const size_t n,
-        const size_t dim) {
+        const size_t dim,
+        const size_t n_list,
+        const size_t n_iter) {
     try {
         faiss::ClusteringParameters cp;
-        cp.niter = this->niter;
+        if (this->niter != 0 && n_iter == 0) {
+            cp.niter = this->niter;
+        } else {
+            cp.niter = n_iter;
+        }
+        if(this->nlist == 0 && n_list != 0) {
+            this->nlist = n_list;
+        }
+
+        LINTDB_THROW_IF_NOT(this->nlist != 0);
+
         cp.nredo = 1;
         cp.seed = 123;
-        faiss::Clustering clus(dim, nlist, cp);
+        faiss::Clustering clus(dim, this->nlist, cp);
         clus.verbose = true;
 
         // clustering uses L2 distance.

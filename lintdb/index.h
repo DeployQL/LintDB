@@ -104,10 +104,12 @@ struct IndexIVF {
      *
      * @param n the number of embeddings to train on.
      * @param embeddings the embeddings to train on.
+     * @param nlist the number of centroids to train. Required if not provided at initialization.
+     * @param niter the number of iterations to train. Required if not provided at initialization.
      */
-    void train(size_t n, std::vector<float>& embeddings);
-    void train(float* embeddings, size_t n, size_t dim);
-    void train(float* embeddings, int n, int dim);
+    void train(size_t n, std::vector<float>& embeddings, size_t nlist=0, size_t niter = 0);
+    void train(float* embeddings, size_t n, size_t dim, size_t nlist=0, size_t niter = 0);
+    void train(float* embeddings, int n, int dim, size_t nlist = 0, size_t niter = 0);
 
     /**
      * set_centroids overwrites the centroids in the encoder.

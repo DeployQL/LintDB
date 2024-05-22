@@ -15,9 +15,7 @@ namespace lintdb {
     };
 
     struct QuantizerConfig {
-        size_t nlist;
         size_t nbits;
-        size_t niter;
         size_t dim;
         size_t num_subquantizers; // used in ProductEncoder
     };

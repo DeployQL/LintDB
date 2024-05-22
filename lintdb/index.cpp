@@ -167,19 +167,33 @@ void IndexIVF::initialize_inverted_list(Version& version) {
             PlaidRetriever(this->inverted_list_, this->index_, this->encoder));
 }
 
-void IndexIVF::train(size_t n, std::vector<float>& embeddings) {
-    this->train(embeddings.data(), n, config.dim);
+void IndexIVF::train(size_t n, std::vector<float>& embeddings, size_t nlist, size_t niter) {
+    this->train(embeddings.data(), n, config.dim, nlist, niter);
 }
 
-void IndexIVF::train(float* embeddings, size_t n, size_t dim) {
-    encoder->train(embeddings, n, dim);
+void IndexIVF::train(float* embeddings, size_t n, size_t dim, size_t nlist, size_t niter) {
+    if (nlist != 0) {
+        this->config.nlist = nlist;
+    }
+    if (niter != 0) {
+        this->config.niter = niter;
+    }
+
+    encoder->train(embeddings, n, dim, nlist, niter);
     this->save();
 }
 
-void IndexIVF::train(float* embeddings, int n, int dim) {
+void IndexIVF::train(float* embeddings, int n, int dim, size_t nlist, size_t niter) {
+    if (nlist != 0) {
+        this->config.nlist = nlist;
+    }
+    if (niter != 0) {
+        this->config.niter = niter;
+    }
+
     assert(config.nlist <= std::numeric_limits<code_t>::max() &&
            "nlist must be less than 32 bits.");
-    train(embeddings, static_cast<size_t>(n), static_cast<size_t>(dim));
+    train(embeddings, static_cast<size_t>(n), static_cast<size_t>(dim), nlist, niter);
 }
 
 void IndexIVF::save() {
