@@ -21,10 +21,11 @@ struct EncoderConfig {
     size_t nbits;
     size_t niter;
     size_t dim;
-    IndexEncoding type;
     size_t num_subquantizers;
+    IndexEncoding type;
 };
 
+// TODO(mbarta): stop using Encoder as an abstract class. It's not necessary.
 struct Encoder {
    public:
     Encoder() = default;
@@ -32,8 +33,8 @@ struct Encoder {
 
     bool is_trained = false;
     size_t dim;
-    size_t nlist;
-    IndexEncoding quantizer_type;
+    size_t nlist = 0;
+    size_t niter = 0;
 
     virtual size_t get_dim() const = 0;
     virtual size_t get_num_centroids() const = 0;
@@ -90,8 +91,8 @@ struct Encoder {
             const float* embeddings,
             const size_t n,
             const size_t dim,
-            const size_t n_list,
-            const size_t n_iter) = 0;
+            const int n_list,
+            const int n_iter) = 0;
 
     virtual void set_centroids(float* data, int n, int dim) = 0;
     virtual void set_weights(
@@ -106,11 +107,7 @@ struct Encoder {
  * That's it.
  */
 struct DefaultEncoder : public Encoder {
-    size_t nlist; // number of centroids to use in L1 quantizing.
-    size_t nbits; // number of bits used in binarizing the residuals.
-    size_t niter; // number of iterations to use in k-means clustering.
     size_t dim;   // number of dimensions per embedding.
-    size_t num_subquantizers;     // used in ProductEncoder
     IndexEncoding quantizer_type; // the type of quantizer we encode the
                                   // residuals with.
 
@@ -132,6 +129,11 @@ struct DefaultEncoder : public Encoder {
             size_t num_subquantizers,
             IndexEncoding type = IndexEncoding::BINARIZER);
 
+    DefaultEncoder(
+            size_t dim,
+            std::shared_ptr<Quantizer> quantizer
+            );
+
     size_t get_dim() const override {
         return dim;
     }
@@ -141,7 +143,7 @@ struct DefaultEncoder : public Encoder {
     }
 
     size_t get_nbits() const override {
-        return nbits;
+        return quantizer->get_nbits();
     }
 
     Quantizer* get_quantizer() const override {
@@ -176,8 +178,9 @@ struct DefaultEncoder : public Encoder {
 
     static std::unique_ptr<Encoder> load(
             std::string path,
+            std::shared_ptr<Quantizer> quantizer,
             EncoderConfig& config);
-    void train(const float* embeddings, const size_t n, const size_t dim, const size_t n_list=0, const size_t n_iter=10)
+    void train(const float* embeddings, const size_t n, const size_t dim, const int n_list=0, const int n_iter=10)
             override;
 
     /**
@@ -193,7 +196,7 @@ struct DefaultEncoder : public Encoder {
             const float avg_residual) override;
 
    private:
-    std::unique_ptr<Quantizer> quantizer;
+    std::shared_ptr<Quantizer> quantizer;
     void save(std::string path) override;
 };
 } // namespace lintdb

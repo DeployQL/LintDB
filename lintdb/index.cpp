@@ -21,11 +21,14 @@
 #include <vector>
 #include "lintdb/assert.h"
 #include "lintdb/cf.h"
-#include "lintdb/invlists/RocksdbList.h"
+#include "lintdb/invlists/RocksdbForwardIndex.h"
+#include "lintdb/invlists/RocksdbInvertedList.h"
 #include "lintdb/retriever/Retriever.h"
 #include "lintdb/schema/util.h"
 #include "lintdb/util.h"
 #include "lintdb/version.h"
+#include "lintdb/quantizers/io.h"
+#include "lintdb/quantizers/Quantizer.h"
 
 namespace lintdb {
 std::ostream& operator<<(std::ostream& os, const Configuration& config) {
@@ -43,16 +46,33 @@ IndexIVF::IndexIVF(std::string path, bool read_only)
     Configuration index_config = this->read_metadata(path);
     this->config = index_config;
 
-    auto config = EncoderConfig{
+    initialize_inverted_list(index_config.lintdb_version);
+
+    // load the saved quantizer and encoder.
+    QuantizerConfig qc {
+            config.nbits,
+            config.dim,
+            config.num_subquantizers
+    };
+    this->quantizer = load_quantizer(path, index_config.quantizer_type, qc);
+
+    auto ec = EncoderConfig{
             this->config.nlist,
             this->config.nbits,
             this->config.niter,
             this->config.dim,
-            index_config.quantizer_type,
-            this->config.num_subquantizers};
-    this->encoder = DefaultEncoder::load(path, config);
+            this->config.num_subquantizers,
+            this->config.quantizer_type};
+    this->encoder = DefaultEncoder::load(path, quantizer, ec);
 
-    initialize_inverted_list(index_config.lintdb_version);
+    this->retriever = std::make_unique<PlaidRetriever>(
+            PlaidRetriever(this->inverted_list_, this->index_, this->encoder));
+
+    // this is just legacy behavior.
+    if (this->config.nlist) {
+        this->encoder->nlist = this->config.nlist;
+        this->encoder->niter = this->config.niter;
+    }
 }
 
 IndexIVF::IndexIVF(std::string path, Configuration& config)
@@ -61,15 +81,9 @@ IndexIVF::IndexIVF(std::string path, Configuration& config)
 
     this->config = config;
 
-    this->encoder = std::make_unique<DefaultEncoder>(
-            config.nlist,
-            config.nbits,
-            config.nlist,
-            config.dim,
-            config.num_subquantizers,
-            config.quantizer_type);
-
     initialize_inverted_list(config.lintdb_version);
+    initialize_retrieval(this->config.quantizer_type);
+
 }
 
 IndexIVF::IndexIVF(
@@ -95,36 +109,86 @@ IndexIVF::IndexIVF(
 
         this->config = config;
 
-    this->encoder = std::make_unique<DefaultEncoder>(
-            nlist,
-            binarize_nbits,
-            niter,
-            dim,
-            num_subquantizers,
-            quantizer_type);
-
-    initialize_inverted_list(config.lintdb_version);
+        initialize_inverted_list(config.lintdb_version);
+        initialize_retrieval(this->config.quantizer_type);
 }
 
 IndexIVF::IndexIVF(const IndexIVF& other, const std::string path) {
     // we'll leverage the loading methods and construct the index components
     // from files on disk.
     this->config = Configuration(other.config);
-    this->read_only = false; // copying an index will always be writeable.
+    this->read_only = false; // copying an existing index will always create a writeable blank index.
 
     this->path = path;
 
-    auto config = EncoderConfig{
+    this->initialize_inverted_list(this->config.lintdb_version);
+    QuantizerConfig qc {
+            config.nbits,
+            config.dim,
+            config.num_subquantizers
+    };
+    this->quantizer = load_quantizer(other.path, config.quantizer_type, qc);
+
+    auto ec = EncoderConfig{
             this->config.nlist,
             this->config.nbits,
             this->config.niter,
             this->config.dim,
-            this->config.quantizer_type,
-            this->config.num_subquantizers};
-    this->encoder = DefaultEncoder::load(other.path, config);
-    this->initialize_inverted_list(this->config.lintdb_version);
+            this->config.num_subquantizers,
+            this->config.quantizer_type};
+    this->encoder = DefaultEncoder::load(other.path, quantizer, ec);
+
+    this->retriever = std::make_unique<PlaidRetriever>(
+            PlaidRetriever(this->inverted_list_, this->index_, this->encoder));
+
+    // this is just legacy behavior.
+    if (this->config.nlist) {
+        this->encoder->nlist = this->config.nlist;
+        this->encoder->niter = this->config.niter;
+    }
 
     this->save();
+}
+
+void IndexIVF::initialize_retrieval(IndexEncoding quantizer_type) {
+    switch (quantizer_type) {
+        case IndexEncoding::NONE:
+            this->quantizer = nullptr;
+            this->encoder = std::make_unique<DefaultEncoder>(
+                    this->config.dim,
+                    quantizer);
+            this->retriever = std::make_unique<PlaidRetriever>(
+                    PlaidRetriever(this->inverted_list_, this->index_, this->encoder));
+            break;
+
+        case IndexEncoding::BINARIZER:
+            this->quantizer = std::make_unique<Binarizer>(config.nbits, config.dim);
+            this->encoder = std::make_unique<DefaultEncoder>(
+                    this->config.dim,
+                    quantizer);
+            this->retriever = std::make_unique<PlaidRetriever>(
+                    PlaidRetriever(this->inverted_list_, this->index_, this->encoder));
+            break;
+
+        case IndexEncoding::PRODUCT_QUANTIZER:
+            this->quantizer = std::make_unique<ProductEncoder>(
+                    config.dim, config.nbits, config.num_subquantizers);
+            this->encoder = std::make_unique<DefaultEncoder>(
+                    this->config.dim,
+                    quantizer);
+            this->retriever = std::make_unique<PlaidRetriever>(
+                    PlaidRetriever(this->inverted_list_, this->index_, this->encoder));
+            break;
+
+        default:
+            throw LintDBException("Quantizer type not valid.");
+    }
+
+    // this is just legacy behavior.
+    if (this->config.nlist) {
+        this->encoder->nlist = this->config.nlist;
+        this->encoder->niter = this->config.niter;
+    }
 }
 
 void IndexIVF::initialize_inverted_list(Version& version) {
@@ -134,37 +198,25 @@ void IndexIVF::initialize_inverted_list(Version& version) {
 
     auto cfs = create_column_families();
 
+    rocksdb::DB* ptr;
+    rocksdb::Status s;
     if (!read_only) {
-        rocksdb::OptimisticTransactionDB* ptr2;
-        rocksdb::Status s = rocksdb::OptimisticTransactionDB::Open(
-                options, path, cfs, &(this->column_families), &ptr2);
-        if (!s.ok()) {
-            LOG(ERROR) << s.ToString();
-        }
-        assert(s.ok());
-        auto owned_ptr =
-                std::shared_ptr<rocksdb::OptimisticTransactionDB>(ptr2);
-        this->db = owned_ptr;
-        auto index = std::make_shared<WritableRocksDBInvertedList>(
-                WritableRocksDBInvertedList(owned_ptr, this->column_families, version));
-        this->index_ = index;
-        this->inverted_list_ = index;
-    } else {
-        rocksdb::DB* ptr;
-        rocksdb::Status s = rocksdb::DB::OpenForReadOnly(
+        s = rocksdb::DB::Open(
                 options, path, cfs, &(this->column_families), &ptr);
-        LOG(INFO) << s.ToString();
-        assert(s.ok());
-        auto owned_ptr = std::shared_ptr<rocksdb::DB>(ptr);
-        this->db = owned_ptr;
-        auto index = std::make_shared<ReadOnlyRocksDBInvertedList>(
-                ReadOnlyRocksDBInvertedList(owned_ptr, this->column_families, version));
-        this->index_ = index;
-        this->inverted_list_ = index;
+    } else {
+        s = rocksdb::DB::OpenForReadOnly(
+                options, path, cfs, &(this->column_families), &ptr);
     }
+    if (!s.ok()) {
+        LOG(ERROR) << s.ToString();
+    }
+    assert(s.ok());
+    auto owned_ptr =
+            std::shared_ptr<rocksdb::DB>(ptr);
+    this->db = owned_ptr;
 
-    this->retriever = std::make_unique<PlaidRetriever>(
-            PlaidRetriever(this->inverted_list_, this->index_, this->encoder));
+    this->index_ = std::make_shared<RocksdbForwardIndex>(owned_ptr, this->column_families, version);
+    this->inverted_list_ = std::make_shared<RocksdbInvertedList>(owned_ptr, this->column_families, version);
 }
 
 void IndexIVF::train(size_t n, std::vector<float>& embeddings, size_t nlist, size_t niter) {
@@ -198,6 +250,7 @@ void IndexIVF::train(float* embeddings, int n, int dim, size_t nlist, size_t nit
 
 void IndexIVF::save() {
     this->encoder->save(this->path);
+    save_quantizer(path, quantizer.get());
     this->write_metadata();
 }
 
@@ -366,8 +419,11 @@ void IndexIVF::merge(const std::string path) {
     index_->merge(owned_ptr, other_cfs);
 
     for (auto cf : other_cfs) {
-        owned_ptr->DestroyColumnFamilyHandle(cf);
+        db->DestroyColumnFamilyHandle(cf);
     }
+
+
+    LOG(INFO) << "merge done";
 }
 
 void IndexIVF::write_metadata() {

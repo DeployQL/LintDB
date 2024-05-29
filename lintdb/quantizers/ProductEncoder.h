@@ -1,13 +1,17 @@
 #pragma once
 
 #include <memory>
-#include <faiss/impl/ProductQuantizer.h>
-#include <faiss/IndexPQ.h>
 #include "lintdb/quantizers/Quantizer.h"
+
+namespace faiss {
+    struct IndexPQ;
+}
 
 namespace lintdb {
     struct ProductEncoder : public Quantizer {
-        std::unique_ptr<faiss::IndexPQ> pq;
+        std::shared_ptr<faiss::IndexPQ> pq;
+        size_t nbits; // number of bits used in binarizing the residuals.
+        size_t dim; // number of dimensions per embedding.
         
         ProductEncoder(
             size_t dim,
@@ -19,6 +23,11 @@ namespace lintdb {
 
         void sa_encode(size_t n, const float* x, residual_t* codes) override;
         void sa_decode(size_t n, const residual_t* codes, float* x) override;
+        size_t code_size() override;
+
+        size_t get_nbits() override {
+            return nbits;
+        }
 
         void save(const std::string path) override;
 
@@ -29,8 +38,7 @@ namespace lintdb {
         QuantizerType get_type() override;
          
         private:
-        size_t nbits; // number of bits used in binarizing the residuals.
-        size_t dim; // number of dimensions per embedding.
+
         
     };
 }

@@ -329,7 +329,6 @@ void Binarizer::sa_encode(size_t n, const float* x, residual_t* codes) {
         // TODO (mbarta): stop making this copy.
         std::vector<float> residuals(x + i * dim, x + (i + 1) * dim);
         std::vector<uint8_t> binarized = binarize(residuals);
-        // auto code_size = (nbits + 7) / 8;
         assert(binarized.size() == (dim / 8 * nbits));
 
         auto code_size = (dim / 8 * nbits);
@@ -360,5 +359,9 @@ void Binarizer::sa_decode(size_t n, const residual_t* residuals, float* x) {
             }
         }
     }
+}
+
+size_t Binarizer::code_size() {
+    return dim / 8 * nbits;
 }
 } // namespace lintdb

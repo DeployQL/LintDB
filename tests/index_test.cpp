@@ -1,19 +1,20 @@
 #include <gtest/gtest.h>
 // TODO(mbarta): we introspect the invlists during tests. We can fix this with better abstractions.
 #define private public
-#include "lintdb/index.h"
-#include "lintdb/SearchOptions.h"
-#include "lintdb/EmbeddingBlock.h"
-#include "lintdb/Passages.h"
-#include "lintdb/invlists/RocksdbList.h"
 #include <faiss/utils/random.h>
-#include <vector>
-#include <iostream>
 #include <filesystem>
 #include <gsl/span>
-#include "lintdb/util.h"
-#include <unordered_set>
+#include <iostream>
 #include <map>
+#include <unordered_set>
+#include <vector>
+#include "lintdb/EmbeddingBlock.h"
+#include "lintdb/Passages.h"
+#include "lintdb/SearchOptions.h"
+#include "lintdb/index.h"
+#include "lintdb/invlists/RocksdbForwardIndex.h"
+#include "lintdb/invlists/RocksdbInvertedList.h"
+#include "lintdb/util.h"
 
 using ::testing::TestWithParam;
 using ::testing::Values;
@@ -31,13 +32,39 @@ class IndexTest : public TestWithParam<lintdb::IndexEncoding> {
 
 // Demonstrate some basic assertions.
 TEST_P(IndexTest, InitializesCorrectly) {
-    size_t nbits = 4; // the number of bits to encode residual codes into.
     std::filesystem::path path = std::filesystem::temp_directory_path();
     auto temp_db = path.append("XXXXXX.db");
 
     lintdb::IndexIVF index(temp_db.string(), 5, 128, 2, 4, 16, type);
 
     EXPECT_EQ(index.config.nlist, 5);
+}
+
+TEST_P(IndexTest, LegacytrainsCorrectly) {
+    // This method tests the legacy pathway for initializing the encoder and testing it.
+    // nlist and niter are no longer initialized with the encoder, so we need to ensure
+    // it still works.
+    size_t dim = 128;
+    // we'll generate num_docs * num_tokens random vectors for training.
+    // keep in mind this needs to be larger than the number of dimensions.
+    size_t num_docs = 100;
+    size_t num_tokens = 100;
+
+    size_t kclusters = 250; // number of centroids to calculate.
+
+    size_t centroid_bits = 1;
+    std::filesystem::path path = std::filesystem::temp_directory_path();
+    auto temp_db = path.append("XXXXXX.db");
+    // buffer for the randomly created vectors.
+    // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
+    std::vector<float> buf(dim * (num_docs * num_tokens));
+
+    faiss::rand_smooth_vectors(num_docs * num_tokens, dim, buf.data(), 1234);
+
+    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
+
+    // legacy calling structure. nlist and niter are only passed at initialization of encoder.
+    index.train(num_docs * num_tokens, buf);
 }
 
 TEST_P(IndexTest, TrainsCorrectly) {
@@ -60,7 +87,7 @@ TEST_P(IndexTest, TrainsCorrectly) {
 
     lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
 
-    index.train(num_docs * num_tokens, buf);
+    index.train(num_docs * num_tokens, buf, kclusters, 2);
     EXPECT_EQ(index.config.nlist, 250);
 
     std::vector<float> fake_doc(dim * num_tokens);
@@ -140,7 +167,9 @@ TEST_P(IndexTest, TrainsWithCompressionCorrectly) {
         lintdb::Key end{0, i, std::numeric_limits<idx_t>::max(), false};
         std::string start_string = start.serialize();
         std::string end_string = end.serialize();
-        lintdb::ReadOnlyRocksDBInvertedList casted = static_cast<lintdb::ReadOnlyRocksDBInvertedList&>(*index.index_);
+        lintdb::RocksdbInvertedList casted = static_cast<lintdb::RocksdbInvertedList&>(
+                        reinterpret_cast<lintdb::RocksdbInvertedList&>(
+                                *index.index_));
         std::unique_ptr<lintdb::Iterator> it = casted.get_iterator(0, i);
         for(; it->has_next(); it->next()) {
             lintdb::Key key = it->get_key();
@@ -268,7 +297,7 @@ TEST_P(IndexTest, MergeCorrectly) {
 
     lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
 
-    index.train(num_docs * num_tokens, buf);
+    index.train(num_docs * num_tokens, buf, kclusters, 2);
 
     EXPECT_EQ(index.config.nlist, 2);
 
@@ -280,7 +309,7 @@ TEST_P(IndexTest, MergeCorrectly) {
     lintdb::EmbeddingPassage doc(fake_doc.data(), num_tokens, dim, 1);
     std::vector<lintdb::EmbeddingPassage> docs = { doc };
     index.add(lintdb::kDefaultTenant, docs);
-
+    std::cout << "added doc to index one" << std::endl;
 
     // create a second db.
     std::filesystem::path path_two = std::filesystem::temp_directory_path();
@@ -290,9 +319,11 @@ TEST_P(IndexTest, MergeCorrectly) {
     lintdb::EmbeddingPassage doc_two(fake_doc.data(), num_tokens, dim, 2);
     std::vector<lintdb::EmbeddingPassage> docs_two = { doc_two };
     index_two.add(lintdb::kDefaultTenant, docs_two);
+    std::cout << "added doc to index two" << std::endl;
 
     // merge the two indices.
     index.merge(second_db.string());
+    std::cout << "merged indices" << std::endl;
 
     index.flush();
 
@@ -310,7 +341,7 @@ TEST_P(IndexTest, MergeCorrectly) {
     // faiss::rand_smooth_vectors(num_tokens, dim, buf_two.data(), 1234);
     lintdb::EmbeddingBlock block_two{buf_two.data(), num_tokens, dim};
     auto results = index.search(lintdb::kDefaultTenant, block_two, 2, 5, opts);
-
+    std::cout << "searched merged index" << std::endl;
     EXPECT_EQ(results.size(), 2);
 }
 
@@ -340,7 +371,7 @@ TEST_P(IndexTest, SearchWithMetadataCorrectly) {
 
     lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
 
-    index.train(num_docs * num_tokens, buf);
+    index.train(num_docs * num_tokens, buf, kclusters, 2);
 
     EXPECT_EQ(index.config.nlist, 250);
 

@@ -12,6 +12,8 @@
 #include "lintdb/retriever/emvb.h"
 #include "lintdb/retriever/emvb_util.h"
 #include "lintdb/retriever/plaid.h"
+#include <faiss/impl/ProductQuantizer.h>
+#include <faiss/IndexPQ.h>
 
 namespace lintdb {
 extern "C" {

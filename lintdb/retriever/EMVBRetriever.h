@@ -6,9 +6,12 @@
 #include "lintdb/Encoder.h"
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/retriever/Retriever.h"
-#include <stddef.h>
+#include <cstddef>
 #include <gsl/span>
-#include <faiss/impl/ProductQuantizer.h>
+
+namespace faiss {
+struct ProductQuantizer;
+}
 
 namespace lintdb {    
     /**

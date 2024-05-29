@@ -2,10 +2,9 @@
 #include <gtest/gtest.h>
 #include <vector>
 #define private public
-#include "lintdb/quantizers/Binarizer.h"
 #include <cmath>
-#include "lintdb/invlists/util.h"
-
+#include "lintdb/invlists/keys.h"
+#include "lintdb/quantizers/Binarizer.h"
 
 TEST(BinarizerTests, QuantilesTest) {
     // Example test data

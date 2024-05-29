@@ -1,4 +1,5 @@
 #include "lintdb/quantizers/io.h"
+#include <faiss/index_io.h>
 
 namespace lintdb {
 std::unique_ptr<Quantizer> load_quantizer(

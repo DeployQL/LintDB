@@ -26,6 +26,25 @@ struct Key {
 };
 
 /**
+ * TokenKey is an inverted list key that maps to the token of a document.
+ *
+ * The total key is: tenant::inverted_list_id::doc_id::token_id.
+ *
+ * When searching against this key, exclude_id removes both the doc_id and token_id.
+ */
+struct TokenKey {
+    uint64_t tenant;
+    idx_t inverted_list_id;
+    idx_t doc_id;
+    idx_t token_id;
+    bool exclude_id;
+
+    std::string serialize() const;
+
+    static TokenKey from_slice(const rocksdb::Slice& slice);
+};
+
+/**
  * ForwardIndexKey is a struct that represents a key in the forward index.
  */
 struct ForwardIndexKey {

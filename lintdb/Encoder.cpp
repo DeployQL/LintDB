@@ -46,9 +46,7 @@ DefaultEncoder::DefaultEncoder(
         size_t num_subquantizers,
         IndexEncoding type)
         : Encoder(),
-          nbits(nbits),
           dim(dim),
-          num_subquantizers(num_subquantizers),
           quantizer_type(type) {
     this->nlist = nlist;
     this->niter = niter;
@@ -70,9 +68,7 @@ DefaultEncoder::DefaultEncoder(
         size_t num_subquantizers,
         IndexEncoding type)
         : Encoder(),
-          nbits(nbits),
           dim(dim),
-          num_subquantizers(num_subquantizers),
           quantizer_type(type) {
     // colBERT uses L2 during clustering.
     // for normalized vectors, this should be the same as IP.
@@ -83,6 +79,12 @@ DefaultEncoder::DefaultEncoder(
             .num_subquantizers = num_subquantizers,
     };
     this->quantizer = create_quantizer(type, quantizer_config);
+}
+
+DefaultEncoder::DefaultEncoder(
+        size_t dim,
+        std::shared_ptr<Quantizer> quantizer): dim(dim), quantizer(quantizer) {
+    this->coarse_quantizer = std::make_unique<faiss::IndexFlatIP>(dim);
 }
 
 std::unique_ptr<EncodedDocument> DefaultEncoder::encode_vectors(
@@ -107,22 +109,23 @@ std::unique_ptr<EncodedDocument> DefaultEncoder::encode_vectors(
                 coarse_idx[i]);
     }
 
+    std::vector<residual_t> residual_codes;
+    size_t code_size;
     if (quantizer != nullptr) {
-        std::vector<residual_t> residual_codes(num_tokens * (dim / 8 * nbits));
+        residual_codes = std::vector<residual_t>(num_tokens * quantizer->code_size());
         quantizer->sa_encode(
                 num_tokens, raw_residuals.data(), residual_codes.data());
-
-        return std::make_unique<EncodedDocument>(EncodedDocument(
-                coarse_idx, residual_codes, num_tokens, doc.id, doc.metadata));
+        code_size = quantizer->code_size();
     } else {
         const residual_t* byte_ptr =
                 reinterpret_cast<const residual_t*>(raw_residuals.data());
-        std::vector<residual_t> residual_codes(
+        residual_codes = std::vector<residual_t>(
                 byte_ptr, byte_ptr + sizeof(float) * raw_residuals.size());
-
-        return std::make_unique<EncodedDocument>(EncodedDocument(
-                coarse_idx, residual_codes, num_tokens, doc.id, doc.metadata));
+        code_size = sizeof(float) * dim;
     }
+
+    return std::make_unique<EncodedDocument>(EncodedDocument(
+            coarse_idx, residual_codes, num_tokens, doc.id, code_size, doc.metadata));
 }
 
 std::vector<float> DefaultEncoder::decode_vectors(
@@ -146,7 +149,7 @@ std::vector<float> DefaultEncoder::decode_vectors(
             // offset into the binarizer.
             quantizer->sa_decode(
                     1,
-                    residuals.data() + i * dim / 8 / nbits,
+                    residuals.data() + i * dim / 8 / get_nbits(),
                     decoded_residuals.data());
             for (size_t j = 0; j < dim; j++) {
                 decoded_embeddings[i * dim + j] += decoded_residuals[j];
@@ -285,12 +288,11 @@ void DefaultEncoder::search_quantizer(
 void DefaultEncoder::save(std::string path) {
     auto quantizer_path = path + "/" + ENCODER_FILENAME;
     faiss::write_index(coarse_quantizer.get(), quantizer_path.c_str());
-
-    save_quantizer(path, quantizer.get());
 }
 
 std::unique_ptr<Encoder> DefaultEncoder::load(
         std::string path,
+        std::shared_ptr<Quantizer> quantizer,
         EncoderConfig& config) {
     std::unique_ptr<faiss::IndexFlat> coarse_quantizer;
 
@@ -311,17 +313,11 @@ std::unique_ptr<Encoder> DefaultEncoder::load(
             config.type));
     encoder->coarse_quantizer = std::move(coarse_quantizer);
 
-    auto quantizer_config = QuantizerConfig{
-            .nbits = config.nbits,
-            .dim = config.dim,
-            .num_subquantizers = config.num_subquantizers,
-    };
-    encoder->quantizer = load_quantizer(path, config.type, quantizer_config);
+    encoder->quantizer = quantizer;
     encoder->nlist = config.nlist;
-    encoder->nbits = config.nbits;
     encoder->niter = config.niter;
     encoder->dim = config.dim;
-    encoder->is_trained = true;
+    encoder->is_trained = encoder->coarse_quantizer->is_trained;
     encoder->quantizer_type = config.type;
 
     return std::move(encoder);
@@ -331,8 +327,8 @@ void DefaultEncoder::train(
         const float* embeddings,
         const size_t n,
         const size_t dim,
-        const size_t n_list,
-        const size_t n_iter) {
+        const int n_list,
+        const int n_iter) {
     try {
         faiss::ClusteringParameters cp;
         if (this->niter != 0 && n_iter == 0) {
@@ -400,4 +396,5 @@ void DefaultEncoder::set_weights(
         binarizer->set_weights(weights, cutoffs, avg_residual);
     }
 }
+
 } // namespace lintdb

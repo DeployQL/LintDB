@@ -6,7 +6,6 @@
 #include "lintdb/quantizers/ProductEncoder.h"
 #include "lintdb/exception.h"
 #include "lintdb/quantizers/Binarizer.h"
-#include <faiss/index_io.h>
 #include <unordered_map>
 #include <string>
 #include "lintdb/SearchOptions.h"

@@ -10,13 +10,21 @@ set(
     util.cpp
     index_builder/EmbeddingModel.cpp
     index_builder/Tokenizer.cpp
-    invlists/RocksdbList.cpp
-    invlists/util.cpp
+        invlists/RocksdbForwardIndex.cpp
+        invlists/keys.cpp
     invlists/EncodedDocument.cpp
     retriever/PlaidRetriever.cpp
     retriever/plaid.cpp
     retriever/EMVBRetriever.cpp
     schema/util.cpp
+
+        invlists/RocksdbInvertedListV2.cpp
+        invlists/RocksdbInvertedList.cpp
+
+        retriever/XTRRetriever.cpp
+        quantizers/InvertedListScanner.cpp
+
+        quantizers/PQDistanceTables.cpp
 )
 
 set(
@@ -43,8 +51,13 @@ set(
     invlists/InvertedList.h
     invlists/Iterator.h
     invlists/EncodedDocument.h
-    invlists/RocksdbList.h
-    invlists/util.h
+        invlists/RocksdbForwardIndex.h
+        invlists/RocksdbInvertedListV2.h
+        quantizers/PQDistanceTables.h
+        quantizers/InvertedListScanner.h
+        invlists/RocksdbInvertedList.h
+        retriever/XTRRetriever.h
+        invlists/keys.h
     retriever/Retriever.h
     retriever/PlaidRetriever.h
     retriever/plaid.h

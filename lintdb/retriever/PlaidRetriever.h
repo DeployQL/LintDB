@@ -7,7 +7,7 @@
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/retriever/Retriever.h"
 #include "lintdb/retriever/plaid.h"
-#include <stddef.h>
+#include <cstddef>
 #include <gsl/span>
 #include <tuple>
 

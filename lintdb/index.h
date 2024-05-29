@@ -224,12 +224,15 @@ struct IndexIVF {
     std::vector<rocksdb::ColumnFamilyHandle*> column_families;
 
     std::shared_ptr<Encoder> encoder;
+    std::shared_ptr<Quantizer> quantizer;
     std::unique_ptr<Retriever> retriever;
 
     // helper to initialize the inverted list.
     void initialize_inverted_list(Version& version);
+    // helper to initialize the encoder, quantizer, and retriever. These are all
+    // inter-related.
+    void initialize_retrieval(IndexEncoding quantizer_type);
 
-    /// the inverted list data structure.
     std::shared_ptr<InvertedList> inverted_list_;
     std::shared_ptr<ForwardIndex> index_;
 

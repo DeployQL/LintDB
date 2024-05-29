@@ -1,17 +1,14 @@
 
 #include <gtest/gtest.h>
-#include "lintdb/index.h"
-#include "lintdb/EmbeddingBlock.h"
-#include <faiss/utils/random.h>
-#include <vector>
-#include <iostream>
-#include <filesystem>
-#include <faiss/utils/hamming.h>
-#include <iostream>
-#include "lintdb/invlists/RocksdbList.h"
-#include "lintdb/invlists/util.h"
 #include <rocksdb/slice.h>
+#include <filesystem>
+#include <iostream>
 #include <map>
+#include <vector>
+#include "lintdb/EmbeddingBlock.h"
+#include "lintdb/index.h"
+#include "lintdb/invlists/RocksdbForwardIndex.h"
+#include "lintdb/invlists/keys.h"
 
 TEST(RocksDBTests, KeyEncodesAndDecodesCorrectly) {
     // this loop exists because we hit a decoding error, and I want to make sure
@@ -84,9 +81,13 @@ TEST(RocksDBTests, ConcatNumbers) {
 
 TEST(RocksDBTests, MetadataSerialization) {
     std::map<std::string, std::string> metadata = {
-        {"key", "metadata"},
+        {"key", "metadata"}
     };
-    lintdb::EncodedDocument test(std::vector<int64_t>(), std::vector<uint8_t>(), 1, 1, metadata);
+
+    std::vector<int64_t> codes(1, 1);
+    std::vector<uint8_t> residuals(1, 2);
+    lintdb::EncodedDocument test(
+            codes, residuals, 1, 1, 0, metadata);
 
     std::string serialized = test.serialize_metadata();
     auto slice = rocksdb::Slice(serialized);

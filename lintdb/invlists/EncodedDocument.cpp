@@ -1,4 +1,5 @@
 #include "lintdb/invlists/EncodedDocument.h"
+#include "lintdb/api.h"
 #include <string_view>
 #include <memory>
 #include <bitsery/bitsery.h>
@@ -8,6 +9,8 @@
 #include <bitsery/ext/std_map.h>
 #include <glog/logging.h>
 #include <map>
+#include <gsl/span>
+#include "lintdb/assert.h"
 
 namespace bitsery {
     template<typename S>
@@ -17,33 +20,40 @@ namespace bitsery {
             s.text1b(value, 0xFFFF);
         });
     }
+
+    template<typename S>
+    void serialize(S& s, std::vector<residual_t>& v) {
+        s.container1b(v, 0xFF);
+
+    }
 }
 
 namespace lintdb {
 
 EncodedDocument::EncodedDocument(
-        const std::vector<code_t>
-                c, // reflects the centroid id for each token vector.
-        const std::vector<residual_t>
-                r, // reflects the residual vector for each token vector.
+        const std::vector<code_t> c,
+        const std::vector<residual_t> r,
         size_t num_tokens,
         idx_t id,
+        size_t code_size,
         const std::map<std::string, std::string>& metadata)
-        : codes(c), residuals(r), num_tokens(num_tokens), id(id), metadata(metadata) {}
+        : codes(c), residuals(r), num_tokens(num_tokens), id(id), metadata(metadata), code_size(code_size) {}
 
 EncodedDocument::EncodedDocument(
-        const code_t* c, // reflects the centroid id for each token vector.
+        const code_t* c,
         const size_t codes_size,
-        const uint8_t* r, // reflects the residual vector for each token vector.
+        const uint8_t* r,
         const size_t residuals_size,
         size_t num_tokens,
         idx_t id,
+        size_t code_size,
         const std::map<std::string, std::string>& metadata)
         : codes(c, c + codes_size),
           residuals(r, r + residuals_size),
           num_tokens(num_tokens),
           id(id),
-          metadata(metadata) {}
+          metadata(metadata),
+          code_size(code_size) {}
 
 std::string EncodedDocument::serialize_metadata() const {
     using Buffer = std::vector<uint8_t>;
@@ -54,6 +64,45 @@ std::string EncodedDocument::serialize_metadata() const {
     auto written = bitsery::quickSerialization(OutputAdapter{buf}, metadata);
     auto st = std::string(buf.begin(), buf.begin()+written);
     return st;
+}
+
+std::vector<InvertedData> EncodedDocument::serialize_inverted_data() const {
+    using Buffer = std::vector<uint8_t>;
+    using OutputAdapter = bitsery::OutputBufferAdapter<Buffer>;
+
+    std::vector<InvertedData> results;
+
+    for (idx_t i=0; i < codes.size(); i++) {
+        // for each code, we want to store the residuals associated with the right
+        // tokens.
+        auto residuals_start = residuals.begin() + i * code_size;
+        std::vector<residual_t> view(residuals_start, residuals_start+code_size);
+
+        InvertedData data;
+        data.key = codes[i];
+        Buffer buf;
+        auto written = bitsery::quickSerialization(OutputAdapter{buf}, view);
+        data.value = std::string(buf.begin(), buf.begin()+written);
+        data.token_id = i;
+
+        results.push_back(data);
+    }
+
+
+    return results;
+
+}
+
+PartialDocumentCodes PartialDocumentCodes::deserialize(idx_t id, std::string& data) {
+    LINTDB_THROW_IF_NOT(!data.empty());
+
+    using InputAdapter = bitsery::InputBufferAdapter<std::string>;
+    std::vector<residual_t> residuals;
+    auto state = bitsery::quickDeserialization(InputAdapter{data.begin(), data.size()}, residuals);
+    assert(state.first == bitsery::ReaderError::NoError && state.second);
+
+    return PartialDocumentCodes(id, residuals);
+
 }
 
 std::unique_ptr<DocumentMetadata> DocumentMetadata::deserialize(std::string& metadata) {

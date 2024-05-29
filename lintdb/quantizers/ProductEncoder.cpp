@@ -3,6 +3,8 @@
 #include <memory>
 #include "lintdb/assert.h"
 #include "lintdb/exception.h"
+#include <list>
+#include <faiss/IndexPQ.h>
 
 namespace lintdb {
 ProductEncoder::ProductEncoder(
@@ -22,6 +24,10 @@ void ProductEncoder::sa_encode(size_t n, const float* x, residual_t* codes) {
 }
 void ProductEncoder::sa_decode(size_t n, const residual_t* codes, float* x) {
     pq->sa_decode(n, codes, x);
+}
+
+size_t ProductEncoder::code_size() {
+    return pq->code_size;
 }
 
 void ProductEncoder::save(std::string path) {

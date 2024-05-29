@@ -143,15 +143,16 @@ class TestIndex(unittest.TestCase):
             collection = lintdb.Collection(index_one, collection_options)
 
             collection.train(['hello world!'] * 1500)
+            
+            opts = lintdb.SearchOptions()
+            opts.n_probe = 250
 
             collection.add_batch(0, [
                 {"id": 1, "text": "hello world!", "metadata": {"title": "metadata"}},
                 {"id": 2, "text": "hello world!", "metadata": {"title": "metadata"}}
             ])
 
-            opts = lintdb.SearchOptions()
-            opts.n_probe = 250
-            results = collection.search(0, "hello world!", 10, opts)
+            results = collection.search(0, "hello world!", 10)
 
 
             assert(len(results) == 2)

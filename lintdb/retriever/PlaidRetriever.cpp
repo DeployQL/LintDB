@@ -63,22 +63,6 @@ std::vector<idx_t> PlaidRetriever::top_passages(
     auto num_centroids_to_eval =
             std::min<size_t>(opts.n_probe, centroid_scores.size());
 
-    if (opts.expected_id != -1) {
-        LOG(INFO) << "expected id: " << opts.expected_id;
-        LOG(INFO) << "centroid score size: " << centroid_scores.size();
-        auto mapping = index_->get_mapping(tenant, opts.expected_id);
-        std::unordered_set<idx_t> mapping_set(mapping.begin(), mapping.end());
-        for (int i = 0; i < centroid_scores.size(); i++) {
-            if (mapping_set.find(centroid_scores[i].second) !=
-                mapping_set.end()) {
-                LOG(INFO) << "expected id found in centroid: "
-                          << centroid_scores[i].second;
-                if (i > num_centroids_to_eval) {
-                    LOG(INFO) << "this centroid is not being searched.";
-                };
-            };
-        }
-    }
     /**
      * Get passage ids
      */
