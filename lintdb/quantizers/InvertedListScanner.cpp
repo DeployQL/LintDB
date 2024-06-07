@@ -16,11 +16,32 @@ InvertedListScanner::InvertedListScanner(
     distance_tables = std::make_unique<PQDistanceTables>(query_data, num_tokens, quantizer->dim, quantizer->pq, true);
 }
 
-std::vector<ScoredPartialDocumentCodes> InvertedListScanner::scan(idx_t key, std::unique_ptr<Iterator> list_iterator, std::vector<idx_t>& query_tokens_to_score) {
-    auto distance_to_query_tokens = distance_tables->precompute_list_tables(key);
+std::vector<ScoredPartialDocumentCodes> InvertedListScanner::scan(
+        const idx_t key,
+        const std::unique_ptr<Iterator> list_iterator,
+        const std::vector<QueryTokenCentroidScore>& query_tokens_to_score) {
+
+    std::vector<idx_t> query_token_ids;
+    query_token_ids.reserve(query_tokens_to_score.size());
+    for (const auto& q : query_tokens_to_score) {
+        query_token_ids.push_back(q.query_token);
+    }
+
+    std::vector<float> precomputed_distances;
+    precomputed_distances.reserve(query_tokens_to_score.size());
+    for (const auto& q : query_tokens_to_score) {
+        precomputed_distances.push_back(q.distance);
+    }
 
     std::vector<ScoredPartialDocumentCodes> results;
     for (; list_iterator->has_next(); list_iterator->next()) {
+//        auto key = list_iterator->get_key();
+//        if (key.token_id == 0 ) {
+//            VLOG(5) << "skipping 0 token";
+////            LOG(WARNING) << "found zeroth token";
+//            continue;
+//        }
+
         auto partial_codes = list_iterator->get_value();
         size_t num_tokens = partial_codes.partial_residuals.size() / code_size;
         if (num_tokens != 1) {
@@ -28,18 +49,18 @@ std::vector<ScoredPartialDocumentCodes> InvertedListScanner::scan(idx_t key, std
         }
 
         ScoredPartialDocumentCodes doc_results;
-        auto token_key = list_iterator->get_token_key();
+        auto token_key = list_iterator->get_key();
         doc_results.doc_id = token_key.doc_id;
         doc_results.token_id = token_key.token_id;
 
-        auto scores = distance_tables->calculate_query_distances(
-                query_tokens_to_score,
-                distance_to_query_tokens,
-                partial_codes.partial_residuals.data()
-        );
+       auto scores = distance_tables->calculate_query_distances(
+               query_token_ids,
+               precomputed_distances,
+               partial_codes.partial_residuals.data()
+       );
 
         for(idx_t i=0; i < scores.size(); i++) {
-            const auto query_token_id = query_tokens_to_score[i];
+            const auto query_token_id = query_token_ids[i];
             doc_results.query_token_scores.insert({query_token_id, scores[i]});
         }
 

@@ -56,18 +56,19 @@ ForwardIndexKey ForwardIndexKey::from_slice(const rocksdb::Slice& slice) {
     uint64_t tenant = load_bigendian<uint64_t>(key_ptr);
     idx_t id = load_bigendian<idx_t>(key_ptr + sizeof(tenant));
 
+
     return ForwardIndexKey{tenant, id};
 }
 
 std::string TokenKey::serialize() const {
     std::vector<unsigned char> serialized_str;
 
-    store_bigendian(this->tenant, serialized_str);
-    store_bigendian(this->inverted_list_id, serialized_str);
+    store_bigendian<uint64_t>(this->tenant, serialized_str);
+    store_bigendian<idx_t>(this->inverted_list_id, serialized_str);
 
     if (!exclude_id) {
-        store_bigendian(this->doc_id, serialized_str);
-        store_bigendian(this->token_id, serialized_str);
+        store_bigendian<idx_t>(this->doc_id, serialized_str);
+        store_bigendian<idx_t>(this->token_id, serialized_str);
     }
 
     std::string result =
@@ -85,6 +86,12 @@ TokenKey TokenKey::from_slice(const rocksdb::Slice& slice) {
     auto inverted_list_id = load_bigendian<idx_t>(key_ptr + sizeof(tenant));
     auto doc_id = load_bigendian<idx_t>(
             key_ptr + sizeof(tenant) + sizeof(inverted_list_id));
+
+    // check if there's a token key. If not, return the key without the token_id.
+    if(slice.size() == 24) {
+        return TokenKey{tenant, inverted_list_id, doc_id, 0};
+    }
+
     auto token_id = load_bigendian<idx_t>(
             key_ptr + sizeof(tenant) + sizeof(inverted_list_id) + sizeof(doc_id));
 

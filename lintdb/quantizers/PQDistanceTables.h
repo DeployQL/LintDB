@@ -27,7 +27,7 @@ class PQDistanceTables {
      * precompute_list_tables precomputes the distance to the list's centroid
      * using the quantizer. We store the initial distance to each query token.
      */
-    std::vector<float> precompute_list_tables(idx_t key);
+//    std::vector<float> precompute_list_tables(const std::vector<idx_t>& query_token_ids);
 
     std::vector<float> calculate_query_distances(const std::vector<idx_t>& query_tokens_to_score, const std::vector<float>& precomputed_distances, const uint8_t* codes);
 

@@ -3,7 +3,7 @@
 #include "lintdb/index.h"
 #include "lintdb/EmbeddingBlock.h"
 #include <vector>
-#include "lintdb/retriever/plaid.h"
+#include "lintdb/retrievers/plaid.h"
 #include <algorithm>
 #include <cstdlib>
 #include "lintdb/util.h"

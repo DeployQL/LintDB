@@ -23,10 +23,10 @@ struct RocksdbForwardIndex : public ForwardIndex {
             std::vector<rocksdb::ColumnFamilyHandle*>& column_families,
             Version& version);
 
-    void add(const uint64_t tenant, std::unique_ptr<EncodedDocument> docs) override;
+    void add(const uint64_t tenant, EncodedDocument* doc) override;
     void remove(const uint64_t tenant, std::vector<idx_t> ids) override;
 
-    void merge(std::shared_ptr<rocksdb::DB> db, std::vector<rocksdb::ColumnFamilyHandle*> cfs) override;
+    void merge(rocksdb::DB* db, std::vector<rocksdb::ColumnFamilyHandle*> cfs) override;
 
     std::vector<std::unique_ptr<DocumentCodes>> get_codes(
             const uint64_t tenant,

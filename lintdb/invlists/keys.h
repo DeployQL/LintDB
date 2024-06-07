@@ -10,6 +10,8 @@ using namespace std;
 
 namespace lintdb {
 /**
+ * DEPRECATED: Please use TokenKey instead.
+ *
  * A Key is composed of several integers that specify a specific document in the
  * inverse index.
  *

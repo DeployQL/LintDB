@@ -5,27 +5,38 @@
 #include "lintdb/SearchResult.h"
 #include "lintdb/Encoder.h"
 #include "lintdb/invlists/InvertedList.h"
-#include "lintdb/retriever/Retriever.h"
-#include "lintdb/retriever/plaid.h"
+#include "lintdb/retrievers/Retriever.h"
 #include <cstddef>
 #include <gsl/span>
-#include <tuple>
+
+namespace faiss {
+struct ProductQuantizer;
+}
 
 namespace lintdb {    
     /**
-     * PlaidRetriever implements the Plaid Engine from: https://arxiv.org/pdf/2205.09707.pdf
+     * DocCandidate keeps track of the emvb score, doc id, and index position in doc codes.
      * 
-     * This is a two-pass retrieval engine that uses a combination of centroid scores and residual scores.
-     * 
-     * Implementation Note: Retrievers depend on both the encoder and the forward index in order to 
-     * get codes and residuals. There's probably a missing abstraction.
+     * It's only used for bookkeeping in the retrievers.
     */
-    struct PlaidRetriever: public Retriever {
+    template<typename ScoreType>
+    struct DocCandidate {
+        ScoreType score;
+        idx_t doc_id;
+        size_t index_position; // index_position is a hack to keep track of the index position through multithreading.
+    };
+
+    /**
+     * EMVBRetriever implements the optimizations in: https://arxiv.org/pdf/2404.02805.pdf
+     * 
+    */
+    struct EMVBRetriever: public Retriever {
         public:
-        PlaidRetriever(
+        EMVBRetriever(
             std::shared_ptr<InvertedList> inverted_list,
             std::shared_ptr<ForwardIndex> index, 
-            std::shared_ptr<Encoder> encoder
+            std::shared_ptr<Encoder> encoder,
+            size_t num_subquantizers = 16
         );
 
         std::vector<SearchResult> retrieve(
@@ -41,28 +52,43 @@ namespace lintdb {
         std::shared_ptr<ForwardIndex> index_;
         std::shared_ptr<Encoder> encoder_;
 
+        size_t num_subquantizers;
+
+        // compute_hit_frequency
         std::vector<idx_t> top_passages(
             const idx_t tenant, 
             const gsl::span<const float> query_data, 
-            const size_t n, 
+            const size_t n, // num query tokens
             const RetrieverOptions& opts,
-            std::vector<float>& distances
+            std::vector<float>& query_scores,
+            std::vector<uint32_t>& bitvectors
         );
 
-        std::vector<std::pair<float, idx_t>> rank_phase_one(
+        //
+        std::vector<DocCandidate<size_t>> rank_phase_one(
              const std::vector<std::unique_ptr<DocumentCodes>>&,
+            const std::vector<float>& reordered_distances,
+            const std::vector<uint32_t>& bitvectors,
+            const size_t n,
+            const RetrieverOptions& opts
+        );
+
+        std::vector<DocCandidate<float>> rank_by_centroids(
+            const std::vector<std::unique_ptr<DocumentCodes>>& doc_codes,
+            const std::vector<DocCandidate<size_t>> candidates,
             const std::vector<float>& reordered_distances,
             const size_t n,
             const RetrieverOptions& opts
         );
 
-        std::vector<std::tuple<float, idx_t, DocumentScore>> rank_phase_two(
-            const std::vector<idx_t>& top_25_ids,
+        std::vector<DocCandidate<float>> rank_phase_two(
+            const std::vector<DocCandidate<float>>& candidates,
             const std::vector<std::unique_ptr<DocumentCodes>>& doc_codes,
             const std::vector<std::unique_ptr<DocumentResiduals>>& doc_residuals,
-            const std::unordered_map<idx_t, size_t>& pid_to_index,
+            const std::vector<float>& distances,
             const gsl::span<const float> query_data,
             const size_t n,
+            const size_t num_to_return,
             const RetrieverOptions& opts
         );
 

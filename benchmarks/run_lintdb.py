@@ -34,7 +34,7 @@ except ImportError:
 app = typer.Typer()
 
 @app.command()
-def single_search(dataset:str='lifestyle', split:str='dev',profile=False, checkpoint:str='colbert-ir/colbertv2.0', index_path:str='experiments/py_index_bench_colbert-lifestyle-2024-04-03'):
+def single_search(dataset:str='lifestyle', split:str='dev',profile=False, checkpoint:str='colbert-ir/colbertv2.0', index_path:str='experiments/py_index_bench_test-collection-xtr'):
     checkpoint_config = ColBERTConfig.load_from_checkpoint(checkpoint)
     config = ColBERTConfig.from_existing(checkpoint_config, None)
 
@@ -46,6 +46,7 @@ def single_search(dataset:str='lifestyle', split:str='dev',profile=False, checkp
     latencies = []
     memory = []
 
+    print(f"using index at {index_path}")
     index = ldb.IndexIVF(index_path)
     rankings = {}
 

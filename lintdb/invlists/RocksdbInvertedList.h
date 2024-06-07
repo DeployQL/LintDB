@@ -30,7 +30,9 @@ struct RocksDBIterator : public lintdb::Iterator {
         if(!is_valid) {
             return false;
         }
-        this->current_key = lintdb::Key::from_slice(it->key());
+        this->current_key = lintdb::TokenKey::from_slice(it->key());
+        LOG(INFO) << "key size: " << it->key().size() << " token id: " << current_key.token_id;
+
         if (current_key.tenant != tenant || current_key.inverted_list_id != inverted_index) {
             return false;
         }
@@ -42,17 +44,13 @@ struct RocksDBIterator : public lintdb::Iterator {
         it->Next();
     }
 
-    Key get_key() const override {
+    TokenKey get_key() const override {
         return current_key;
-    }
-
-    TokenKey get_token_key() const override {
-        throw LintDBException("not supported in RocksdbInvertedList. Use RocksdbInvertedListV2");
     }
 
     PartialDocumentCodes get_value() const override {
         auto value = it->value().ToString();
-        auto id = get_key().id;
+        auto id = get_key().doc_id;
         return PartialDocumentCodes::deserialize(id, value);
     }
 
@@ -63,24 +61,31 @@ struct RocksDBIterator : public lintdb::Iterator {
     string prefix;
     string end_key;
     rocksdb::Slice prefix_slice;
-    lintdb::Key current_key;
+    TokenKey current_key;
 
     const idx_t tenant;
     const idx_t inverted_index;
 
 };
 
+/**
+ * RocksdbInvertedList stores a slim version of the inverted list. There is no data
+ * associated with each token, only the document id as part of the key.
+ *
+ * This inverted list is only capable of telling us what documents are associated
+ * with what centroids.
+ */
 struct RocksdbInvertedList: public InvertedList {
     RocksdbInvertedList(
             std::shared_ptr<rocksdb::DB> db,
             std::vector<rocksdb::ColumnFamilyHandle*>& column_families,
             Version& version);
 
-    void add(uint64_t tenant, std::unique_ptr<EncodedDocument> docs)
+    void add(uint64_t tenant, EncodedDocument* doc)
             override;
     void remove(uint64_t tenant, std::vector<idx_t> ids) override;
     void merge(
-            std::shared_ptr<rocksdb::DB> db,
+            rocksdb::DB* db,
             std::vector<rocksdb::ColumnFamilyHandle*> cfs) override;
 
     std::vector<idx_t> get_mapping(const uint64_t tenant, idx_t id) const override;

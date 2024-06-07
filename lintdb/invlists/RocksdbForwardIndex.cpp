@@ -21,7 +21,7 @@ RocksdbForwardIndex::RocksdbForwardIndex(
 
 void RocksdbForwardIndex::add(
         const uint64_t tenant,
-        std::unique_ptr<EncodedDocument> doc) {
+        EncodedDocument* doc) {
     rocksdb::WriteOptions wo;
     // get unique indexes.
     std::unordered_set<idx_t> unique_coarse_idx(
@@ -30,34 +30,9 @@ void RocksdbForwardIndex::add(
 
     rocksdb::WriteBatch batch;
 
-    // store inverted index.
-    for(code_t idx : unique_coarse_idx) {
-        VLOG(100) << "Adding document with id: " << doc->id
-                  << " to inverted list " << idx;
-        auto index_status = batch.Put(
-                column_families[kIndexColumnIndex],
-                rocksdb::Slice(Key{tenant, idx, doc->id}.serialize()),
-                rocksdb::Slice()
-        );
-        LINTDB_THROW_IF_NOT(index_status.ok());
-    }
-
     // store forward doc id -> coarse idx mapping.
     ForwardIndexKey forward_key = ForwardIndexKey{tenant, doc->id};
     auto fks = forward_key.serialize();
-    std::vector<idx_t> unique_coarse_idx_vec(
-            unique_coarse_idx.begin(), unique_coarse_idx.end());
-    auto mapping_ptr = create_doc_mapping(
-            unique_coarse_idx_vec.data(), unique_coarse_idx_vec.size());
-    auto mapping_status = batch.Put(
-            column_families[kMappingColumnIndex],
-            rocksdb::Slice(fks),
-            rocksdb::Slice(
-                    reinterpret_cast<const char*>(
-                            mapping_ptr->GetBufferPointer()),
-                    mapping_ptr->GetSize())
-    );
-    LINTDB_THROW_IF_NOT(mapping_status.ok());
 
     // store document codes.
     auto doc_ptr = create_inverted_index_document(
@@ -105,6 +80,10 @@ void RocksdbForwardIndex::remove(
         const uint64_t tenant,
         std::vector<idx_t> ids) {
     for (idx_t id : ids) {
+        // it's easier to skip the inverted index column families.
+        if (id == kIndexColumnIndex || id == kMappingColumnIndex) {
+            continue;
+        }
         // delete from all of the forward indices.
         for (size_t i = 1; i < column_families.size(); i++) {
             // ignore the default cf at position 0 since we don't use it.
@@ -291,13 +270,18 @@ std::vector<std::unique_ptr<DocumentMetadata>> RocksdbForwardIndex::get_metadata
 }
 
 void RocksdbForwardIndex::merge(
-        std::shared_ptr<rocksdb::DB> db,
+        rocksdb::DB* db,
         std::vector<rocksdb::ColumnFamilyHandle*> cfs) {
     // very weak check to make sure the column families are the same.
     LINTDB_THROW_IF_NOT(cfs.size() == column_families.size());
 
 #pragma omp for
     for (size_t i = 1; i < cfs.size(); i++) {
+        // it's easier to skip the inverted index column families.
+        // the forward index uses the rest.
+        if (i == kIndexColumnIndex || i == kMappingColumnIndex) {
+            continue;
+        }
         // ignore the default cf at position 0 since we don't use it.
         auto cf = cfs[i];
         rocksdb::ReadOptions ro;

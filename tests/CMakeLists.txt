@@ -1,11 +1,16 @@
 set(
     LINT_DB_TESTS
-    index_test.cpp
+        util.h
+        index_test.cpp
     plaid_test.cpp
     rocksdb_test.cpp
     binarizer_test.cpp
     encoder_test.cpp
     index_builder_test.cpp
+    mocks.h
+    xtr_test.cpp
+        inverted_list_test.cpp
+        encoded_doc_test.cpp
 )
 
 add_executable(

@@ -20,7 +20,7 @@ RocksDBIterator::RocksDBIterator(
         const idx_t inverted_list)
         : lintdb::Iterator(), tenant(tenant), inverted_index(inverted_list) {
     cf = column_family->GetID();
-    prefix = lintdb::Key{tenant, inverted_list, 0, true}.serialize();
+    prefix = lintdb::TokenKey{tenant, inverted_list, 0, 0, true}.serialize();
 
     prefix_slice = rocksdb::Slice(this->prefix);
     auto options = rocksdb::ReadOptions();
@@ -38,18 +38,16 @@ RocksdbInvertedList::RocksdbInvertedList(
 
 void RocksdbInvertedList::add(
         const uint64_t tenant,
-        std::unique_ptr<EncodedDocument> doc) {
+        EncodedDocument* doc) {
 
     rocksdb::WriteOptions wo;
     std::unordered_set<idx_t> unique_coarse_idx(
             doc->codes.begin(), doc->codes.end());
     VLOG(100) << "Unique coarse indexes: " << unique_coarse_idx.size();
-
     // store ivf -> doc mapping.
     for (const code_t& idx : unique_coarse_idx) {
         Key key = Key{tenant, idx, doc->id};
         std::string k_string = key.serialize();
-
         rocksdb::Status status = db_->Put(
                 wo,
                 column_families[kIndexColumnIndex],
@@ -61,6 +59,24 @@ void RocksdbInvertedList::add(
         VLOG(100) << "Added document with id: " << doc->id
                   << " to inverted list " << idx;
     }
+
+    // store forward doc id -> coarse idx mapping.
+    ForwardIndexKey forward_key = ForwardIndexKey{tenant, doc->id};
+    auto fks = forward_key.serialize();
+    std::vector<idx_t> unique_coarse_idx_vec(
+            unique_coarse_idx.begin(), unique_coarse_idx.end());
+    auto mapping_ptr = create_doc_mapping(
+            unique_coarse_idx_vec.data(), unique_coarse_idx_vec.size());
+    auto mapping_status = db_->Put(
+            wo,
+            column_families[kMappingColumnIndex],
+            rocksdb::Slice(fks),
+            rocksdb::Slice(
+                    reinterpret_cast<const char*>(
+                            mapping_ptr->GetBufferPointer()),
+                    mapping_ptr->GetSize())
+    );
+    LINTDB_THROW_IF_NOT(mapping_status.ok());
 }
 
 void RocksdbInvertedList::remove(
@@ -109,29 +125,35 @@ std::vector<idx_t> RocksdbInvertedList::get_mapping(
     }
 }
 
+// merge uses the index and mapping column families.
 void RocksdbInvertedList::merge(
-        std::shared_ptr<rocksdb::DB> db,
+        rocksdb::DB* db,
         std::vector<rocksdb::ColumnFamilyHandle*> cfs) {
     // very weak check to make sure the column families are the same.
     LINTDB_THROW_IF_NOT(cfs.size() == column_families.size());
 
-#pragma omp for
-    for (size_t i = 1; i < cfs.size(); i++) {
-        // ignore the default cf at position 0 since we don't use it.
-        auto cf = cfs[i];
-        rocksdb::ReadOptions ro;
-        auto it = db->NewIterator(ro, cf);
-        it->SeekToFirst();
-        rocksdb::WriteOptions wo;
-        while (it->Valid()) {
-            auto key = it->key();
-            auto value = it->value();
-            auto status = db_->Put(wo, column_families[i], key, value);
-            assert(status.ok());
-            it->Next();
-        }
+    auto cf = cfs[kIndexColumnIndex];
+    rocksdb::ReadOptions ro;
+    auto it = db->NewIterator(ro, cf);
+    it->SeekToFirst();
+    rocksdb::WriteOptions wo;
+    while (it->Valid()) {
+        auto key = it->key();
+        auto value = it->value();
+        auto status = db_->Put(wo, column_families[kIndexColumnIndex], key, value);
+        assert(status.ok());
+        it->Next();
+    }
 
-        delete it;
+    auto map_cf = cfs[kMappingColumnIndex];
+    auto map_it = db->NewIterator(ro, map_cf);
+    map_it->SeekToFirst();
+    while (map_it->Valid()) {
+        auto key = map_it->key();
+        auto value = map_it->value();
+        auto status = db_->Put(wo, column_families[kMappingColumnIndex], key, value);
+        assert(status.ok());
+        map_it->Next();
     }
 }
 

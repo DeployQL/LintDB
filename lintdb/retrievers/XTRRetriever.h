@@ -1,11 +1,15 @@
 #pragma once
 
-#include "lintdb/retriever/Retriever.h"
+#include "lintdb/retrievers/Retriever.h"
 #include <memory>
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/Encoder.h"
 #include <gsl/span>
 #include "lintdb/quantizers/ProductEncoder.h"
+#include "lintdb/quantizers/InvertedListScanner.h"
+#include <map>
+#include <vector>
+
 
 namespace lintdb {
 
@@ -35,7 +39,25 @@ namespace lintdb {
             size_t n, // num tokens
             size_t k, // num to return
             const RetrieverOptions& opts
-        ) = 0;
+        ) override;
+
+        static void get_document_scores(
+                const size_t n,
+                vector<ScoredPartialDocumentCodes>& all_doc_codes,
+                map<idx_t, std::vector<float>>& document_scores,
+                vector<float>& lowest_query_scores);
+
+        static void impute_missing_scores(
+                const size_t n,
+                map<idx_t, std::vector<float>>& document_scores,
+                const std::vector<float>& lowest_query_scores);
+
+        std::vector<ScoredPartialDocumentCodes> get_document_codes(
+                idx_t tenant,
+                const std::vector<QueryTokenCentroidScore>& token_centroid_scores,
+                const gsl::span<const float> query_data,
+                const size_t n // num tokens
+                );
 
         private:
         std::shared_ptr<InvertedList> inverted_list_;
@@ -44,12 +66,14 @@ namespace lintdb {
         std::shared_ptr<ProductEncoder> product_encoder_;
 
 
-        std::vector<std::pair<float, idx_t>> get_top_centroids(
+        std::vector<QueryTokenCentroidScore>
+        filter_top_centroids_per_query_token(
                 const std::vector<idx_t>& coarse_idx,
                 const std::vector<float>& distances,
-                size_t n, // num_tokens
-                size_t total_centroids_to_calculate,
-                size_t k_top_centroids,
-                size_t n_probe) const;
+                const size_t n, // num_tokens
+                const size_t total_centroids_to_calculate,
+                const size_t k_top_centroids) const;
+
+
     };
 }

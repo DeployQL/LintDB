@@ -1,4 +1,4 @@
-#include "lintdb/retriever/EMVBRetriever.h"
+#include "lintdb/retrievers/EMVBRetriever.h"
 #include <glog/logging.h>
 #include <omp.h>
 #include <numeric>
@@ -8,10 +8,10 @@
 #include "lintdb/invlists/EncodedDocument.h"
 #include "lintdb/quantizers/ProductEncoder.h"
 #include "lintdb/quantizers/Quantizer.h"
-#include "lintdb/retriever/Retriever.h"
-#include "lintdb/retriever/emvb.h"
-#include "lintdb/retriever/emvb_util.h"
-#include "lintdb/retriever/plaid.h"
+#include "lintdb/retrievers/Retriever.h"
+#include "lintdb/retrievers/emvb.h"
+#include "lintdb/retrievers/emvb_util.h"
+#include "lintdb/retrievers/plaid.h"
 #include <faiss/impl/ProductQuantizer.h>
 #include <faiss/IndexPQ.h>
 
@@ -436,7 +436,7 @@ std::vector<idx_t> EMVBRetriever::lookup_pids(
     for (; it->has_next(); it->next()) {
         auto k = it->get_key();
 
-        local_pids.push_back(k.id);
+        local_pids.push_back(k.doc_id);
     }
 
     return local_pids;

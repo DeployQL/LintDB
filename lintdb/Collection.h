@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include "lintdb/SearchOptions.h"
 
 namespace lintdb {
     struct CollectionOptions {
@@ -37,15 +38,15 @@ namespace lintdb {
          * @param metadata a dictionary of metadata to store with the document. only accepts strings.
         */
         void add(const uint64_t tenant, const uint64_t id, const std::string& text, const std::map<std::string, std::string>& metadata) const;
-        
+
         /**
          * Add a batch of texts to the index.
-         * 
+         *
          * @param tenant The tenant id.
          * @param passages A list of EmbeddingPassage objects to add.
         */
         void add_batch(
-            const uint64_t tenant, 
+            const uint64_t tenant,
             const std::vector<TextPassage> passages
         ) const;
         /**

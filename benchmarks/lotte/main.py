@@ -64,8 +64,6 @@ def lintdb(dataset, experiment, split='dev', k=5, checkpoint: str = "colbert-ir/
         experiment, 
         'experiments', 
         d, 
-        2, 
-        nbits=1,
         checkpoint=checkpoint,
         reuse_centroids=True,
         use_compression=True

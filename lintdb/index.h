@@ -16,8 +16,8 @@
 #include "lintdb/api.h"
 #include "lintdb/exception.h"
 #include "lintdb/invlists/InvertedList.h"
-#include "lintdb/retriever/PlaidRetriever.h"
-#include "lintdb/retriever/Retriever.h"
+#include "lintdb/retrievers/PlaidRetriever.h"
+#include "lintdb/retrievers/Retriever.h"
 #include "lintdb/version.h"
 
 // forward declare these classes and avoid including the rocksdb headers.
@@ -229,9 +229,11 @@ struct IndexIVF {
 
     // helper to initialize the inverted list.
     void initialize_inverted_list(Version& version);
-    // helper to initialize the encoder, quantizer, and retriever. These are all
+    // helper to initialize the encoder, quantizer, and retrievers. These are all
     // inter-related.
     void initialize_retrieval(IndexEncoding quantizer_type);
+    // instead of initializing, load from disk.
+    void load_retrieval(std::string path, const Configuration& config);
 
     std::shared_ptr<InvertedList> inverted_list_;
     std::shared_ptr<ForwardIndex> index_;

@@ -26,6 +26,18 @@ struct ScoredPartialDocumentCodes {
 };
 
 /**
+ * QueryTokenCentroidScore holds the distance between a query token and a centroid.
+ *
+ * This is passed to scan to help calculate the score of a token.
+
+ */
+struct QueryTokenCentroidScore {
+    idx_t query_token;
+    idx_t centroid_id;
+    float distance;
+};
+
+/**
  * InvertedListScanner helps us scan through an inverted list and score the results.
  *
  * The score is going to be a calculation between the stored codes, the centroid, and the query.
@@ -38,12 +50,14 @@ class InvertedListScanner {
             size_t num_tokens
     );
 
-    std::vector<ScoredPartialDocumentCodes> scan(idx_t key, std::unique_ptr<Iterator> list_iterator, std::vector<idx_t>& query_tokens_to_score);
+    std::vector<ScoredPartialDocumentCodes> scan(
+            idx_t key,
+            const std::unique_ptr<Iterator> list_iterator,
+            const std::vector<QueryTokenCentroidScore>& query_tokens_to_score);
 
    private:
         std::unique_ptr<PQDistanceTables> distance_tables;
         size_t code_size;
-        std::vector<idx_t> query_tokens_to_score;
 
 };
 

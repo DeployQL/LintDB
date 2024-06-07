@@ -1,5 +1,6 @@
 #include "lintdb/Collection.h"
 #include "lintdb/EmbeddingBlock.h"
+#include "lintdb/assert.h"
 #include <glog/logging.h>
 #include <iostream>
 #include "lintdb/utils/progress_bar.h"
@@ -9,7 +10,11 @@ namespace lintdb {
     Collection::Collection(IndexIVF* index, const CollectionOptions& opts) {
         this->index = index;
         this->model = std::make_unique<EmbeddingModel>(opts.model_file);
-        this->tokenizer = std::make_unique<Tokenizer>(opts.tokenizer_file, opts.max_length);
+
+        LINTDB_THROW_IF_NOT_MSG(index->config.dim == model->get_dims(), "model dimensions don't match index dimensions");
+
+        bool use_spiece = index->config.quantizer_type == IndexEncoding::XTR;
+        this->tokenizer = std::make_unique<Tokenizer>(opts.tokenizer_file, opts.max_length, use_spiece);
     }
 
     void Collection::add(const uint64_t tenant, const uint64_t id, const std::string& text, const std::map<std::string, std::string>& metadata) const {
@@ -20,6 +25,7 @@ namespace lintdb {
 
         std::vector<int32_t> attn;
         for(auto id: ids) {
+
             if(id == 0) {
                 attn.push_back(0);
             } else {
@@ -35,40 +41,13 @@ namespace lintdb {
     }
 
     void Collection::add_batch(
-        const uint64_t tenant, 
+        const uint64_t tenant,
         const std::vector<TextPassage> passages
         ) const {
-        
-        std::vector<ModelInput> inputs;
-        for(auto passage: passages) {
-            auto ids = tokenizer->encode(passage.data);
 
-            ModelInput input;
-            input.input_ids = ids;
-
-            std::vector<int32_t> attn;
-            for(auto id: ids) {
-                if(id == 0) {
-                    attn.push_back(0);
-                } else {
-                    attn.push_back(1);
-                }
-            }
-            input.attention_mask = attn;
-
-            inputs.push_back(input);
+        for(const auto& passage: passages) {
+            this->add(tenant, passage.id, passage.data, passage.metadata);
         }
-
-        auto output = model->encode(inputs);
-
-        std::vector<EmbeddingPassage> embedded_passages;
-        for (size_t i = 0; i < passages.size(); i++) {
-            auto encoded_vector = output.get(i);
-            auto passage = EmbeddingPassage(encoded_vector.data(), inputs[i].input_ids.size(), model->get_dims(), passages[i].id, passages[i].metadata);
-            embedded_passages.push_back(passage);
-        }
-
-        index->add(tenant, embedded_passages);
     }
 
     std::vector<SearchResult> Collection::search(
@@ -82,17 +61,21 @@ namespace lintdb {
         input.input_ids = ids;
 
         std::vector<int32_t> attn;
+        int size = 0;
         for(auto id: ids) {
             if(id == 0) {
                 attn.push_back(0);
             } else {
                 attn.push_back(1);
+                size++;
             }
         }
         input.attention_mask = attn;
         auto output = model->encode(input);
 
-        return index->search(tenant, output.data(), ids.size(), model->get_dims(), opts.n_probe, k, opts);
+        std::vector<float> query_data = output;
+
+        return index->search(tenant, query_data.data(), size, model->get_dims(), opts.n_probe, k, opts);
     }
 
     std::vector<TokenScore> Collection::interpret(

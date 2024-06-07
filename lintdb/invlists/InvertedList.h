@@ -17,9 +17,9 @@ namespace lintdb {
  * this out into a separate class.
  */
 struct InvertedList {
-    virtual void add(const uint64_t tenant, std::unique_ptr<EncodedDocument> docs) = 0;
+    virtual void add(const uint64_t tenant, EncodedDocument* doc) = 0;
     virtual void remove(const uint64_t tenant, std::vector<idx_t> ids) = 0;
-    virtual void merge(std::shared_ptr<rocksdb::DB> db, std::vector<rocksdb::ColumnFamilyHandle*> cfs) = 0;
+    virtual void merge(rocksdb::DB* db, std::vector<rocksdb::ColumnFamilyHandle*> cfs) = 0;
 
     virtual std::unique_ptr<Iterator> get_iterator(
         const uint64_t tenant,
@@ -47,10 +47,10 @@ struct ForwardIndex {
         const uint64_t tenant,
         const std::vector<idx_t>& ids) const = 0;
 
-    virtual void add(const uint64_t tenant, std::unique_ptr<EncodedDocument> docs) = 0;
+    virtual void add(const uint64_t tenant, EncodedDocument* doc) = 0;
     virtual void remove(const uint64_t tenant, std::vector<idx_t> ids) = 0;
 
-    virtual void merge(std::shared_ptr<rocksdb::DB> db, std::vector<rocksdb::ColumnFamilyHandle*> cfs) = 0;
+    virtual void merge(rocksdb::DB* db, std::vector<rocksdb::ColumnFamilyHandle*> cfs) = 0;
 
     virtual ~ForwardIndex() = default;
 };

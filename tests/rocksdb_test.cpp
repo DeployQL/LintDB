@@ -32,6 +32,30 @@ TEST(RocksDBTests, KeyEncodesAndDecodesCorrectly) {
 
 }
 
+TEST(RocksDBTests, TokenKeyEncodesAndDecodesCorrectly) {
+    // this loop exists because we hit a decoding error, and I want to make sure
+    // encoding/decoding works for more values.
+    for (code_t i=0; i < 20000; i++) {
+        auto test_key = lintdb::TokenKey{
+                1, // tenant
+                2, // inverted list id
+                i, // doc id
+                3 // token id
+        };
+
+        std::string ks = test_key.serialize();
+        auto slice = rocksdb::Slice(ks);
+
+        auto decoded = lintdb::TokenKey::from_slice(slice);
+
+        EXPECT_EQ(test_key.tenant, decoded.tenant);
+        EXPECT_EQ(test_key.inverted_list_id, decoded.inverted_list_id);
+        EXPECT_EQ(test_key.doc_id, decoded.doc_id);
+        EXPECT_EQ(test_key.token_id, decoded.token_id);
+    }
+
+}
+
 TEST(RocksDBTests, ForwardKeyEncodesAndDecodesCorrectly) {
     // this loop exists because we hit a decoding error, and I want to make sure
     // encoding/decoding works for more values.

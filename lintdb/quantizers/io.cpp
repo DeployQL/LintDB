@@ -22,6 +22,9 @@ std::unique_ptr<Quantizer> load_quantizer(
             case IndexEncoding::PRODUCT_QUANTIZER:
                 return ProductEncoder::load(path, config);
 
+            case IndexEncoding::XTR:
+                return ProductEncoder::load(path, config);
+
             default:
                 throw LintDBException("Quantizer type not valid.");
         }
@@ -65,6 +68,10 @@ std::unique_ptr<Quantizer> create_quantizer(
             return std::make_unique<Binarizer>(config.nbits, config.dim);
 
         case IndexEncoding::PRODUCT_QUANTIZER:
+            return std::make_unique<ProductEncoder>(
+                    config.dim, config.nbits, config.num_subquantizers);
+
+        case IndexEncoding::XTR:
             return std::make_unique<ProductEncoder>(
                     config.dim, config.nbits, config.num_subquantizers);
 

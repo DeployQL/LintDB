@@ -1,10 +1,10 @@
-#include "lintdb/retriever/PlaidRetriever.h"
+#include "lintdb/retrievers/PlaidRetriever.h"
 #include <glog/logging.h>
 #include <omp.h>
 #include "lintdb/SearchOptions.h"
 #include "lintdb/invlists/EncodedDocument.h"
-#include "lintdb/retriever/Retriever.h"
-#include "lintdb/retriever/plaid.h"
+#include "lintdb/retrievers/Retriever.h"
+#include "lintdb/retrievers/plaid.h"
 #include <tuple>
 
 #ifndef LINTDB_CHUNK_SIZE
@@ -294,7 +294,7 @@ std::vector<idx_t> PlaidRetriever::lookup_pids(
     for (; it->has_next(); it->next()) {
         auto k = it->get_key();
 
-        local_pids.push_back(k.id);
+        local_pids.push_back(k.doc_id);
     }
 
     return local_pids;
@@ -367,7 +367,7 @@ std::vector<std::pair<float, idx_t>> PlaidRetriever::get_top_centroids(
         std::sort(
                 centroid_scores.begin(),
                 centroid_scores.end(),
-                std::greater<std::pair<float, idx_t>>());
+                std::greater<>());
     } else {
         std::sort_heap(
                 centroid_scores.begin(), centroid_scores.end(), comparator);

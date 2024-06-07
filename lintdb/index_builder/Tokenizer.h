@@ -28,7 +28,7 @@ namespace lintdb {
 
         std::set<int> skip_tokens;
 
-        Tokenizer(const std::string& path, const size_t max_length);
+        Tokenizer(const std::string& path, const size_t max_length, const bool is_sentencepiece=false);
         InputIds encode(const std::string& text, bool is_query=false) const;
         std::string decode(const InputIds& ids) const;
 

@@ -21,7 +21,7 @@ build-python-mac:
 	cd builds/python/lintdb/python && python setup.py build
 
 test:
-	cd builds/debug && cmake -E env GLOG_logtostderr=1 MKL_THREADING_LAYER=GNU ctest --output-on-failure
+	cd builds/debug && cmake -E env GLOG_v=5 GLOG_logtostderr=1 MKL_THREADING_LAYER=GNU ctest --output-on-failure
 
 test-python: build-python
 # had to fix up conda to make this work--
@@ -44,10 +44,10 @@ format:
 
 valgrind:
 # we need valgrind?-3.20 to process dwarf5
-	valgrind -s --trace-children=yes --track-origins=yes --keep-stacktraces=alloc-and-free --suppressions=debug/valgrind-python.supp env PYTHONPATH="_build_python_/lintdb/python/build/lib/lintdb" python benchmarks/bench_lintdb.py --index-path=experiments/py_index_bench_colbert-lifestyle-2024-04-03
+	valgrind -s --trace-children=yes --track-origins=yes --keep-stacktraces=alloc-and-free --suppressions=debug/valgrind-python.supp env PYTHONPATH="_build_python_/lintdb/python/build/lib/lintdb" python benchmarks/bench_lintdb.py --index-path=experiments/py_index_bench_test-collection-xtr
 
-callgrind: build-conda
-	OMP_MAX_ACTIVE_LEVELS=2 OMP_THREAD_LIMIT=6 OMP_NUM_THREADS=6 PYTHONPATH="_build_python_/lintdb/python/build/lib/lintdb" valgrind --tool=callgrind --suppressions=debug/valgrind-python.supp --instr-atstart=yes --dump-instr=yes --collect-jumps=yes python ./benchmarks/bench_lintdb.py
+callgrind:
+	OMP_MAX_ACTIVE_LEVELS=2 OMP_THREAD_LIMIT=6 OMP_NUM_THREADS=6 PYTHONPATH="_build_python_/lintdb/python/build/lib/lintdb" valgrind --tool=callgrind --suppressions=debug/valgrind-python.supp --instr-atstart=yes --dump-instr=yes --collect-jumps=yes python ./benchmarks/bench_lintdb.py single-search
 	
 callgrind-colbert: build-conda
 	PYTHONPATH="_build_python_/lintdb/python/build/lib/lintdb" valgrind --tool=callgrind --suppressions=debug/valgrind-python.supp --instr-atstart=no --dump-instr=yes --collect-jumps=yes python ./benchmarks/run_colbert.py
@@ -73,6 +73,9 @@ build-conda:
 	-DBUILD_TESTING=OFF \
 	-DCMAKE_BUILD_TYPE=Release \
 	-DBLA_VENDOR=Intel10_64lp \
+	-DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
+	-DOpenMP_CXX_LIB_NAMES=libiomp5 \
+	-DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/_build_python_/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
 	.
 
 	cmake --build _build_python_${PY_VER} --target pylintdb -j12
@@ -92,7 +95,7 @@ build-benchmarks:
 	  .
 	CC=gcc CXX=g++ CMAKE_C_COMPILER=gcc CMAKE_CXX_COMPILER=g++ cmake --build build_benchmarks --target=bench_lintdb -j12
 
-run-perf: build-conda
+run-perf:
 # make sure your system allows perf to run. ex: sudo sysctl -w kernel.perf_event_paranoid=1 
-	OMP_MAX_ACTIVE_LEVELS=2 OMP_THREAD_LIMIT=12 OMP_NUM_THREADS=6 PYTHONPATH="_build_python_/lintdb/python/build/lib/lintdb" perf record -g -- /home/matt/miniconda3/envs/lintdb-benchmark/bin/python -X perf benchmarks/bench_lintdb.py
+	OMP_MAX_ACTIVE_LEVELS=2 OMP_THREAD_LIMIT=12 OMP_NUM_THREADS=6 PYTHONPATH="builds/python/lintdb/python/build/lib/lintdb" perf record -g -- /home/matt/miniconda3/envs/lintdb-benchmark/bin/python -X perf benchmarks/run_lintdb.py
 	perf script | ./debug/stackcollapse-perf.pl | ./debug/flamegraph.pl > perf.data.svg 

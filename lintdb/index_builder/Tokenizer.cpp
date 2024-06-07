@@ -7,9 +7,13 @@
 
 
 namespace lintdb {
-    Tokenizer::Tokenizer(const std::string& path, const size_t max_length): max_length(max_length) {
+    Tokenizer::Tokenizer(const std::string& path, const size_t max_length, const bool is_sentencepiece): max_length(max_length) {
         auto blob = LoadBytesFromFile(path);
-        tokenizer = tokenizers::Tokenizer::FromBlobJSON(blob);
+        if (is_sentencepiece) {
+            tokenizer = tokenizers::Tokenizer::FromBlobSentencePiece(blob);
+        } else {
+            tokenizer = tokenizers::Tokenizer::FromBlobJSON(blob);
+        }
 
         for(const char& c: "!\"#$%&'()*+,-./:;<=>? @[\\]^_`{|}~") {
             skip_tokens.insert(tokenizer->TokenToId(std::string(1, c)));

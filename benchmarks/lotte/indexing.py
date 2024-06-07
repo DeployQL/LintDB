@@ -25,6 +25,11 @@ from colbert import Searcher
 
 app = typer.Typer()
 
+def batch(iterable, n=1):
+    l = len(iterable)
+    for ndx in range(0, l, n):
+        yield iterable[ndx:min(ndx + n, l)]
+
 @app.command()
 def run(
     dataset: str, 
@@ -36,6 +41,8 @@ def run(
     num_procs:int=10, 
     nbits: int=1, 
     index_type="binarizer",
+    use_batch:bool=False,
+    batch_size:int=5,
     checkpoint: str = "colbert-ir/colbertv2.0"):
     print("Loading dataset...")
     d = load_lotte(dataset, split, stop=40000)
@@ -51,15 +58,23 @@ def run(
         index_type_enum = ldb.IndexEncoding_PRODUCT_QUANTIZER
     elif index_type == 'none':
         index_type_enum = ldb.IndexEncoding_NONE
+    elif index_type == 'xtr':
+        index_type_enum = ldb.IndexEncoding_XTR
 
     print(f"using index type: {index_type_enum}")
 
         # lifestyle full centroids == 65536
         #lifestyle-40k-benchmark centroids == 32768
-    index = ldb.IndexIVF(index_path, 32768, 128, nbits, 6, 16, index_type_enum)
+    dims = 128
+    if index_type_enum == ldb.IndexEncoding_XTR:
+        dims = 768
+    index = ldb.IndexIVF(index_path, 32768, dims, nbits, 6, 16, index_type_enum)
     opts = ldb.CollectionOptions()
     opts.model_file = "assets/model.onnx"
     opts.tokenizer_file = "assets/colbert_tokenizer.json"
+    if index_type_enum == ldb.IndexEncoding_XTR:
+        opts.model_file = "assets/xtr-encoder.onnx"
+        opts.tokenizer_file = "assets/xtr-tokenizer.json"  #"assets/spiece.model"
     collection = ldb.Collection(index, opts)
 
     training_data = random.sample(d.collection, 1000)
@@ -67,8 +82,13 @@ def run(
 
     start = time.perf_counter()
 
-    for i, dd in tqdm(zip(d.dids, d.collection)):
-        collection.add(0, i, dd, {'text': dd})
+    if use_batch:
+        for b in tqdm(batch(list(zip(d.dids, d.collection)), n=batch_size)):
+                bb = [{'id': i, 'text': dd, 'metadata': {'text': dd}} for i, dd in b]
+                collection.add_batch(0, bb)
+    else:
+        for i, dd in tqdm(zip(d.dids, d.collection)):
+            collection.add(0, i, dd, {'text': dd})
 
     duration = time.perf_counter() - start
     print(f"Indexing complete. duration: {duration:.2f}s")
