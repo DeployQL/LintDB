@@ -36,7 +36,7 @@ static const std::string METADATA_FILENAME = "_lintdb_metadata.json";
  *
  */
 struct Configuration {
-    Version lintdb_version; /// the current version of the index. Used internally for feature compatibility.
+    Version lintdb_version = LINTDB_VERSION; /// the current version of the index. Used internally for feature compatibility.
     size_t nlist = 256; /// the number of centroids to train.
     size_t nbits = 2;   /// the number of bits to use in residual compression.
     size_t niter = 10;  /// the number of iterations to use during training.

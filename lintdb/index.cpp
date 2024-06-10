@@ -44,12 +44,11 @@ IndexIVF::IndexIVF(std::string path, bool read_only)
     LOG(INFO) << "loading LintDB from path: " << path;
 
     // set all of our individual attributes.
-    Configuration index_config = this->read_metadata(path);
-    this->config = index_config;
+    this->config = this->read_metadata(path);
 
-    initialize_inverted_list(index_config.lintdb_version);
+    initialize_inverted_list(config.lintdb_version);
 
-    load_retrieval(path, index_config);
+    load_retrieval(path, config);
 }
 
 IndexIVF::IndexIVF(std::string path, Configuration& config)
@@ -355,7 +354,6 @@ std::vector<SearchResult> IndexIVF::search(
 
     auto results =
             this->retriever->retrieve(tenant, query_span, n, k, plaid_options);
-
     std::vector<idx_t> ids;
     for (auto& result : results) {
         ids.push_back(result.id);
@@ -396,7 +394,8 @@ void IndexIVF::add(const uint64_t tenant, const std::vector<EmbeddingPassage>& d
 void IndexIVF::add_single(const uint64_t tenant, const EmbeddingPassage& doc) {
     auto encoded = encoder->encode_vectors(doc);
     inverted_list_->add(tenant, encoded.get());
-    index_->add(tenant, encoded.get());
+    //
+    index_->add(tenant, encoded.get(), config.quantizer_type != IndexEncoding::XTR);
 }
 
 void IndexIVF::remove(const uint64_t tenant, const std::vector<idx_t>& ids) {

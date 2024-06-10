@@ -35,13 +35,6 @@ std::vector<ScoredPartialDocumentCodes> InvertedListScanner::scan(
 
     std::vector<ScoredPartialDocumentCodes> results;
     for (; list_iterator->has_next(); list_iterator->next()) {
-//        auto key = list_iterator->get_key();
-//        if (key.token_id == 0 ) {
-//            VLOG(5) << "skipping 0 token";
-////            LOG(WARNING) << "found zeroth token";
-//            continue;
-//        }
-
         auto partial_codes = list_iterator->get_value();
         size_t num_tokens = partial_codes.partial_residuals.size() / code_size;
         if (num_tokens != 1) {
@@ -56,7 +49,7 @@ std::vector<ScoredPartialDocumentCodes> InvertedListScanner::scan(
        auto scores = distance_tables->calculate_query_distances(
                query_token_ids,
                precomputed_distances,
-               partial_codes.partial_residuals.data()
+               partial_codes.partial_residuals
        );
 
         for(idx_t i=0; i < scores.size(); i++) {

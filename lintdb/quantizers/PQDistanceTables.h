@@ -29,7 +29,7 @@ class PQDistanceTables {
      */
 //    std::vector<float> precompute_list_tables(const std::vector<idx_t>& query_token_ids);
 
-    std::vector<float> calculate_query_distances(const std::vector<idx_t>& query_tokens_to_score, const std::vector<float>& precomputed_distances, const uint8_t* codes);
+    std::vector<float> calculate_query_distances(const std::vector<idx_t>& query_tokens_to_score, const std::vector<float>& precomputed_distances, const std::vector<uint8_t>& codes);
 
 
    private:

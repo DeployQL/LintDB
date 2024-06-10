@@ -23,7 +23,9 @@ struct RocksdbForwardIndex : public ForwardIndex {
             std::vector<rocksdb::ColumnFamilyHandle*>& column_families,
             Version& version);
 
-    void add(const uint64_t tenant, EncodedDocument* doc) override;
+    // store_codes is used to determine whether to store the codes in the forward index.
+    // ColBERT uses the forward index for codes, but XTR does not.
+    void add(const uint64_t tenant, EncodedDocument* doc, bool store_codes=true) override;
     void remove(const uint64_t tenant, std::vector<idx_t> ids) override;
 
     void merge(rocksdb::DB* db, std::vector<rocksdb::ColumnFamilyHandle*> cfs) override;

@@ -254,6 +254,7 @@ void DefaultEncoder::search(
     for (int i = 0; i < num_query_tok; i++) {
         for (int j = 0; j < k_top_centroids; j++) {
             auto pair = centroid_scores[i * k_top_centroids + j];
+
             distances[i * k_top_centroids + j] = pair.first;
             coarse_idx[i * k_top_centroids + j] = pair.second;
         }

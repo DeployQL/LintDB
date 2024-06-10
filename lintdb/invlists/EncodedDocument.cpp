@@ -98,8 +98,6 @@ std::vector<InvertedData> EncodedDocument::serialize_inverted_data() const {
 }
 
 PartialDocumentCodes PartialDocumentCodes::deserialize(idx_t id, std::string& data) {
-    LOG(INFO) << "deserializing partial doc codes. size: " << data.size();
-
     LINTDB_THROW_IF_NOT(!data.empty());
 
 //    using InputAdapter = bitsery::InputBufferAdapter<std::string>;

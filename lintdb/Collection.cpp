@@ -11,6 +11,8 @@ namespace lintdb {
         this->index = index;
         this->model = std::make_unique<EmbeddingModel>(opts.model_file);
 
+        LOG(INFO) << "config dims: " << index->config.dim << " model dims: " << model->get_dims();
+
         LINTDB_THROW_IF_NOT_MSG(index->config.dim == model->get_dims(), "model dimensions don't match index dimensions");
 
         bool use_spiece = index->config.quantizer_type == IndexEncoding::XTR;

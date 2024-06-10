@@ -31,7 +31,6 @@ struct RocksDBIterator : public lintdb::Iterator {
             return false;
         }
         this->current_key = lintdb::TokenKey::from_slice(it->key());
-        LOG(INFO) << "key size: " << it->key().size() << " token id: " << current_key.token_id;
 
         if (current_key.tenant != tenant || current_key.inverted_list_id != inverted_index) {
             return false;

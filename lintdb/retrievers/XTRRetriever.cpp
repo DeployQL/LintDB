@@ -30,16 +30,6 @@ namespace lintdb {
             opts.total_centroids_to_calculate,
             opts.centroid_threshold);
 
-//    std::vector<float> distances_copy = distances;
-//    std::vector<idx_t> coarse_idx_copy = coarse_idx;
-//    LOG(INFO) << "listing out coarse_idx and distances.";
-//    for(int i=0; i < n; i++) {
-//        for(int j=0; j<opts.total_centroids_to_calculate; j++) {
-//            LOG(INFO) << "coarse_idx[" << i << "][" << j << "] = " << coarse_idx_copy[i * opts.total_centroids_to_calculate + j]
-//                    << " distances[" << i << "][" << j << "] = " << distances_copy[i * opts.total_centroids_to_calculate + j];
-//        }
-//    }
-
     // returns k top centroids per query token.
     auto top_centroids = filter_top_centroids_per_query_token(
             coarse_idx,
@@ -50,7 +40,7 @@ namespace lintdb {
 
     InvertedListScanner scanner(product_encoder_, query_data.data(), n);
 
-
+    // step 1: get the top token neighbors.
     auto all_doc_codes = get_document_codes(
             tenant,
             top_centroids,
@@ -58,7 +48,6 @@ namespace lintdb {
             n
     );
 
-    // step 1: get the top token neighbors.
     // for each doc partial result, we need to assemble the top scores per query token.
     std::map<idx_t, std::vector<float>> document_scores;
     std::vector<float> lowest_query_scores;
@@ -76,10 +65,28 @@ namespace lintdb {
             score += s;
         }
 
-        results.emplace_back(SearchResult{doc_id, score/n});
+        results.emplace_back(SearchResult{doc_id, score});
     }
 
     std::sort(results.begin(), results.end(), std::greater<>());
+
+    if (opts.expected_id != -1) {
+        auto it = std::find_if(
+                results.begin(),
+                results.end(),
+                [opts](SearchResult p) {
+                    return p.id == opts.expected_id;
+                });
+        if (it != results.end()) {
+            auto pos = it - results.begin();
+            LOG(INFO) << "found expected id in pid code scores at position: "
+                      << pos << " score: " << it->score;
+            if (pos > k) {
+                LOG(INFO) << "num to return: " << k
+                          << ". expected id is not being returned";
+            }
+        }
+    }
 
     return results;
 }
@@ -92,6 +99,7 @@ std::vector<ScoredPartialDocumentCodes> XTRRetriever::get_document_codes(
     InvertedListScanner scanner(product_encoder_, query_data.data(), n);
 
     std::vector<ScoredPartialDocumentCodes> all_doc_codes;
+#pragma omp parallel for
     for(const auto centroid_score : token_centroid_scores) {
         auto centroid_idx = centroid_score.centroid_id;
         // get the query tokens that want to search this centroid_score and their distance to the centroid_score.
@@ -100,11 +108,11 @@ std::vector<ScoredPartialDocumentCodes> XTRRetriever::get_document_codes(
         std::vector<ScoredPartialDocumentCodes> scored = scanner.scan(
                 centroid_idx, std::move(it), {centroid_score});
 
-        if (scored.empty()) {
-            LOG(WARNING) << "no documents found for centroid_score: " << centroid_idx;
-        }
-
+#pragma omp critical
+    {
         all_doc_codes.insert(all_doc_codes.end(), scored.begin(), scored.end());
+
+    }
     }
 
     return all_doc_codes;
@@ -118,7 +126,6 @@ void XTRRetriever::impute_missing_scores(
         for (size_t i = 0; i < n; i++) {
             if (scores[i] == numeric_limits<float>::lowest()) {
                 if (lowest_query_scores[i] == numeric_limits<float>::max()) {
-//                    LOG(WARNING) << "failed to impute missing query score.";
                     scores[i] = 0;
                 } else {
                     scores[i] = lowest_query_scores[i];
@@ -163,8 +170,9 @@ std::vector<QueryTokenCentroidScore> XTRRetriever::
     // we're finding the highest centroid scores per query token.
     std::vector<QueryTokenCentroidScore> results;
 
+    size_t max_centroids_to_return = std::min(k_top_centroids, total_centroids_to_calculate);
     for (idx_t i = 0; i < n; i++) {
-        for (size_t j = 0; j < k_top_centroids; j++) {
+        for (size_t j = 0; j < max_centroids_to_return; j++) {
             auto centroid_of_interest =
                     coarse_idx[i * total_centroids_to_calculate + j];
 

@@ -32,20 +32,21 @@ PQDistanceTables::PQDistanceTables(
 std::vector<float> PQDistanceTables::calculate_query_distances(
         const std::vector<idx_t>& query_tokens_to_score,
         const std::vector<float>& precomputed_distances,
-        const uint8_t* codes) {
-    std::vector<float> results(precomputed_distances.size());
-    for(int i = 0; i < precomputed_distances.size(); i++) {
-        results[i] = precomputed_distances[i];
-    }
+        const std::vector<uint8_t>& codes) {
+    std::vector<float> results(precomputed_distances);
+
     for(int j = 0; j < query_tokens_to_score.size(); j++) {
         auto query_token_id = query_tokens_to_score[j];
         auto sim_table = distance_tables[query_token_id];
-        float score = faiss::distance_single_code<faiss::PQDecoderGeneric>(
-                ipq->pq,
-                sim_table.data(),
-                codes
-        );
-        results[j] += score;
+        for (size_t c = 0; c < codes.size(); c++) {
+            float score = faiss::distance_single_code<faiss::PQDecoderGeneric>(
+                    ipq->pq,
+                    sim_table.data(),
+                    codes.data() + c * ipq->pq.code_size
+            );
+            results[j] += score;
+        }
+
     }
     return results;
 }

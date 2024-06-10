@@ -65,7 +65,9 @@ def lintdb_search(
         checkpoint: str = "colbert-ir/colbertv2.0", 
         reuse_centroids=True, 
         use_compression=False,
-        failures={}):
+        failures={},
+        use_xtr: bool = False,
+        ):
     # let's get the same model.
     config = ColBERTConfig.load_from_checkpoint(checkpoint)
     config.kmeans_niters=4
@@ -73,9 +75,10 @@ def lintdb_search(
     config.ndocs=1024
     config.centroid_score_threshold=.45
 
-    from colbert.modeling.checkpoint import Checkpoint
-    from colbert import Searcher
-    checkpoint = Checkpoint(checkpoint, config)
+    if not use_xtr:
+        from colbert.modeling.checkpoint import Checkpoint
+        from colbert import Searcher
+        checkpoint = Checkpoint(checkpoint, config)
 
     index_path = f"{exp_path}/py_index_bench_{experiment}"
     if not os.path.exists(index_path):
@@ -126,7 +129,7 @@ def lintdb_search(
                     )
             else:
                 opts = ldb.SearchOptions()
-                opts.k_top_centroids = 100
+                opts.k_top_centroids = 1000
                 results = index.search(
                     0,
                     converted, 
@@ -135,8 +138,8 @@ def lintdb_search(
                     opts
                 )
                 count+=1
-                if count == 2:
-                    return
+                # if count == 2:
+                #     return
             for rank, result in enumerate(results):
                 # qid, pid, rank
                 f.write(f"{id}\t{result.id}\t{rank+1}\t{result.score}\n")

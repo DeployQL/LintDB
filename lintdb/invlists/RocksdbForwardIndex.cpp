@@ -21,7 +21,8 @@ RocksdbForwardIndex::RocksdbForwardIndex(
 
 void RocksdbForwardIndex::add(
         const uint64_t tenant,
-        EncodedDocument* doc) {
+        EncodedDocument* doc,
+        bool store_codes) {
     rocksdb::WriteOptions wo;
     // get unique indexes.
     std::unordered_set<idx_t> unique_coarse_idx(
@@ -35,14 +36,17 @@ void RocksdbForwardIndex::add(
     auto fks = forward_key.serialize();
 
     // store document codes.
-    auto doc_ptr = create_inverted_index_document(
-            doc->codes.data(), doc->codes.size());
-    auto* ptr = doc_ptr->GetBufferPointer();
-    auto size = doc_ptr->GetSize();
+    if (store_codes) {
+        auto doc_ptr = create_inverted_index_document(
+                doc->codes.data(), doc->codes.size());
+        auto* ptr = doc_ptr->GetBufferPointer();
+        auto size = doc_ptr->GetSize();
 
-    const rocksdb::Slice slice(reinterpret_cast<const char*>(ptr), size);
-    auto codes_status = batch.Put(column_families[kCodesColumnIndex], rocksdb::Slice(fks), slice);
-    LINTDB_THROW_IF_NOT(codes_status.ok());
+        const rocksdb::Slice slice(reinterpret_cast<const char*>(ptr), size);
+        auto codes_status = batch.Put(column_families[kCodesColumnIndex], rocksdb::Slice(fks), slice);
+        LINTDB_THROW_IF_NOT(codes_status.ok());
+    }
+
 
     // store document residuals.
     auto forward_doc_ptr = create_forward_index_document(
@@ -62,18 +66,17 @@ void RocksdbForwardIndex::add(
     // store document metadata.
     if (this->version.metadata_enabled) {
         std::string metadata_serialized = doc->serialize_metadata();
-
         const rocksdb::Slice metadata_slice(metadata_serialized);
         rocksdb::Status metadata_status = batch.Put(
                 column_families[kDocColumnIndex],
                 rocksdb::Slice(fks),
                 metadata_slice);
-
-        auto status = db_->Write(wo, &batch);
-        assert(status.ok());
-
-        LINTDB_THROW_IF_NOT(status.ok());
     }
+
+    auto status = db_->Write(wo, &batch);
+    assert(status.ok());
+
+    LINTDB_THROW_IF_NOT(status.ok());
 };
 
 void RocksdbForwardIndex::remove(

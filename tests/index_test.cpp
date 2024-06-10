@@ -40,6 +40,12 @@ TEST_P(IndexTest, InitializesCorrectly) {
     lintdb::IndexIVF index(temp_db.string(), 5, 128, 2, 4, 16, type);
 
     EXPECT_EQ(index.config.nlist, 5);
+
+    EXPECT_GE(index.config.lintdb_version.major, 0);
+    EXPECT_GE(index.config.lintdb_version.minor, 1);
+
+    // we expect metadata to be enabled by default.
+    EXPECT_TRUE(index.config.lintdb_version.metadata_enabled);
 }
 
 TEST_P(IndexTest, LegacytrainsCorrectly) {
@@ -161,6 +167,7 @@ TEST_P(IndexTest, TrainsWithCompressionCorrectly) {
 
     // without knowing what ivf list we assigned the doc to, make sure one document is indexed.
     // this amounts to a full scan.
+    int count = 0;
     for(idx_t i=0; i<kclusters; i++) {
         lintdb::Key start{0, i, 0, true};
         lintdb::Key end{0, i, std::numeric_limits<idx_t>::max(), false};
@@ -174,8 +181,11 @@ TEST_P(IndexTest, TrainsWithCompressionCorrectly) {
             lintdb::TokenKey key = it->get_key();
             auto id = key.doc_id;
             EXPECT_EQ(id, idx_t(1));
+            count++;
         }
     }
+
+    EXPECT_GE(count, 1);
 
 }
 
@@ -391,9 +401,9 @@ TEST_P(IndexTest, SearchWithMetadataCorrectly) {
 }
 
 INSTANTIATE_TEST_SUITE_P(IndexTest, IndexTest, Values(
-//    lintdb::IndexEncoding::NONE,
-//    lintdb::IndexEncoding::BINARIZER,
-//    lintdb::IndexEncoding::PRODUCT_QUANTIZER,
+    lintdb::IndexEncoding::NONE,
+    lintdb::IndexEncoding::BINARIZER,
+    lintdb::IndexEncoding::PRODUCT_QUANTIZER,
     lintdb::IndexEncoding::XTR
     ),
     [](const testing::TestParamInfo<IndexTest::ParamType>& info) {

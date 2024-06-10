@@ -34,7 +34,7 @@ class MockForwardIndex : public lintdb::ForwardIndex {
     MOCK_METHOD(std::vector<std::unique_ptr<lintdb::DocumentMetadata>>, get_metadata,
                 (const uint64_t tenant, const std::vector<idx_t>& ids), (const, override));
 
-    MOCK_METHOD(void, add, (const uint64_t tenant, lintdb::EncodedDocument* doc), (override));
+    MOCK_METHOD(void, add, (const uint64_t tenant, lintdb::EncodedDocument* doc, bool store_codes), (override));
     MOCK_METHOD(void, remove, (const uint64_t tenant, std::vector<idx_t> ids), (override));
 
     MOCK_METHOD(void, merge, (rocksdb::DB* db, std::vector<rocksdb::ColumnFamilyHandle*> cfs), (override));
