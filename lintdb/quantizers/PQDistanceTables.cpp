@@ -31,10 +31,6 @@ std::vector<float> PQDistanceTables::calculate_query_distances(
         const std::vector<float>& precomputed_distances,
         const std::vector<uint8_t>& codes) {
     std::vector<float> results(precomputed_distances);
-//    for(auto pc : precomputed_distances) {
-//        LOG(INFO) << "precomputed distance: " << pc;
-//    }
-
     for(int j = 0; j < query_tokens_to_score.size(); j++) {
         auto query_token_id = query_tokens_to_score[j];
         auto sim_table = distance_tables[query_token_id];
@@ -43,9 +39,7 @@ std::vector<float> PQDistanceTables::calculate_query_distances(
                 sim_table.data(),
                 codes.data()
         );
-//        LOG(INFO) << "score: " << score;
         results[j] += score;
-
     }
     return results;
 }

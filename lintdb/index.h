@@ -71,9 +71,9 @@ struct IndexIVF {
     friend struct Collection; // our Collection wants access to the index.
 
     /// load an existing index.
-    IndexIVF(std::string path, bool read_only = false);
+    IndexIVF(const std::string& path, bool read_only = false);
 
-    IndexIVF(std::string path, Configuration& config);
+    IndexIVF(const std::string& path, Configuration& config);
 
     IndexIVF(
             std::string path, /// path to the database.

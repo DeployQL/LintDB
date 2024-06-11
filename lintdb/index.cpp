@@ -39,7 +39,7 @@ std::ostream& operator<<(std::ostream& os, const Configuration& config) {
     return os;
 }
 
-IndexIVF::IndexIVF(std::string path, bool read_only)
+IndexIVF::IndexIVF(const std::string& path, bool read_only)
         : read_only(read_only), path(path) {
     LOG(INFO) << "loading LintDB from path: " << path;
 
@@ -51,7 +51,7 @@ IndexIVF::IndexIVF(std::string path, bool read_only)
     load_retrieval(path, config);
 }
 
-IndexIVF::IndexIVF(std::string path, Configuration& config)
+IndexIVF::IndexIVF(const std::string& path, Configuration& config)
         : config(config), path(path) {
     LINTDB_THROW_IF_NOT(config.nlist <= std::numeric_limits<code_t>::max());
 
@@ -191,6 +191,7 @@ void IndexIVF::load_retrieval(std::string path, const Configuration& config) {
         case IndexEncoding::NONE:
             this->retriever = std::make_unique<PlaidRetriever>(
                     PlaidRetriever(this->inverted_list_, this->index_, this->encoder));
+            break;
         default:
             throw LintDBException("Index Encoding not known.");
     }
