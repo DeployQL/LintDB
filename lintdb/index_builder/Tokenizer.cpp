@@ -4,12 +4,13 @@
 #include <tokenizers_cpp.h>
 #include <set>
 #include <cctype>
+#include <glog/logging.h>
 
 
 namespace lintdb {
-    Tokenizer::Tokenizer(const std::string& path, const size_t max_length, const bool is_sentencepiece): max_length(max_length) {
+    Tokenizer::Tokenizer(const std::string& path, const size_t max_length, const bool is_xtr): max_length(max_length), is_xtr(is_xtr) {
         auto blob = LoadBytesFromFile(path);
-        if (is_sentencepiece) {
+        if (is_xtr) {
             tokenizer = tokenizers::Tokenizer::FromBlobSentencePiece(blob);
         } else {
             tokenizer = tokenizers::Tokenizer::FromBlobJSON(blob);
@@ -24,11 +25,41 @@ namespace lintdb {
      * Modify the input ids for encoding by adding special tokens.
     */
     InputIds Tokenizer::modify_ids_for_encoding(const InputIds& ids, bool is_query) const {
+        if(is_xtr) {
+            return modify_ids_for_xtr(ids, is_query);
+        }
+        return modify_ids_for_colbert(ids, is_query);
+    }
+
+    InputIds Tokenizer::modify_ids_for_xtr(const InputIds& ids, bool is_query) const {
+        InputIds new_ids;
+
+        for (auto id: ids) {
+            if (new_ids.size() >= max_length-1) {
+                break;
+            }
+            if(is_query) {
+                if (skip_tokens.find(id) == skip_tokens.end()) {
+                    new_ids.push_back(id);
+                }
+            } else {
+                new_ids.push_back(id);
+            }
+        }
+        new_ids.push_back(xtr_eos_token);
+
+        return new_ids;
+    }
+
+    InputIds Tokenizer::modify_ids_for_colbert(const InputIds& ids, bool is_query) const {
         InputIds new_ids;
         new_ids.push_back(cls_token);
         new_ids.push_back(is_query ? query_token : doc_token);
 
         for(auto id: ids) {
+            if (new_ids.size() >= max_length-1) {
+                break;
+            }
             if(is_query) {
                 if (skip_tokens.find(id) == skip_tokens.end()) {
                     new_ids.push_back(id);
@@ -44,9 +75,6 @@ namespace lintdb {
 
     InputIds Tokenizer::encode(const std::string& text, bool is_query) const {
         InputIds ids = tokenizer->Encode(text);
-        if(ids.size() > max_length-3) {
-            ids.resize(max_length-3);
-        }
 
         return modify_ids_for_encoding(ids, is_query);
     }

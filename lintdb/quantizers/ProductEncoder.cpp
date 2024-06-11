@@ -5,18 +5,21 @@
 #include "lintdb/exception.h"
 #include <list>
 #include <faiss/IndexPQ.h>
+#include <faiss/utils/distances.h>
 
 namespace lintdb {
 ProductEncoder::ProductEncoder(
         size_t dim,
         size_t nbits,
         size_t num_subquantizers = 16)
-        : Quantizer(), nbits(nbits), dim(dim) {
+        : Quantizer(), nbits(nbits), dim(dim), num_subquantizers(num_subquantizers){
     this->pq = std::make_unique<faiss::IndexPQ>(
             dim /*input dimensions*/,
             num_subquantizers /* number of sub quantizers */,
             nbits /* number of bits per subquantizer index */,
             faiss::METRIC_INNER_PRODUCT);
+    dsub = pq->pq.dsub;
+    ksub = pq->pq.ksub;
 }
 
 void ProductEncoder::sa_encode(size_t n, const float* x, residual_t* codes) {
@@ -27,7 +30,7 @@ void ProductEncoder::sa_decode(size_t n, const residual_t* codes, float* x) {
 }
 
 size_t ProductEncoder::code_size() {
-    return pq->code_size;
+    return pq->sa_code_size();
 }
 
 void ProductEncoder::save(std::string path) {
@@ -52,11 +55,15 @@ std::unique_ptr<ProductEncoder> ProductEncoder::load(
 
     auto encoder = std::make_unique<ProductEncoder>(
             config.dim, config.nbits, config.num_subquantizers);
+    encoder->is_trained = quantizer->is_trained;
     encoder->pq = std::move(quantizer);
 
     encoder->nbits = config.nbits;
     encoder->dim = config.dim;
-    encoder->is_trained = true;
+    encoder->num_subquantizers = config.num_subquantizers;
+    encoder->ksub = encoder->pq->pq.ksub;
+    encoder->dsub = encoder->pq->pq.dsub;
+
     return encoder;
 }
 
@@ -70,5 +77,12 @@ void ProductEncoder::train(
         const size_t dim) {
     pq->train(n, embeddings);
 }
+
+std::unique_ptr<PQDistanceTables> ProductEncoder::get_distance_tables(
+        const float* query_data,
+        size_t num_tokens) const {
+    return std::make_unique<PQDistanceTables>(query_data, num_tokens, dim, this->pq, true);
+}
+
 
 } // namespace lintdb

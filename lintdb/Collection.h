@@ -68,7 +68,7 @@ namespace lintdb {
             const std::vector<float> scores
         );
 
-        void train(const std::vector<std::string> texts);
+        void train(const std::vector<std::string> texts, size_t nlist=0, size_t niter=0);
 
         private:
             IndexIVF* index;

@@ -13,13 +13,13 @@
 #include <memory>
 #include <cstdint>
 
-#include "lintdb/SearchResult.h"
-#include "lintdb/index.h"
-#include "lintdb/SearchOptions.h"
+#include "lintdb/Collection.h"
 #include "lintdb/EmbeddingBlock.h"
 #include "lintdb/Passages.h"
-#include "lintdb/Collection.h"
+#include "lintdb/SearchOptions.h"
+#include "lintdb/SearchResult.h"
 #include "lintdb/exception.h"
+#include "lintdb/index.h"
 
 #include <faiss/impl/FaissException.h>
 #include <numpy/arrayobject.h>

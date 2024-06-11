@@ -20,13 +20,10 @@ PQDistanceTables::PQDistanceTables(
 
     for (size_t i = 0; i < num_tokens; i++) {
         std::vector<float> distance_table(ipq->pq.M * ipq->pq.ksub);
-        if (!is_ip) {
-            ipq->pq.compute_distance_table(query_data + i * dim, distance_table.data());
-        } else {
-            ipq->pq.compute_inner_prod_table(query_data + i * dim, distance_table.data());
-        }
+        ipq->pq.compute_inner_prod_table(query_data + i * dim, distance_table.data());
         distance_tables.push_back(distance_table);
     }
+
 }
 
 std::vector<float> PQDistanceTables::calculate_query_distances(
@@ -34,18 +31,20 @@ std::vector<float> PQDistanceTables::calculate_query_distances(
         const std::vector<float>& precomputed_distances,
         const std::vector<uint8_t>& codes) {
     std::vector<float> results(precomputed_distances);
+//    for(auto pc : precomputed_distances) {
+//        LOG(INFO) << "precomputed distance: " << pc;
+//    }
 
     for(int j = 0; j < query_tokens_to_score.size(); j++) {
         auto query_token_id = query_tokens_to_score[j];
         auto sim_table = distance_tables[query_token_id];
-        for (size_t c = 0; c < codes.size(); c++) {
-            float score = faiss::distance_single_code<faiss::PQDecoderGeneric>(
-                    ipq->pq,
-                    sim_table.data(),
-                    codes.data() + c * ipq->pq.code_size
-            );
-            results[j] += score;
-        }
+        float score = faiss::distance_single_code<faiss::PQDecoderGeneric>(
+                ipq->pq,
+                sim_table.data(),
+                codes.data()
+        );
+//        LOG(INFO) << "score: " << score;
+        results[j] += score;
 
     }
     return results;

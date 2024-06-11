@@ -128,7 +128,7 @@ def eval(dataset, experiment, index_type='binarizer', split='dev'):
     with open(f"experiments/{experiment}.ranking.tsv", "w") as f:
         for id, query in zip(data.qids, data.queries):
             opts = ldb.SearchOptions()
-            opts.k_top_centroids = 32
+            opts.k_top_centroids = 100
             results = collection.search(
                 0, # tenant
                 query, # converted,

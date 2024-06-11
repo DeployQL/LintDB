@@ -10,22 +10,18 @@ set(
     util.cpp
     index_builder/EmbeddingModel.cpp
     index_builder/Tokenizer.cpp
-        invlists/RocksdbForwardIndex.cpp
-        invlists/keys.cpp
+    invlists/RocksdbForwardIndex.cpp
+    invlists/keys.cpp
     invlists/EncodedDocument.cpp
-        retrievers/PlaidRetriever.cpp
-        retrievers/plaid.cpp
-        retrievers/EMVBRetriever.cpp
+    retrievers/PlaidRetriever.cpp
+    retrievers/plaid.cpp
+    retrievers/EMVBRetriever.cpp
     schema/util.cpp
-
-        invlists/RocksdbInvertedListV2.cpp
-        invlists/RocksdbInvertedList.cpp
-
-        retrievers/XTRRetriever.cpp
-        quantizers/InvertedListScanner.cpp
-
-        quantizers/PQDistanceTables.cpp
-        env.h
+    invlists/RocksdbInvertedListV2.cpp
+    invlists/RocksdbInvertedList.cpp
+    retrievers/XTRRetriever.cpp
+    quantizers/InvertedListScanner.cpp
+    quantizers/PQDistanceTables.cpp
 )
 
 set(
@@ -39,6 +35,7 @@ set(
     cf.h
     EmbeddingBlock.h
     Encoder.h
+    env.h
     Passages.h
     quantizers/Binarizer.h
     quantizers/Quantizer.h
@@ -52,21 +49,21 @@ set(
     invlists/InvertedList.h
     invlists/Iterator.h
     invlists/EncodedDocument.h
-        invlists/RocksdbForwardIndex.h
-        invlists/RocksdbInvertedListV2.h
-        quantizers/PQDistanceTables.h
-        quantizers/InvertedListScanner.h
-        invlists/RocksdbInvertedList.h
-        retrievers/XTRRetriever.h
-        invlists/keys.h
-        retrievers/Retriever.h
-        retrievers/PlaidRetriever.h
-        retrievers/plaid.h
-        retrievers/EMVBRetriever.h
-        retrievers/emvb_util.h
-        retrievers/emvb.h
-        retrievers/emvb_generic.h
-        retrievers/emvb_avx.h
+    invlists/RocksdbForwardIndex.h
+    invlists/RocksdbInvertedListV2.h
+    quantizers/PQDistanceTables.h
+    quantizers/InvertedListScanner.h
+    invlists/RocksdbInvertedList.h
+    retrievers/XTRRetriever.h
+    invlists/keys.h
+    retrievers/Retriever.h
+    retrievers/PlaidRetriever.h
+    retrievers/plaid.h
+    retrievers/EMVBRetriever.h
+    retrievers/emvb_util.h
+    retrievers/emvb.h
+    retrievers/emvb_generic.h
+    retrievers/emvb_avx.h
     schema/forward_index_generated.h
     schema/inverted_index_generated.h
     schema/mapping_generated.h

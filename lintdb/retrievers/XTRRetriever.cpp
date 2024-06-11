@@ -1,7 +1,5 @@
 #include "lintdb/retrievers/XTRRetriever.h"
 #include <glog/logging.h>
-
-#include <glog/log_severity.h>
 #include <utility>
 #include "lintdb/quantizers/InvertedListScanner.h"
 
@@ -22,7 +20,7 @@ namespace lintdb {
     ) {
     std::vector<idx_t> coarse_idx(n * opts.total_centroids_to_calculate);
     std::vector<float> distances(n * opts.total_centroids_to_calculate);
-    encoder_->search(
+    encoder_->search_quantizer(
             query_data.data(),
             n,
             coarse_idx,
@@ -31,14 +29,13 @@ namespace lintdb {
             opts.centroid_threshold);
 
     // returns k top centroids per query token.
+    size_t max_centroids_to_return = std::min(opts.k_top_centroids, opts.total_centroids_to_calculate);
     auto top_centroids = filter_top_centroids_per_query_token(
             coarse_idx,
             distances,
             n,
             opts.total_centroids_to_calculate,
-            opts.k_top_centroids);
-
-    InvertedListScanner scanner(product_encoder_, query_data.data(), n);
+            max_centroids_to_return);
 
     // step 1: get the top token neighbors.
     auto all_doc_codes = get_document_codes(
@@ -56,7 +53,6 @@ namespace lintdb {
     // step 2: impute missing query token scores.
     // for each missing query score in the documents, impute the missing score.
     impute_missing_scores(n, document_scores, lowest_query_scores);
-
     // step 3: aggregate scores
     std::vector<SearchResult> results;
     for (const auto&[doc_id, scores]: document_scores) {
@@ -64,6 +60,7 @@ namespace lintdb {
         for (const auto& s: scores) {
             score += s;
         }
+        score = score / n;
 
         results.emplace_back(SearchResult{doc_id, score});
     }
@@ -96,6 +93,7 @@ std::vector<ScoredPartialDocumentCodes> XTRRetriever::get_document_codes(
         const std::vector<QueryTokenCentroidScore>& token_centroid_scores,
         const gsl::span<const float> query_data,
         const size_t n) {
+
     InvertedListScanner scanner(product_encoder_, query_data.data(), n);
 
     std::vector<ScoredPartialDocumentCodes> all_doc_codes;

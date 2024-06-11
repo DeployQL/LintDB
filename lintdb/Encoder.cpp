@@ -208,12 +208,12 @@ void DefaultEncoder::search(
 
     std::vector<std::pair<float, idx_t>> centroid_scores(num_query_tok * k_top_centroids);
 
-//#pragma omp parallel
+#pragma omp parallel
 {
     std::vector<std::pair<float, idx_t>> token_centroid_scores;
     token_centroid_scores.reserve(k_top_centroids);
 
-//#pragma omp for nowait schedule(dynamic, 1)
+#pragma omp for nowait schedule(dynamic, 1)
     for (int i = 0; i < num_query_tok; i++) {
         for (int j = 0; j < nlist; j++) {
             idx_t key = j;

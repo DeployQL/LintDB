@@ -1,7 +1,3 @@
-//
-// Created by matt on 5/25/24.
-//
-
 #include "InvertedListScanner.h"
 #include <faiss/IndexPQ.h>
 #include <glog/logging.h>
@@ -12,8 +8,8 @@ InvertedListScanner::InvertedListScanner(
         std::shared_ptr<ProductEncoder>& quantizer,
         const float* query_data,
         size_t num_tokens):
-    code_size(quantizer->code_size()) {
-    distance_tables = std::make_unique<PQDistanceTables>(query_data, num_tokens, quantizer->dim, quantizer->pq, true);
+    quantizer(quantizer), code_size(quantizer->code_size()) {
+    distance_tables = quantizer->get_distance_tables(query_data, num_tokens);
 }
 
 std::vector<ScoredPartialDocumentCodes> InvertedListScanner::scan(

@@ -57,6 +57,7 @@ class InvertedListScanner {
 
    private:
         std::unique_ptr<PQDistanceTables> distance_tables;
+        std::shared_ptr<ProductEncoder> quantizer;
         size_t code_size;
 
 };

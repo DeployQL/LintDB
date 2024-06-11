@@ -19,40 +19,6 @@ from common import load_lotte, lintdb_indexing, evaluate_dataset, lintdb_search
 app = typer.Typer()
 
 
-
-@app.command()
-def colbert(dataset, experiment, split='dev', k: int=5, checkpoint: str = "colbert-ir/colbertv2.0"):
-    d = load_lotte(dataset, split, stop=40000)
-
-    with Run().context(RunConfig(nranks=1, experiment=experiment)):
-        config = ColBERTConfig.load_from_checkpoint(checkpoint)
-        # config.kmeans_niters=4
-        start = time.perf_counter()
-        indexer = Indexer(checkpoint=checkpoint, config=config)
-        indexer.index(name=experiment, collection=d.collection)
-        index_duration = time.perf_counter() - start
-        print(f"Indexing duration: {index_duration:.2f}s")
-
-        searcher = Searcher(index=experiment, config=config, collection=d.collection)
-
-        mapped_queries = {id: q for id, q in zip(d.qids, d.queries)}
-        queries = Queries(data = mapped_queries) 
-        ranking = searcher.search_all(queries, k=100)
-        ranking.save(f"{experiment}.ranking.tsv")
-
-        # Run() hides some of the path to the filename. let's grab it.
-        with Run().open(f"{experiment}.ranking.tsv") as f:
-            rankings_path = f.name
-
-    evaluate_dataset(
-        'search', 
-        dataset,
-        split,
-        int(k),
-        'data/lotte/',
-        rankings_path
-    )
-
 """
 This command only searches a prebuilt index. Use lotte/multiprocess_indexing.py to index
 """

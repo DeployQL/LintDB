@@ -18,6 +18,9 @@ namespace lintdb {
  *
  * This class holds all of the compute logic and returns the pieces of the calculation
  * to InvertedListScanner.
+ *
+ * This class also knows about the IndexPQ internals, and should be owned by
+ * the quantizer. In the future, this will move inside ProductEncoder.
  */
 class PQDistanceTables {
    public:

@@ -5,18 +5,17 @@
 #include <iostream>
 #include "lintdb/utils/progress_bar.h"
 #include <chrono>
+#include "lintdb/util.h"
 
 namespace lintdb {
     Collection::Collection(IndexIVF* index, const CollectionOptions& opts) {
         this->index = index;
         this->model = std::make_unique<EmbeddingModel>(opts.model_file);
 
-        LOG(INFO) << "config dims: " << index->config.dim << " model dims: " << model->get_dims();
-
         LINTDB_THROW_IF_NOT_MSG(index->config.dim == model->get_dims(), "model dimensions don't match index dimensions");
 
-        bool use_spiece = index->config.quantizer_type == IndexEncoding::XTR;
-        this->tokenizer = std::make_unique<Tokenizer>(opts.tokenizer_file, opts.max_length, use_spiece);
+        bool is_xtr = index->config.quantizer_type == IndexEncoding::XTR;
+        this->tokenizer = std::make_unique<Tokenizer>(opts.tokenizer_file, opts.max_length, is_xtr);
     }
 
     void Collection::add(const uint64_t tenant, const uint64_t id, const std::string& text, const std::map<std::string, std::string>& metadata) const {
@@ -37,6 +36,7 @@ namespace lintdb {
         input.attention_mask = attn;
 
         auto output = model->encode(input);
+        normalize_vector(output.data(), ids.size(), model->get_dims());
     
         auto passage = EmbeddingPassage(output.data(), ids.size(), model->get_dims(), id, metadata);
         index->add(tenant, {passage});
@@ -57,7 +57,7 @@ namespace lintdb {
             const std::string& text, 
             const size_t k, 
             const SearchOptions& opts) const {
-        auto ids = tokenizer->encode(text);
+        auto ids = tokenizer->encode(text, true);
 
         ModelInput input;
         input.input_ids = ids;
@@ -76,6 +76,7 @@ namespace lintdb {
         auto output = model->encode(input);
 
         std::vector<float> query_data = output;
+        normalize_vector(query_data.data(), ids.size(), model->get_dims());
 
         return index->search(tenant, query_data.data(), size, model->get_dims(), opts.n_probe, k, opts);
     }
@@ -101,7 +102,7 @@ namespace lintdb {
         return results;
     }
 
-    void Collection::train(const std::vector<std::string> texts) {
+    void Collection::train(const std::vector<std::string> texts, size_t nlist, size_t niter) {
         std::vector<float> embeddings;
         size_t num_embeddings = 0;
 
@@ -132,6 +133,6 @@ namespace lintdb {
             num_embeddings += ids.size();
         }
 
-        index->train(num_embeddings, embeddings);
+        index->train(num_embeddings, embeddings, nlist, niter);
     }
 }
