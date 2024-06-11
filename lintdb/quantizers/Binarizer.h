@@ -1,11 +1,12 @@
 #ifndef LINTDB_BINARIZER_H
 #define LINTDB_BINARIZER_H
 
-#include <vector>
-#include <string>
-#include <stddef.h>
+#include <cstddef>
 #include <memory>
+#include <string>
+#include <vector>
 #include "lintdb/api.h"
+#include "lintdb/quantizers/PQDistanceTables.h"
 #include "lintdb/quantizers/Quantizer.h"
 
 namespace lintdb {
@@ -26,6 +27,11 @@ namespace lintdb {
 
         void sa_encode(size_t n, const float* x, residual_t* codes) override;
         void sa_decode(size_t n, const residual_t* codes, float* x) override;
+        size_t code_size() override;
+
+        size_t get_nbits() override {
+            return nbits;
+        }
 
         static std::unique_ptr<Binarizer> load(std::string path);
 

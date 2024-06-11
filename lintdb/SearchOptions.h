@@ -10,6 +10,7 @@ enum class IndexEncoding {
     NONE,
     BINARIZER,
     PRODUCT_QUANTIZER,
+    XTR,
 };
 
 /**

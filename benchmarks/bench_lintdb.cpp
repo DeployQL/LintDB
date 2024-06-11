@@ -7,8 +7,8 @@
 #include "lintdb/index_builder/Tokenizer.h"
 
 static void BM_lintdb_search(benchmark::State& state) {
-    // std::string path = "/mnt/data/py_index_bench_colbert-lifestyle-2024-04-16-pq";
-    std::string path = "experiments/py_index_bench_colbert-lifestyle-2024-04-03";
+     std::string path = "experiments/py_index_bench_test-collection-xtr";
+//    std::string path = "experiments/py_index_bench_colbert-lifestyle-2024-04-03";
     lintdb::IndexIVF index(path);
     for (auto _ : state) {
         state.PauseTiming();

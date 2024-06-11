@@ -16,8 +16,8 @@
 #include "lintdb/api.h"
 #include "lintdb/exception.h"
 #include "lintdb/invlists/InvertedList.h"
-#include "lintdb/retriever/PlaidRetriever.h"
-#include "lintdb/retriever/Retriever.h"
+#include "lintdb/retrievers/PlaidRetriever.h"
+#include "lintdb/retrievers/Retriever.h"
 #include "lintdb/version.h"
 
 // forward declare these classes and avoid including the rocksdb headers.
@@ -36,7 +36,7 @@ static const std::string METADATA_FILENAME = "_lintdb_metadata.json";
  *
  */
 struct Configuration {
-    Version lintdb_version; /// the current version of the index. Used internally for feature compatibility.
+    Version lintdb_version = LINTDB_VERSION; /// the current version of the index. Used internally for feature compatibility.
     size_t nlist = 256; /// the number of centroids to train.
     size_t nbits = 2;   /// the number of bits to use in residual compression.
     size_t niter = 10;  /// the number of iterations to use during training.
@@ -71,9 +71,9 @@ struct IndexIVF {
     friend struct Collection; // our Collection wants access to the index.
 
     /// load an existing index.
-    IndexIVF(std::string path, bool read_only = false);
+    IndexIVF(const std::string& path, bool read_only = false);
 
-    IndexIVF(std::string path, Configuration& config);
+    IndexIVF(const std::string& path, Configuration& config);
 
     IndexIVF(
             std::string path, /// path to the database.
@@ -104,10 +104,12 @@ struct IndexIVF {
      *
      * @param n the number of embeddings to train on.
      * @param embeddings the embeddings to train on.
+     * @param nlist the number of centroids to train. Required if not provided at initialization.
+     * @param niter the number of iterations to train. Required if not provided at initialization.
      */
-    void train(size_t n, std::vector<float>& embeddings);
-    void train(float* embeddings, size_t n, size_t dim);
-    void train(float* embeddings, int n, int dim);
+    void train(size_t n, std::vector<float>& embeddings, size_t nlist=0, size_t niter = 0);
+    void train(float* embeddings, size_t n, size_t dim, size_t nlist=0, size_t niter = 0);
+    void train(float* embeddings, int n, int dim, size_t nlist = 0, size_t niter = 0);
 
     /**
      * set_centroids overwrites the centroids in the encoder.
@@ -222,12 +224,17 @@ struct IndexIVF {
     std::vector<rocksdb::ColumnFamilyHandle*> column_families;
 
     std::shared_ptr<Encoder> encoder;
+    std::shared_ptr<Quantizer> quantizer;
     std::unique_ptr<Retriever> retriever;
 
     // helper to initialize the inverted list.
     void initialize_inverted_list(Version& version);
+    // helper to initialize the encoder, quantizer, and retrievers. These are all
+    // inter-related.
+    void initialize_retrieval(IndexEncoding quantizer_type);
+    // instead of initializing, load from disk.
+    void load_retrieval(std::string path, const Configuration& config);
 
-    /// the inverted list data structure.
     std::shared_ptr<InvertedList> inverted_list_;
     std::shared_ptr<ForwardIndex> index_;
 

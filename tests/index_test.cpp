@@ -1,19 +1,17 @@
 #include <gtest/gtest.h>
 // TODO(mbarta): we introspect the invlists during tests. We can fix this with better abstractions.
 #define private public
-#include "lintdb/index.h"
-#include "lintdb/SearchOptions.h"
+#include <faiss/utils/random.h>
+#include <iostream>
+#include <map>
+#include <vector>
 #include "lintdb/EmbeddingBlock.h"
 #include "lintdb/Passages.h"
-#include "lintdb/invlists/RocksdbList.h"
-#include <faiss/utils/random.h>
-#include <vector>
-#include <iostream>
-#include <filesystem>
-#include <gsl/span>
+#include "lintdb/SearchOptions.h"
+#include "lintdb/index.h"
+#include "lintdb/invlists/RocksdbInvertedList.h"
 #include "lintdb/util.h"
-#include <unordered_set>
-#include <map>
+#include "util.h"
 
 using ::testing::TestWithParam;
 using ::testing::Values;
@@ -23,21 +21,57 @@ class IndexTest : public TestWithParam<lintdb::IndexEncoding> {
   ~IndexTest() override {}
   void SetUp() override { type = GetParam(); }
   void TearDown() override {
+      std::filesystem::remove_all(temp_db);
+      if (!temp_db_two.empty()) {
+          std::filesystem::remove_all(temp_db_two);
+      }
   }
 
  protected:
   lintdb::IndexEncoding type;
+  std::filesystem::path temp_db;
+  std::filesystem::path temp_db_two;
 };
 
 // Demonstrate some basic assertions.
 TEST_P(IndexTest, InitializesCorrectly) {
-    size_t nbits = 4; // the number of bits to encode residual codes into.
-    std::filesystem::path path = std::filesystem::temp_directory_path();
-    auto temp_db = path.append("XXXXXX.db");
+    auto temp_db = create_temporary_directory();
 
     lintdb::IndexIVF index(temp_db.string(), 5, 128, 2, 4, 16, type);
 
     EXPECT_EQ(index.config.nlist, 5);
+
+    EXPECT_GE(index.config.lintdb_version.major, 0);
+    EXPECT_GE(index.config.lintdb_version.minor, 1);
+
+    // we expect metadata to be enabled by default.
+    EXPECT_TRUE(index.config.lintdb_version.metadata_enabled);
+}
+
+TEST_P(IndexTest, LegacytrainsCorrectly) {
+    // This method tests the legacy pathway for initializing the encoder and testing it.
+    // nlist and niter are no longer initialized with the encoder, so we need to ensure
+    // it still works.
+    size_t dim = 128;
+    // we'll generate num_docs * num_tokens random vectors for training.
+    // keep in mind this needs to be larger than the number of dimensions.
+    size_t num_docs = 100;
+    size_t num_tokens = 100;
+
+    size_t kclusters = 250; // number of centroids to calculate.
+
+    size_t centroid_bits = 1;
+    temp_db = create_temporary_directory();
+    // buffer for the randomly created vectors.
+    // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
+    std::vector<float> buf(dim * (num_docs * num_tokens));
+
+    faiss::rand_smooth_vectors(num_docs * num_tokens, dim, buf.data(), 1234);
+
+    lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
+
+    // legacy calling structure. nlist and niter are only passed at initialization of encoder.
+    index.train(num_docs * num_tokens, buf);
 }
 
 TEST_P(IndexTest, TrainsCorrectly) {
@@ -50,8 +84,7 @@ TEST_P(IndexTest, TrainsCorrectly) {
     size_t kclusters = 250; // number of centroids to calculate.
 
     size_t centroid_bits = 1;
-    std::filesystem::path path = std::filesystem::temp_directory_path();
-    auto temp_db = path.append("XXXXXX.db");
+    temp_db = create_temporary_directory();
     // buffer for the randomly created vectors.
     // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
     std::vector<float> buf(dim * (num_docs * num_tokens));
@@ -60,7 +93,7 @@ TEST_P(IndexTest, TrainsCorrectly) {
 
     lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
 
-    index.train(num_docs * num_tokens, buf);
+    index.train(num_docs * num_tokens, buf, kclusters, 2);
     EXPECT_EQ(index.config.nlist, 250);
 
     std::vector<float> fake_doc(dim * num_tokens);
@@ -110,8 +143,7 @@ TEST_P(IndexTest, TrainsWithCompressionCorrectly) {
     size_t kclusters = 250; // number of centroids to calculate.
 
     size_t centroid_bits = 2;
-    std::filesystem::path path = std::filesystem::temp_directory_path();
-    auto temp_db = path.append("XXXXXX.db");
+    temp_db = create_temporary_directory();
     // buffer for the randomly created vectors.
     // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
     std::vector<float> buf(dim * (num_docs * num_tokens));
@@ -135,19 +167,25 @@ TEST_P(IndexTest, TrainsWithCompressionCorrectly) {
 
     // without knowing what ivf list we assigned the doc to, make sure one document is indexed.
     // this amounts to a full scan.
+    int count = 0;
     for(idx_t i=0; i<kclusters; i++) {
         lintdb::Key start{0, i, 0, true};
         lintdb::Key end{0, i, std::numeric_limits<idx_t>::max(), false};
         std::string start_string = start.serialize();
         std::string end_string = end.serialize();
-        lintdb::ReadOnlyRocksDBInvertedList casted = static_cast<lintdb::ReadOnlyRocksDBInvertedList&>(*index.index_);
+        lintdb::RocksdbInvertedList casted = static_cast<lintdb::RocksdbInvertedList&>(
+                        reinterpret_cast<lintdb::RocksdbInvertedList&>(
+                                *index.index_));
         std::unique_ptr<lintdb::Iterator> it = casted.get_iterator(0, i);
         for(; it->has_next(); it->next()) {
-            lintdb::Key key = it->get_key();
-            auto id = key.id;
+            lintdb::TokenKey key = it->get_key();
+            auto id = key.doc_id;
             EXPECT_EQ(id, idx_t(1));
+            count++;
         }
     }
+
+    EXPECT_GE(count, 1);
 
 }
 
@@ -168,8 +206,7 @@ TEST_P(IndexTest, SearchCorrectly) {
     size_t kclusters = 250; // number of centroids to calculate.
 
     size_t centroid_bits = 2;
-    std::filesystem::path path = std::filesystem::temp_directory_path();
-    auto temp_db = path.append("XXXXXX.db");
+    temp_db = create_temporary_directory();
     // buffer for the randomly created vectors.
     // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
     std::vector<float> buf(dim * (num_docs * num_tokens));
@@ -218,12 +255,11 @@ TEST_P(IndexTest, LoadsCorrectly) {
     size_t kclusters = 250; // number of centroids to calculate.
 
     size_t centroid_bits = 1;
-    std::filesystem::path path = std::filesystem::temp_directory_path();
-    auto temp_db = path.append("XXXXXX.db");
+    temp_db = create_temporary_directory();
     // buffer for the randomly created vectors.
     // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
     std::vector<float> buf(dim * (num_docs * num_tokens));
-    // fake data where every vector is either all 1s,2s...9s. 
+    // fake data where every vector is either all 1s,2s...9s.
     for(size_t i=0; i<num_docs * num_tokens; i++) {
         for(size_t j=0; j<dim; j++) {
             buf[i*dim + j] = i%11 + 1;
@@ -253,7 +289,7 @@ TEST_P(IndexTest, MergeCorrectly) {
 
     size_t centroid_bits = 2;
     std::filesystem::path path = std::filesystem::temp_directory_path();
-    auto temp_db = path.append("XXXXXX.db_one");
+    temp_db = create_temporary_directory();
     // buffer for the randomly created vectors.
     // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
     std::vector<float> buf(dim * (num_docs * num_tokens));
@@ -268,7 +304,7 @@ TEST_P(IndexTest, MergeCorrectly) {
 
     lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
 
-    index.train(num_docs * num_tokens, buf);
+    index.train(num_docs * num_tokens, buf, kclusters, 2);
 
     EXPECT_EQ(index.config.nlist, 2);
 
@@ -281,18 +317,18 @@ TEST_P(IndexTest, MergeCorrectly) {
     std::vector<lintdb::EmbeddingPassage> docs = { doc };
     index.add(lintdb::kDefaultTenant, docs);
 
-
     // create a second db.
     std::filesystem::path path_two = std::filesystem::temp_directory_path();
-    auto second_db = path_two.append("XXXXXX.db_two");
+    temp_db_two = create_temporary_directory();
     // copy the first index to create the second db.
-    auto index_two = lintdb::IndexIVF(index, second_db.string());
+    auto index_two = lintdb::IndexIVF(index, temp_db_two.string());
     lintdb::EmbeddingPassage doc_two(fake_doc.data(), num_tokens, dim, 2);
     std::vector<lintdb::EmbeddingPassage> docs_two = { doc_two };
     index_two.add(lintdb::kDefaultTenant, docs_two);
 
     // merge the two indices.
-    index.merge(second_db.string());
+    index.merge(temp_db_two.string());
+    std::cout << "merged indices" << std::endl;
 
     index.flush();
 
@@ -310,7 +346,7 @@ TEST_P(IndexTest, MergeCorrectly) {
     // faiss::rand_smooth_vectors(num_tokens, dim, buf_two.data(), 1234);
     lintdb::EmbeddingBlock block_two{buf_two.data(), num_tokens, dim};
     auto results = index.search(lintdb::kDefaultTenant, block_two, 2, 5, opts);
-
+    std::cout << "searched merged index" << std::endl;
     EXPECT_EQ(results.size(), 2);
 }
 
@@ -324,8 +360,7 @@ TEST_P(IndexTest, SearchWithMetadataCorrectly) {
     size_t kclusters = 250; // number of centroids to calculate.
 
     size_t centroid_bits = 2;
-    std::filesystem::path path = std::filesystem::temp_directory_path();
-    auto temp_db = path.append("XXXXXX.db");
+    temp_db = create_temporary_directory();
     // buffer for the randomly created vectors.
     // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
     std::vector<float> buf(dim * (num_docs * num_tokens));
@@ -340,7 +375,7 @@ TEST_P(IndexTest, SearchWithMetadataCorrectly) {
 
     lintdb::IndexIVF index(temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
 
-    index.train(num_docs * num_tokens, buf);
+    index.train(num_docs * num_tokens, buf, kclusters, 2);
 
     EXPECT_EQ(index.config.nlist, 250);
 
@@ -366,9 +401,10 @@ TEST_P(IndexTest, SearchWithMetadataCorrectly) {
 }
 
 INSTANTIATE_TEST_SUITE_P(IndexTest, IndexTest, Values(
-    lintdb::IndexEncoding::NONE, 
-    lintdb::IndexEncoding::BINARIZER, 
-    lintdb::IndexEncoding::PRODUCT_QUANTIZER
+    lintdb::IndexEncoding::NONE,
+    lintdb::IndexEncoding::BINARIZER,
+    lintdb::IndexEncoding::PRODUCT_QUANTIZER,
+    lintdb::IndexEncoding::XTR
     ),
     [](const testing::TestParamInfo<IndexTest::ParamType>& info) {
         auto serialized = lintdb::serialize_encoding(info.param);

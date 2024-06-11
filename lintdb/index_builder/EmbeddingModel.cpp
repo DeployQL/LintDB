@@ -3,6 +3,8 @@
 #include <glog/logging.h>
 #include <onnxruntime_cxx_api.h>
 #include <cassert>
+#include "lintdb/env.h"
+#include <stdlib.h>
 
 namespace lintdb {
     std::string print_shape(const std::vector<std::int64_t>& v) {
@@ -25,8 +27,19 @@ namespace lintdb {
         env = std::make_unique<Ort::Env>(ORT_LOGGING_LEVEL_WARNING, "lintdb");
         
         Ort::SessionOptions session_options;
-        session_options.SetInterOpNumThreads(1);
-        session_options.SetIntraOpNumThreads(3);
+        try {
+            if (std::getenv(ONNX_INTER_THREADS) != nullptr) {
+                int intert = std::stoi(std::getenv(ONNX_INTER_THREADS));
+                session_options.SetInterOpNumThreads(intert);
+            }
+            if (std::getenv(ONNX_INTRA_THREADS) != nullptr) {
+                int intrat = std::stoi(std::getenv(ONNX_INTER_THREADS));
+                session_options.SetIntraOpNumThreads(intrat);
+            }
+        } catch (const std::exception& err) {
+            LOG(ERROR) << err.what();
+        }
+
 
         session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
         session = std::make_unique<Ort::Session>(*env.get(), path.data(), session_options);

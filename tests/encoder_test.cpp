@@ -1,14 +1,16 @@
 #include <gtest/gtest.h>
 #define private public
-#include "lintdb/index.h"
-#include "lintdb/EmbeddingBlock.h"
-#include "lintdb/Passages.h"
-#include "lintdb/invlists/RocksdbList.h"
 #include <faiss/utils/random.h>
-#include <vector>
-#include <iostream>
 #include <filesystem>
 #include <gsl/span>
+#include <iostream>
+#include <vector>
+#include "lintdb/EmbeddingBlock.h"
+#include "lintdb/Passages.h"
+#include "lintdb/index.h"
+#include "lintdb/invlists/RocksdbForwardIndex.h"
+#include "lintdb/quantizers/io.h"
+#include "lintdb/quantizers/Quantizer.h"
 
 TEST(EncoderTest, ResidualsAreEncodedCorrectly) {
     size_t dim = 128;
@@ -31,8 +33,10 @@ TEST(EncoderTest, ResidualsAreEncodedCorrectly) {
         }
     }
 
-    lintdb::DefaultEncoder encoder(2, 2, 2, 128, 0, lintdb::IndexEncoding::BINARIZER);
-    encoder.train(buf.data(), num_docs * num_tokens, dim);
+    auto qc = lintdb::QuantizerConfig{2, 128, 2};
+    std::shared_ptr<lintdb::Quantizer> quantizer = create_quantizer(lintdb::IndexEncoding::BINARIZER, qc);
+    lintdb::DefaultEncoder encoder(128, quantizer);
+    encoder.train(buf.data(), num_docs * num_tokens, dim, 2, 2);
 
     std::vector<float> fake_doc(dim * num_tokens, 2);
 

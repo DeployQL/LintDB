@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="VcsDirectoryMappings">
+    <mapping directory="" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/tokenizers-cpp" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/tokenizers-cpp/msgpack" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/lib/tokenizers-cpp/sentencepiece" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/tools/vcpkg" vcs="Git" />
+  </component>
+</project>

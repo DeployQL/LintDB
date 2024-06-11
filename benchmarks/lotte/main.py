@@ -64,8 +64,6 @@ def lintdb(dataset, experiment, split='dev', k=5, checkpoint: str = "colbert-ir/
         experiment, 
         'experiments', 
         d, 
-        2, 
-        nbits=1,
         checkpoint=checkpoint,
         reuse_centroids=True,
         use_compression=True
@@ -86,7 +84,7 @@ def comma_separated(raw: str) -> List[int]:
     return [int(x) for x in raw.split(",")]
 
 @app.command()
-def run_failures(dataset, experiment, split='dev',  failure: Annotated[list, typer.Option(parser=comma_separated)] = [], checkpoint: str = "colbert-ir/colbertv2.0"):
+def run_failures(dataset, experiment, split='dev', failure: Annotated[list, typer.Option(parser=comma_separated)] = [], use_xtr:bool = False,  checkpoint: str = "colbert-ir/colbertv2.0"):
     d = load_lotte(dataset, split, stop=40000)
     with open(f"experiments/{experiment}.ranking.tsv.failures", "r") as f:
         failures = {}
@@ -109,9 +107,7 @@ def run_failures(dataset, experiment, split='dev',  failure: Annotated[list, typ
     lintdb_search(
         experiment, 
         'experiments', 
-        d, 
-        2, 
-        nbits=2,
+        d,
         checkpoint=checkpoint,
         reuse_centroids=True,
         use_compression=True,
@@ -121,15 +117,6 @@ def run_failures(dataset, experiment, split='dev',  failure: Annotated[list, typ
 @app.command()
 def run_failures_colbert(dataset, experiment, split='dev', k:int=5, failure: Annotated[list, typer.Option(parser=comma_separated)] = [], checkpoint: str = "colbert-ir/colbertv2.0"):
     d = load_lotte(dataset, split, stop=40000000)
-
-
-    # these are failures from lintdb
-    # with open(f"experiments/{experiment}.ranking.tsv.failures", "r") as f:
-    #     failures = {}
-    #     for line in f:
-    #         qid, apids = line.strip().split("\t")
-    #         apids = apids.replace("{", "").replace("}", "")
-    #         failures[int(qid)] = [int(x) for x in apids.split(",")]
 
     failures = {
         # 0: [2466, 2435, 1641, 4619, 1615]
@@ -173,35 +160,10 @@ def run_failures_colbert(dataset, experiment, split='dev', k:int=5, failure: Ann
             print("cells: ", cells)
             print("scores: ", scores)
 
-            # top = scores.topk(2, dim=0, sorted=False)
-            # print("top indices: ", top.indices.tolist())
-            # print("top scores: ", top.values.tolist())
-
-            # doing this results in slightly different scores than if I call retrieve directly?
-            # pids, scores = searcher.ranker.generate_candidate_pids(Q_, 2)
-            # print("num pids non-unique: ", len(pids.tolist()))
-            # import torch
-            # sorter = pids.sort()
-            # pids = sorter.values
-            # pids, pids_count = torch.unique_consecutive(pids, return_counts=True)
-            # print("num pids unqiue: ", len(pids.tolist()))
-
             # this is part of searcher.ranker.rank
             pids, centroid_scores = searcher.ranker.retrieve(config, Q)
             idx = centroid_scores.max(-1).values >= config.centroid_score_threshold
-            # get the filtered pids
-            # this filtered list isn't the same as the one from rank() ???
-            # filtered_pids = searcher.ranker.filter_pids(pids, centroid_scores, searcher.ranker.embeddings.codes, searcher.ranker.doclens, searcher.ranker.offsets, idx, 1024)
-            # print("num filtered pids: ", len(filtered_pids.tolist()))
-            # for pid in apids:
-            #     try:
-            #         index = filtered_pids.tolist().index(pid)
-            #         print(f"filtered pid: {pid} found at index: {index}.")
-            #     except:
-            #         print("pid not found in filtered pid list: ", pid)
 
-            # this gives us the final scores.
-            # scores, pids = searcher.ranker.score_pids(config, Q, pids, centroid_scores)
             pids, scores = searcher.ranker.rank(config, Q)
             # print("pids: ", pids)
             for pid in apids:

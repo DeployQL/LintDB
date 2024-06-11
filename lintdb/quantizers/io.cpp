@@ -1,4 +1,5 @@
 #include "lintdb/quantizers/io.h"
+#include <faiss/index_io.h>
 
 namespace lintdb {
 std::unique_ptr<Quantizer> load_quantizer(
@@ -19,6 +20,9 @@ std::unique_ptr<Quantizer> load_quantizer(
                 return Binarizer::load(path);
 
             case IndexEncoding::PRODUCT_QUANTIZER:
+                return ProductEncoder::load(path, config);
+
+            case IndexEncoding::XTR:
                 return ProductEncoder::load(path, config);
 
             default:
@@ -64,6 +68,10 @@ std::unique_ptr<Quantizer> create_quantizer(
             return std::make_unique<Binarizer>(config.nbits, config.dim);
 
         case IndexEncoding::PRODUCT_QUANTIZER:
+            return std::make_unique<ProductEncoder>(
+                    config.dim, config.nbits, config.num_subquantizers);
+
+        case IndexEncoding::XTR:
             return std::make_unique<ProductEncoder>(
                     config.dim, config.nbits, config.num_subquantizers);
 

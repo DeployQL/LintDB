@@ -61,13 +61,13 @@ def colbert_indexing(experiment: str, exp_path: str, dataset: LoTTeDataset, nbit
 def lintdb_search(
         experiment: str, 
         exp_path: str, 
-        dataset:LoTTeDataset, 
-        k, 
-        nbits=2,  
+        dataset:LoTTeDataset,   
         checkpoint: str = "colbert-ir/colbertv2.0", 
         reuse_centroids=True, 
         use_compression=False,
-        failures={}):
+        failures={},
+        use_xtr: bool = False,
+        ):
     # let's get the same model.
     config = ColBERTConfig.load_from_checkpoint(checkpoint)
     config.kmeans_niters=4
@@ -75,9 +75,10 @@ def lintdb_search(
     config.ndocs=1024
     config.centroid_score_threshold=.45
 
-    from colbert.modeling.checkpoint import Checkpoint
-    from colbert import Searcher
-    checkpoint = Checkpoint(checkpoint, config)
+    if not use_xtr:
+        from colbert.modeling.checkpoint import Checkpoint
+        from colbert import Searcher
+        checkpoint = Checkpoint(checkpoint, config)
 
     index_path = f"{exp_path}/py_index_bench_{experiment}"
     if not os.path.exists(index_path):
@@ -96,6 +97,7 @@ def lintdb_search(
         failure_ids=set()
         if failures:
             failure_ids = set(failures.keys())
+        count=0
         for id, query in zip(dataset.qids, dataset.queries):
             if failures and id not in failure_ids:
                 continue
@@ -126,12 +128,18 @@ def lintdb_search(
                         opts
                     )
             else:
+                opts = ldb.SearchOptions()
+                opts.k_top_centroids = 1000
                 results = index.search(
                     0,
                     converted, 
                     64, # nprobe
                     100, # k to return
+                    opts
                 )
+                count+=1
+                # if count == 2:
+                #     return
             for rank, result in enumerate(results):
                 # qid, pid, rank
                 f.write(f"{id}\t{result.id}\t{rank+1}\t{result.score}\n")

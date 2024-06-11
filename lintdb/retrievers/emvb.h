@@ -5,8 +5,8 @@
  * For now, we'll only use the generic library until emvb_avx.h is ready.
 */
 // #ifdef __AVX2__
-// #include "lintdb/retriever/emvb_avx.h"
+// #include "lintdb/retrievers/emvb_avx.h"
 // #else
 // #endif
 
-#include "lintdb/retriever/emvb_generic.h"
+#include "lintdb/retrievers/emvb_generic.h"

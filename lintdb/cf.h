@@ -23,7 +23,7 @@ rocksdb::ColumnFamilyOptions create_index_table_options() {
     return index_options;
 };
 } // namespace
-std::vector<rocksdb::ColumnFamilyDescriptor> create_column_families() {
+inline std::vector<rocksdb::ColumnFamilyDescriptor> create_column_families() {
     return {
         rocksdb::ColumnFamilyDescriptor(
                     rocksdb::kDefaultColumnFamilyName,

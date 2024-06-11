@@ -25,7 +25,7 @@ except ImportError:
 app = typer.Typer()
 
 @app.command()
-def single_search(dataset:str='lifestyle', split:str='dev',profile=False, checkpoint:str='colbert-ir/colbertv2.0', index_path:str='experiments/py_index_bench_colbert-lifestyle-2024-04-03'):
+def single_search(dataset:str='lifestyle', split:str='dev',profile=False, checkpoint:str='colbert-ir/colbertv2.0', index_path:str='experiments/py_index_bench_test-collection-xtr'):
     latencies = []
     memory = []
 
@@ -38,8 +38,8 @@ def single_search(dataset:str='lifestyle', split:str='dev',profile=False, checkp
         converted = embeddings
 
         start = time.perf_counter()
-        # if profile:
-        #     callgrind_start_instrumentation()
+        if profile:
+            callgrind_start_instrumentation()
         opts = ldb.SearchOptions()
         results = index.search(
             0,
@@ -49,9 +49,9 @@ def single_search(dataset:str='lifestyle', split:str='dev',profile=False, checkp
             opts
         )
         latencies.append((time.perf_counter() - start)*1000)
-        # if profile:
-        #     callgrind_stop_instrumentation()
-        #     callgrind_dump_stats("callgrind.out.single_search")
+        if profile:
+            callgrind_stop_instrumentation()
+            callgrind_dump_stats("callgrind.out.single_search")
         memory.append(get_memory_usage())
         rankings[id] = [x.id for x in results]
         count+=1

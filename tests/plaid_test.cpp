@@ -2,15 +2,10 @@
 #include <gtest/gtest.h>
 #include "lintdb/index.h"
 #include "lintdb/EmbeddingBlock.h"
-#include <faiss/utils/random.h>
 #include <vector>
-#include <iostream>
-#include "lintdb/retriever/plaid.h"
-#include <filesystem>
-#include <faiss/utils/hamming.h>
-#include <iostream>
+#include "lintdb/retrievers/plaid.h"
 #include <algorithm>
-#include <stdlib.h>
+#include <cstdlib>
 #include "lintdb/util.h"
 
 TEST(PlaidTests, ReadsCodesCorrectly) {

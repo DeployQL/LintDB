@@ -1,10 +1,10 @@
-#include "lintdb/retriever/PlaidRetriever.h"
+#include "lintdb/retrievers/PlaidRetriever.h"
 #include <glog/logging.h>
 #include <omp.h>
 #include "lintdb/SearchOptions.h"
 #include "lintdb/invlists/EncodedDocument.h"
-#include "lintdb/retriever/Retriever.h"
-#include "lintdb/retriever/plaid.h"
+#include "lintdb/retrievers/Retriever.h"
+#include "lintdb/retrievers/plaid.h"
 #include <tuple>
 
 #ifndef LINTDB_CHUNK_SIZE
@@ -63,22 +63,6 @@ std::vector<idx_t> PlaidRetriever::top_passages(
     auto num_centroids_to_eval =
             std::min<size_t>(opts.n_probe, centroid_scores.size());
 
-    if (opts.expected_id != -1) {
-        LOG(INFO) << "expected id: " << opts.expected_id;
-        LOG(INFO) << "centroid score size: " << centroid_scores.size();
-        auto mapping = index_->get_mapping(tenant, opts.expected_id);
-        std::unordered_set<idx_t> mapping_set(mapping.begin(), mapping.end());
-        for (int i = 0; i < centroid_scores.size(); i++) {
-            if (mapping_set.find(centroid_scores[i].second) !=
-                mapping_set.end()) {
-                LOG(INFO) << "expected id found in centroid: "
-                          << centroid_scores[i].second;
-                if (i > num_centroids_to_eval) {
-                    LOG(INFO) << "this centroid is not being searched.";
-                };
-            };
-        }
-    }
     /**
      * Get passage ids
      */
@@ -310,7 +294,7 @@ std::vector<idx_t> PlaidRetriever::lookup_pids(
     for (; it->has_next(); it->next()) {
         auto k = it->get_key();
 
-        local_pids.push_back(k.id);
+        local_pids.push_back(k.doc_id);
     }
 
     return local_pids;
@@ -383,7 +367,7 @@ std::vector<std::pair<float, idx_t>> PlaidRetriever::get_top_centroids(
         std::sort(
                 centroid_scores.begin(),
                 centroid_scores.end(),
-                std::greater<std::pair<float, idx_t>>());
+                std::greater<>());
     } else {
         std::sort_heap(
                 centroid_scores.begin(), centroid_scores.end(), comparator);

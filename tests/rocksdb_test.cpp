@@ -1,17 +1,14 @@
 
 #include <gtest/gtest.h>
-#include "lintdb/index.h"
-#include "lintdb/EmbeddingBlock.h"
-#include <faiss/utils/random.h>
-#include <vector>
-#include <iostream>
-#include <filesystem>
-#include <faiss/utils/hamming.h>
-#include <iostream>
-#include "lintdb/invlists/RocksdbList.h"
-#include "lintdb/invlists/util.h"
 #include <rocksdb/slice.h>
+#include <filesystem>
+#include <iostream>
 #include <map>
+#include <vector>
+#include "lintdb/EmbeddingBlock.h"
+#include "lintdb/index.h"
+#include "lintdb/invlists/RocksdbForwardIndex.h"
+#include "lintdb/invlists/keys.h"
 
 TEST(RocksDBTests, KeyEncodesAndDecodesCorrectly) {
     // this loop exists because we hit a decoding error, and I want to make sure
@@ -31,6 +28,30 @@ TEST(RocksDBTests, KeyEncodesAndDecodesCorrectly) {
         EXPECT_EQ(test_key.tenant, decoded.tenant);
         EXPECT_EQ(test_key.inverted_list_id, decoded.inverted_list_id);
         EXPECT_EQ(test_key.id, decoded.id);
+    }
+
+}
+
+TEST(RocksDBTests, TokenKeyEncodesAndDecodesCorrectly) {
+    // this loop exists because we hit a decoding error, and I want to make sure
+    // encoding/decoding works for more values.
+    for (code_t i=0; i < 20000; i++) {
+        auto test_key = lintdb::TokenKey{
+                1, // tenant
+                2, // inverted list id
+                i, // doc id
+                3 // token id
+        };
+
+        std::string ks = test_key.serialize();
+        auto slice = rocksdb::Slice(ks);
+
+        auto decoded = lintdb::TokenKey::from_slice(slice);
+
+        EXPECT_EQ(test_key.tenant, decoded.tenant);
+        EXPECT_EQ(test_key.inverted_list_id, decoded.inverted_list_id);
+        EXPECT_EQ(test_key.doc_id, decoded.doc_id);
+        EXPECT_EQ(test_key.token_id, decoded.token_id);
     }
 
 }
@@ -84,9 +105,13 @@ TEST(RocksDBTests, ConcatNumbers) {
 
 TEST(RocksDBTests, MetadataSerialization) {
     std::map<std::string, std::string> metadata = {
-        {"key", "metadata"},
+        {"key", "metadata"}
     };
-    lintdb::EncodedDocument test(std::vector<int64_t>(), std::vector<uint8_t>(), 1, 1, metadata);
+
+    std::vector<int64_t> codes(1, 1);
+    std::vector<uint8_t> residuals(1, 2);
+    lintdb::EncodedDocument test(
+            codes, residuals, 1, 1, 0, metadata);
 
     std::string serialized = test.serialize_metadata();
     auto slice = rocksdb::Slice(serialized);

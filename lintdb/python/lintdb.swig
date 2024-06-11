@@ -13,13 +13,13 @@
 #include <memory>
 #include <cstdint>
 
-#include "lintdb/SearchResult.h"
-#include "lintdb/index.h"
-#include "lintdb/SearchOptions.h"
+#include "lintdb/Collection.h"
 #include "lintdb/EmbeddingBlock.h"
 #include "lintdb/Passages.h"
-#include "lintdb/Collection.h"
+#include "lintdb/SearchOptions.h"
+#include "lintdb/SearchResult.h"
 #include "lintdb/exception.h"
+#include "lintdb/index.h"
 
 #include <faiss/impl/FaissException.h>
 #include <numpy/arrayobject.h>
@@ -234,6 +234,26 @@ namespace std {
 %ignore IndexIVF::invlists;
 %ignore IndexIVF::decode_vectors;
 %ignore IndexIVF::get_pids;
+%ignore IndexIVF::search(
+        const uint64_t tenant,
+        const EmbeddingBlock& block,
+        const size_t k,
+        const SearchOptions& opts = SearchOptions()) const;
+%ignore IndexIVF::search(
+            const uint64_t tenant,
+            const float* data,
+            const int n,
+            const int dim,
+            const size_t n_probe,
+            const size_t k,
+            const SearchOptions& opts = SearchOptions()) const;
+%ignore IndexIVF::search(
+            const uint64_t tenant,
+            const EmbeddingBlock& block,
+            const size_t n_probe,
+            const size_t k,
+            const SearchOptions& opts = SearchOptions()) const;
+
 
 %ignore EmbeddingBlock::EmbeddingBlock(const float* embeddings, size_t num_tokens, size_t dimensions);
 

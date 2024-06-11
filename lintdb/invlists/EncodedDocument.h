@@ -11,48 +11,68 @@
 namespace lintdb {
 
 /**
+ * InvertedData holds the data we want to store in the inverted index.
+ *
+ * If we have N posting lists, we need to return N data structures, one
+ * for each posting list.
+ */
+struct InvertedData{
+    code_t key; /// the posting list we're assigning data to.
+    idx_t token_id; /// the token id.
+    std::string value; /// the serialized data.
+};
+
+/**
  * EncodedDocument is the interface between indexes and the inverted list. The
  * data owned by this struct will eventually be stored.
  *
  * Currently, EncodedDocument represent data from both the inverted index and
- * the forward index. This makes it easier to pass data down, but returning data
- * has to worry about what data is populated.
+ * the forward index. This likely means that EncodedDocument also knows
+ * how to serialize different messages.
  */
 struct EncodedDocument {
     EncodedDocument(
-            const std::vector<code_t>
-                    codes, // reflects the centroid id for each token vector.
-            const std::vector<residual_t>
-                    residuals, // reflects the residual vector for each token
-                               // vector.
+            const std::vector<code_t> codes,
+            const std::vector<residual_t> residuals,
             size_t num_tokens,
             idx_t id,
-            const std::map<std::string, std::string>& metadata = {}
-        );
+            size_t cs,
+            const std::map<std::string, std::string>& metadata = {});
 
     EncodedDocument(
-            const code_t*
-                    codes, // reflects the centroid id for each token vector.
+            const code_t* codes,
             const size_t codes_size,
-            const uint8_t* residuals, // reflects the residual vector for each
-                                      // token vector.
+            const uint8_t* residuals,
             const size_t residuals_size,
             size_t num_tokens,
             idx_t id,
-            const std::map<std::string, std::string>& metadata = {}
-        );
+            size_t cs,
+            const std::map<std::string, std::string>& metadata = {});
 
     std::string serialize_metadata() const;
 
+    std::vector<InvertedData>  serialize_inverted_data() const;
+
     const std::vector<code_t> codes;
     const std::vector<residual_t> residuals;
-    const size_t num_tokens; // num_tokens
+    const size_t num_tokens;
     idx_t id;
     const std::map<std::string, std::string> metadata;
+    const size_t code_size; // residual size per token;
 };
 
-struct InvertedDocument {
+/**
+ * PartialDocumentCodes hold only a subset of a document's codes.
+ *
+ * This is used to deserialize codes per token from the inverted index.
+ */
+struct PartialDocumentCodes {
     idx_t id;
+    std::vector<residual_t> partial_residuals;
+
+    explicit PartialDocumentCodes(idx_t id, std::vector<residual_t>& partial_residuals): id(id), partial_residuals(partial_residuals) {}
+
+    static PartialDocumentCodes deserialize(idx_t id, std::string& data);
 };
 
 struct DocumentCodes {

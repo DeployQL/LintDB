@@ -20,6 +20,13 @@ struct SearchResult {
     std::vector<float> token_scores; /// Document token scores.
 
     SearchResult() = default;
+
+    bool operator<(const SearchResult& other) const {
+            return score < other.score;
+    }
+    bool operator>(const SearchResult& other) const {
+            return score > other.score;
+    }
 };
 
 } // namespace lintdb

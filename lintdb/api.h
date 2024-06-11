@@ -2,6 +2,7 @@
 #define LINTDB_API_H
 
 #include <cstdint>
+#include <string>
 
 typedef int64_t idx_t;
 

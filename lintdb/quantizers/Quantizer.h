@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <string>
 #include "lintdb/api.h"
+#include "lintdb/quantizers/PQDistanceTables.h"
 
 namespace lintdb {
     static const std::string QUANTIZER_FILENAME = "_residual_quantizer.bin";
@@ -15,9 +16,7 @@ namespace lintdb {
     };
 
     struct QuantizerConfig {
-        size_t nlist;
         size_t nbits;
-        size_t niter;
         size_t dim;
         size_t num_subquantizers; // used in ProductEncoder
     };
@@ -31,6 +30,9 @@ namespace lintdb {
 
         virtual void sa_encode(size_t n, const float* x, residual_t* codes) = 0;
         virtual void sa_decode(size_t n, const residual_t* codes, float* x) = 0;
+        virtual size_t code_size() = 0;
+
+        virtual size_t get_nbits() = 0;
 
         virtual QuantizerType get_type() =0;
 

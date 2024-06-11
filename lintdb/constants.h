@@ -22,7 +22,7 @@ static const column_index_t kResidualsColumnIndex = 4;
 static const column_index_t kMappingColumnIndex = 5;
 static const column_index_t kDocColumnIndex = 6;
 
-[[deprecated]]
+// default tenant is used in testing.
 static const uint64_t kDefaultTenant = 0;
 } // namespace lintdb
 
