@@ -208,6 +208,73 @@ namespace std {
     $1 = vec;
 }
 
+%typemap(freearg) const std::vector<EmbeddingPassage>* {
+    delete $1;
+}
+
+%typemap(freearg) const std::vector<EmbeddingPassage>& {
+    delete $1;
+}
+%typemap(in) const std::vector<lintdb::TextPassage>& {
+    if (!PyList_Check($input)) {
+        SWIG_exception_fail(SWIG_TypeError, "Expected a list");
+    }
+
+    // Allocate the vector
+    std::vector<lintdb::TextPassage>* vec = new std::vector<lintdb::TextPassage>;
+
+    // Get the size of the list
+    Py_ssize_t size = PyList_Size($input);
+    vec->reserve(size); // Reserve space in the vector
+
+    for (Py_ssize_t i = 0; i < size; ++i) {
+        PyObject* item = PyList_GetItem($input, i);
+        if (!PyDict_Check(item)) {
+            delete vec; // Clean up allocated memory
+            SWIG_exception_fail(SWIG_TypeError, "List items must be dictionaries");
+        }
+
+        // Extract dictionary values
+        PyObject* py_text = PyDict_GetItemString(item, "text");
+        PyObject* py_id = PyDict_GetItemString(item, "id");
+        PyObject* py_metadata = PyDict_GetItemString(item, "metadata");
+
+        if (!py_text || !PyUnicode_Check(py_text) ||
+            !py_id || !PyLong_Check(py_id) ||
+            !py_metadata || !PyDict_Check(py_metadata)) {
+            delete vec; // Clean up allocated memory
+            SWIG_exception_fail(SWIG_TypeError, "Dictionary keys are missing or of incorrect type");
+        }
+
+        // Convert Python types to C++ types
+        std::string text = PyUnicode_AsUTF8(py_text);
+        int64_t id = PyLong_AsLongLong(py_id);
+        std::map<std::string, std::string> metadata;
+
+        // Iterate through metadata dictionary
+        PyObject *key, *value;
+        Py_ssize_t pos = 0;
+        while (PyDict_Next(py_metadata, &pos, &key, &value)) {
+            if (!PyUnicode_Check(key) || !PyUnicode_Check(value)) {
+                delete vec; // Clean up allocated memory
+                SWIG_exception_fail(SWIG_TypeError, "Metadata keys and values must be strings");
+            }
+            metadata[PyUnicode_AsUTF8(key)] = PyUnicode_AsUTF8(value);
+        }
+
+        // Add to vector
+        vec->emplace_back(text, id, metadata);
+    }
+
+    // Assign the pointer to $1
+    $1 = vec;
+}
+
+%typemap(freearg) const std::vector<lintdb::TextPassage>& {
+    delete $1;
+}
+
+
 // EmbeddingPassage typemaps
 
 %typemap(in) lintdb::EmbeddingPassage& {

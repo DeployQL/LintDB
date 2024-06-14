@@ -47,7 +47,7 @@ namespace lintdb {
         */
         void add_batch(
             const uint64_t tenant,
-            const std::vector<TextPassage>& passages
+            const std::vector<TextPassage>& passages // pass by reference has some issues with swig here.
         ) const;
         /**
          * Search the index for similar documents.

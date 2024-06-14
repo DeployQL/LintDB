@@ -24,7 +24,7 @@ class TestIndex(unittest.TestCase):
             index_one.train(data)
 
             query = np.random.rand(30, 128).astype('float32')
-            index_one.add(0,[lintdb.RawPassage(query, 1)])
+            index_one.add(0,[{'id': 1, 'embeddings': query, 'metadata': {}}])
 
             result = index_one.search(0, query, 10, 10)
             assert(len(result) == 1)
@@ -59,12 +59,12 @@ class TestIndex(unittest.TestCase):
                 index_two = lintdb.IndexIVF(index_one, dir_two)
 
                 query = np.random.rand(30, 128).astype('float32')
-                index_one.add(0,[lintdb.RawPassage(query, 1)])
+                index_one.add(0,[{'id': 1, 'embeddings': query, 'metadata': {}}])
 
                 result = index_one.search(0, query, 10, 10)
                 assert(len(result) == 1)
 
-                index_two.add(0, [lintdb.RawPassage(query, 2)])
+                index_two.add(0, [{'id': 2, 'embeddings': query, 'metadata': {}}])
 
                 # search index one againt to test we didn't add a new document to it.
                 result = index_one.search(0, query, 10, 10)
@@ -88,8 +88,8 @@ class TestIndex(unittest.TestCase):
             index_one.train(data)
 
             query = np.random.rand(30, 128).astype('float32')
-            index_one.add(0,[lintdb.RawPassage(query, 1)])
-            index_one.add(2,[lintdb.RawPassage(query, 3)])
+            index_one.add(0,[{'id': 1, 'embeddings': query, 'metadata': {}}])
+            index_one.add(2,[{'id': 3, 'embeddings': query, 'metadata': {}}])
 
             result = index_one.search(0, query, 10, 10)
             assert(len(result) == 1)
