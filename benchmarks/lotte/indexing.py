@@ -134,6 +134,7 @@ def eval(dataset, experiment, index_type='binarizer', split='dev'):
                 0, # tenant
                 query, # converted,
                 100, # k to return
+                opts
             )
             for rank, result in enumerate(results):
                 # qid, pid, rank
