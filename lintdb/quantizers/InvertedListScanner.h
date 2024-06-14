@@ -24,6 +24,11 @@ struct ScoredPartialDocumentCodes {
     idx_t doc_token_id;
     idx_t query_token_id;
     float score;
+
+    ScoredPartialDocumentCodes() = default;
+
+    ScoredPartialDocumentCodes(idx_t doc_id, idx_t doc_token_id, idx_t query_token_id, float score)
+        : doc_id(doc_id), doc_token_id(doc_token_id), query_token_id(query_token_id), score(score) {}
 };
 
 /**
