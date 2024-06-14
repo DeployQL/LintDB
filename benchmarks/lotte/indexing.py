@@ -52,7 +52,7 @@ def open_collection(index_path, index_type):
 
     return index, collection
 
-def create_collection(index_path, index_type, dims, nbits, num_subquantizers=16, num_centroids=32768):
+def create_collection(index_path, index_type, dims, nbits, num_subquantizers=64, num_centroids=32768):
     index = ldb.IndexIVF(index_path, num_centroids, dims, nbits, 6, num_subquantizers, index_type)
     opts = ldb.CollectionOptions()
     opts.model_file = model_files[index_type]['model_file']
@@ -129,11 +129,11 @@ def eval(dataset, experiment, index_type='binarizer', split='dev'):
         for id, query in zip(data.qids, data.queries):
             opts = ldb.SearchOptions()
             opts.k_top_centroids = 100
+            opts.nearest_tokens_to_fetch = 100
             results = collection.search(
                 0, # tenant
                 query, # converted,
                 100, # k to return
-                opts,
             )
             for rank, result in enumerate(results):
                 # qid, pid, rank

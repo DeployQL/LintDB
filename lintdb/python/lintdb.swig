@@ -53,7 +53,6 @@ namespace std {
     %template() vector<float>;
     %template() vector<idx_t>;
     %template() vector<lintdb::SearchResult>;
-    %template() vector<lintdb::EmbeddingPassage>;
     %template() vector<std::string>;
     %template() vector<lintdb::TextPassage>;
 }
@@ -209,6 +208,195 @@ namespace std {
     $1 = vec;
 }
 
+// EmbeddingPassage typemaps
+
+%typemap(in) lintdb::EmbeddingPassage& {
+    if (!PyDict_Check($input)) {
+        SWIG_exception_fail(SWIG_TypeError, "Expected a dictionary");
+    }
+
+    PyObject *py_embeddings = PyDict_GetItemString($input, "embeddings");
+    PyObject *py_id = PyDict_GetItemString($input, "id");
+    PyObject *py_metadata = PyDict_GetItemString($input, "metadata");
+
+    if (!py_embeddings || !py_id || !py_metadata) {
+        SWIG_exception_fail(SWIG_TypeError, "Missing keys in dictionary: expected 'embeddings', 'id', and 'metadata'");
+    }
+
+    // Extract embeddings as numpy array
+    if (!PyArray_Check(py_embeddings)) {
+        SWIG_exception_fail(SWIG_TypeError, "Expected 'embeddings' to be a numpy array");
+    }
+
+    PyArrayObject *array = (PyArrayObject*)py_embeddings;
+    if (PyArray_TYPE(array) != NPY_FLOAT32) {
+        SWIG_exception_fail(SWIG_TypeError, "Expected 'embeddings' to be a numpy array of float32");
+    }
+
+    float *data = (float*)PyArray_DATA(array);
+    npy_intp *dims = PyArray_DIMS(array);
+    int num_tokens = (int)dims[0];
+    int dimensions = (int)dims[1];
+
+    // Extract id
+    if (!PyLong_Check(py_id)) {
+        SWIG_exception_fail(SWIG_TypeError, "Expected 'id' to be an integer");
+    }
+    int64_t id = PyLong_AsLongLong(py_id);
+
+    // Extract metadata
+    std::map<std::string, std::string> metadata;
+    if (PyDict_Check(py_metadata)) {
+        PyObject *key, *value;
+        Py_ssize_t pos = 0;
+        while (PyDict_Next(py_metadata, &pos, &key, &value)) {
+            if (!PyUnicode_Check(key) || !PyUnicode_Check(value)) {
+                SWIG_exception_fail(SWIG_TypeError, "Expected 'metadata' dictionary to have string keys and values");
+            }
+            std::string key_str = PyUnicode_AsUTF8(key);
+            std::string value_str = PyUnicode_AsUTF8(value);
+            metadata[key_str] = value_str;
+        }
+    } else {
+        SWIG_exception_fail(SWIG_TypeError, "Expected 'metadata' to be a dictionary");
+    }
+
+    $1 = new EmbeddingPassage(data, num_tokens, dimensions, id, metadata);
+}
+
+%typemap(freearg) lintdb::EmbeddingPassage* {
+    delete $1;
+}
+
+%typemap(in) lintdb::EmbeddingPassage {
+    if (!PyDict_Check($input)) {
+        SWIG_exception_fail(SWIG_TypeError, "Expected a dictionary");
+    }
+
+    PyObject *py_embeddings = PyDict_GetItemString($input, "embeddings");
+    PyObject *py_id = PyDict_GetItemString($input, "id");
+    PyObject *py_metadata = PyDict_GetItemString($input, "metadata");
+
+    if (!py_embeddings || !py_id || !py_metadata) {
+        SWIG_exception_fail(SWIG_TypeError, "Missing keys in dictionary: expected 'embeddings', 'id', and 'metadata'");
+    }
+
+    // Extract embeddings as numpy array
+    if (!PyArray_Check(py_embeddings)) {
+        SWIG_exception_fail(SWIG_TypeError, "Expected 'embeddings' to be a numpy array");
+    }
+
+    PyArrayObject *array = (PyArrayObject*)py_embeddings;
+    if (PyArray_TYPE(array) != NPY_FLOAT32) {
+        SWIG_exception_fail(SWIG_TypeError, "Expected 'embeddings' to be a numpy array of float32");
+    }
+
+    float *data = (float*)PyArray_DATA(array);
+    npy_intp *dims = PyArray_DIMS(array);
+    int num_tokens = (int)dims[0];
+    int dimensions = (int)dims[1];
+
+    // Extract id
+    if (!PyLong_Check(py_id)) {
+        SWIG_exception_fail(SWIG_TypeError, "Expected 'id' to be an integer");
+    }
+    int64_t id = PyLong_AsLongLong(py_id);
+
+    // Extract metadata
+    std::map<std::string, std::string> metadata;
+    if (PyDict_Check(py_metadata)) {
+        PyObject *key, *value;
+        Py_ssize_t pos = 0;
+        while (PyDict_Next(py_metadata, &pos, &key, &value)) {
+            if (!PyUnicode_Check(key) || !PyUnicode_Check(value)) {
+                SWIG_exception_fail(SWIG_TypeError, "Expected 'metadata' dictionary to have string keys and values");
+            }
+            std::string key_str = PyUnicode_AsUTF8(key);
+            std::string value_str = PyUnicode_AsUTF8(value);
+            metadata[key_str] = value_str;
+        }
+    } else {
+        SWIG_exception_fail(SWIG_TypeError, "Expected 'metadata' to be a dictionary");
+    }
+
+    $1 = EmbeddingPassage(data, num_tokens, dimensions, id, metadata);
+}
+
+%typemap(in) std::vector< lintdb::EmbeddingPassage,std::allocator< lintdb::EmbeddingPassage > > const & {
+    if (!PyList_Check($input)) {
+        SWIG_exception_fail(SWIG_TypeError, "Expected a list of dictionaries");
+    }
+
+    Py_ssize_t len = PyList_Size($input);
+    std::vector<EmbeddingPassage>* result = new std::vector<EmbeddingPassage>;
+    result->reserve(len);
+
+    for (Py_ssize_t i = 0; i < len; ++i) {
+        PyObject *item = PyList_GetItem($input, i);
+        if (!PyDict_Check(item)) {
+            SWIG_exception_fail(SWIG_TypeError, "Expected a list of dictionaries");
+        }
+
+        // Convert Python dictionary to EmbeddingPassage
+        PyObject *py_embeddings = PyDict_GetItemString(item, "embeddings");
+        PyObject *py_id = PyDict_GetItemString(item, "id");
+        PyObject *py_metadata = PyDict_GetItemString(item, "metadata");
+
+        if (!py_embeddings || !py_id || !py_metadata) {
+            SWIG_exception_fail(SWIG_TypeError, "Missing keys in dictionary: expected 'embeddings', 'id', and 'metadata'");
+        }
+
+        // Extract embeddings as numpy array
+        if (!PyArray_Check(py_embeddings)) {
+            SWIG_exception_fail(SWIG_TypeError, "Expected 'embeddings' to be a numpy array");
+        }
+
+        PyArrayObject *array = (PyArrayObject*)py_embeddings;
+        if (PyArray_TYPE(array) != NPY_FLOAT32) {
+            SWIG_exception_fail(SWIG_TypeError, "Expected 'embeddings' to be a numpy array of float32");
+        }
+
+        float *data = (float*)PyArray_DATA(array);
+        npy_intp *dims = PyArray_DIMS(array);
+        int num_tokens = (int)dims[0];
+        int dimensions = (int)dims[1];
+
+        // Extract id
+        if (!PyLong_Check(py_id)) {
+            SWIG_exception_fail(SWIG_TypeError, "Expected 'id' to be an integer");
+        }
+        int64_t id = PyLong_AsLongLong(py_id);
+
+        // Extract metadata
+        std::map<std::string, std::string> metadata;
+        if (PyDict_Check(py_metadata)) {
+            PyObject *key, *value;
+            Py_ssize_t pos = 0;
+            while (PyDict_Next(py_metadata, &pos, &key, &value)) {
+                if (!PyUnicode_Check(key) || !PyUnicode_Check(value)) {
+                    SWIG_exception_fail(SWIG_TypeError, "Expected 'metadata' dictionary to have string keys and values");
+                }
+                std::string key_str = PyUnicode_AsUTF8(key);
+                std::string value_str = PyUnicode_AsUTF8(value);
+                metadata[key_str] = value_str;
+            }
+        } else {
+            SWIG_exception_fail(SWIG_TypeError, "Expected 'metadata' to be a dictionary");
+        }
+
+        EmbeddingPassage passage(data, num_tokens, dimensions, id, metadata);
+        result->push_back(passage);
+    }
+    $1 = result;
+}
+
+%typemap(freearg) const std::vector<EmbeddingPassage>* {
+    delete $1;
+}
+
+%typemap(freearg) const std::vector<EmbeddingPassage>& {
+    delete $1;
+}
 
 // EmbeddingPassage constructor.
 %apply (float* IN_ARRAY2, int DIM1, int DIM2) {(const float* block, int num_tokens, int dim)};

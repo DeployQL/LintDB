@@ -52,12 +52,13 @@ namespace lintdb {
                 map<idx_t, std::vector<float>>& document_scores,
                 const std::vector<float>& lowest_query_scores);
 
-        std::vector<ScoredPartialDocumentCodes> get_document_codes(
-                idx_t tenant,
-                const std::vector<QueryTokenCentroidScore>& token_centroid_scores,
+        std::vector<ScoredPartialDocumentCodes> get_tokens(
+                const idx_t tenant,
+                const std::vector<QueryTokenCentroidScore>&
+                        token_centroid_scores,
                 const gsl::span<const float> query_data,
-                const size_t n // num tokens
-                );
+                const size_t n,
+                const size_t num_tokens_to_return = 100);
 
         private:
         std::shared_ptr<InvertedList> inverted_list_;

@@ -31,6 +31,8 @@ std::vector<float> PQDistanceTables::calculate_query_distances(
         const std::vector<float>& precomputed_distances,
         const std::vector<uint8_t>& codes) {
     std::vector<float> results(precomputed_distances);
+    // use the distance to the centroid as a precomputed distance.
+    // we'll then add the distance from the centroid to the document code.
     for(int j = 0; j < query_tokens_to_score.size(); j++) {
         auto query_token_id = query_tokens_to_score[j];
         auto sim_table = distance_tables[query_token_id];

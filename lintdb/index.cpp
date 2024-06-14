@@ -51,10 +51,9 @@ IndexIVF::IndexIVF(const std::string& path, bool read_only)
     load_retrieval(path, config);
 }
 
-IndexIVF::IndexIVF(const std::string& path, Configuration& config)
-        : config(config), path(path) {
+IndexIVF::IndexIVF(std::string path, Configuration& config)
+        : config(config), read_only(false), path(path) {
     LINTDB_THROW_IF_NOT(config.nlist <= std::numeric_limits<code_t>::max());
-
     this->config = config;
 
     initialize_inverted_list(config.lintdb_version);
@@ -240,6 +239,9 @@ void IndexIVF::train(size_t n, std::vector<float>& embeddings, size_t nlist, siz
 }
 
 void IndexIVF::train(float* embeddings, size_t n, size_t dim, size_t nlist, size_t niter) {
+    assert(config.nlist <= std::numeric_limits<code_t>::max() &&
+           "nlist must be less than 32 bits.");
+
     if (nlist != 0) {
         this->config.nlist = nlist;
     }
@@ -252,15 +254,7 @@ void IndexIVF::train(float* embeddings, size_t n, size_t dim, size_t nlist, size
 }
 
 void IndexIVF::train(float* embeddings, int n, int dim, size_t nlist, size_t niter) {
-    if (nlist != 0) {
-        this->config.nlist = nlist;
-    }
-    if (niter != 0) {
-        this->config.niter = niter;
-    }
 
-    assert(config.nlist <= std::numeric_limits<code_t>::max() &&
-           "nlist must be less than 32 bits.");
     train(embeddings, static_cast<size_t>(n), static_cast<size_t>(dim), nlist, niter);
 }
 
@@ -351,7 +345,9 @@ std::vector<SearchResult> IndexIVF::search(
             .expected_id = opts.expected_id,
             .centroid_threshold = opts.centroid_score_threshold,
             .k_top_centroids = opts.k_top_centroids,
-            .n_probe = n_probe};
+            .n_probe = n_probe,
+            .nearest_tokens_to_fetch = opts.nearest_tokens_to_fetch,
+    };
 
     auto results =
             this->retriever->retrieve(tenant, query_span, n, k, plaid_options);

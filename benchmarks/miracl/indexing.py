@@ -12,9 +12,59 @@ import shutil
 import math
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
-
+import numpy as np
 
 app = typer.Typer()
+
+model_files = {
+    ldb.IndexEncoding_XTR: {
+        'model_file': "assets/xtr/encoder.onnx",
+        'tokenizer_file': "assets/xtr/spiece.model",
+    },
+    ldb.IndexEncoding_BINARIZER: {
+        'model_file': "assets/model.onnx",
+        'tokenizer_file': "assets/colbert_tokenizer.json",
+    },
+}
+
+def batch(iterable, n=1):
+    l = len(iterable)
+    for ndx in range(0, l, n):
+        yield iterable[ndx:min(ndx + n, l)]
+
+
+def open_collection(index_path, index_type):
+    index = ldb.IndexIVF(index_path)
+    opts = ldb.CollectionOptions()
+    opts.model_file = model_files[index_type]['model_file']
+    opts.tokenizer_file = model_files[index_type]['tokenizer_file']
+
+    collection = ldb.Collection(index, opts)
+
+    return index, collection
+
+def create_collection(index_path, index_type, dims, nbits, num_subquantizers=64, num_centroids=32768):
+    index = ldb.IndexIVF(index_path, num_centroids, dims, nbits, 10, num_subquantizers, index_type)
+    opts = ldb.CollectionOptions()
+    opts.model_file = model_files[index_type]['model_file']
+    opts.tokenizer_file = model_files[index_type]['tokenizer_file']
+
+    collection = ldb.Collection(index, opts)
+
+    return index, collection
+
+def get_index_type(index_type):
+    index_type_enum = ldb.IndexEncoding_BINARIZER
+    if index_type == "binarizer":
+        index_type_enum = ldb.IndexEncoding_BINARIZER
+    elif index_type == 'pq':
+        index_type_enum = ldb.IndexEncoding_PRODUCT_QUANTIZER
+    elif index_type == 'none':
+        index_type_enum = ldb.IndexEncoding_NONE
+    elif index_type == 'xtr':
+        index_type_enum = ldb.IndexEncoding_XTR
+
+    return index_type_enum
 
 # https://github.com/PongoAI/pongo-miracl-benchmark/blob/main/scripts/run-pongo.py
 def batch(iterable, n=1):
@@ -26,22 +76,24 @@ def batch(iterable, n=1):
 def eval(
     experiment: str,
     split: str = 'en',
-    use_rerank: bool = True,
+    index_type="binarizer",
 ):
     dataset = load_dataset('miracl/miracl', split, use_auth_token=True)
 
-    index = ldb.IndexIVF(f"experiments/miracl/{experiment}")
-    opts = ldb.CollectionOptions()
-    opts.model_file = "/home/matt/deployql/LintDB/assets/model.onnx"
-    opts.tokenizer_file = "/home/matt/deployql/LintDB/assets/colbert_tokenizer.json"
+    index_path = f"experiments/miracl/{experiment}"
 
-    collection = ldb.Collection(index, opts)
+    index_type_enum = get_index_type(index_type)
 
-    if use_rerank:
-        print("loading reranker model...")
-        tokenizer = AutoTokenizer.from_pretrained('BAAI/bge-reranker-v2-m3')
-        model = AutoModelForSequenceClassification.from_pretrained('BAAI/bge-reranker-v2-m3')
-        model.eval()
+    # lifestyle full centroids == 65536
+    #lifestyle-40k-benchmark centroids == 32768
+    if index_type != 'bge':
+        index, collection = open_collection(index_path, index_type_enum)
+    else:
+        from FlagEmbedding import BGEM3FlagModel
+
+        model = BGEM3FlagModel("BAAI/bge-m3", use_fp16=True)
+        index_type_enum = get_index_type('binarizer') # use colbert
+        index, collection = open_collection(index_path, index_type_enum)
 
     file_exists = False
     try:
@@ -60,21 +112,30 @@ def eval(
 
         for data in tqdm(dataset['dev']):
             question = data['query']
-
-            results = collection.search(0, question, 100)
-            if use_rerank:
-                print("reranking...")
-                texts = [doc.metadata['text'] for doc in results]
-                pairs = [(question, text) for text in texts]
-
-                with torch.no_grad():
-                    inputs = tokenizer(pairs, padding=True, truncation=True, return_tensors='pt', max_length=512)
-                    scores = model(**inputs, return_dict=True).logits.view(-1, ).float()
-
-                    tups = list(zip(results, scores))
-                    results = sorted(tups, key=lambda x: x[1], reverse=True)
-                    results = [x[0] for x in results]
-                    print("done reranking...")
+            opts = ldb.SearchOptions()
+            opts.n_probe = 32
+            opts.num_second_pass = 2500
+            opts.k_top_centroids=2
+            if index_type != 'bge':
+                results = collection.search(0, question, 100, opts)
+            else:
+                import string
+                query = question.translate(str.maketrans('', '', string.punctuation))
+                embeds = model.encode(query, max_length=1028, return_colbert_vecs=True)['colbert_vecs']
+                results = index.search(0, embeds, 100, opts)
+            # if use_rerank:
+            #     print("reranking...")
+            #     texts = [doc.metadata['text'] for doc in results]
+            #     pairs = [(question, text) for text in texts]
+            #
+            #     with torch.no_grad():
+            #         inputs = tokenizer(pairs, padding=True, truncation=True, return_tensors='pt', max_length=512)
+            #         scores = model(**inputs, return_dict=True).logits.view(-1, ).float()
+            #
+            #         tups = list(zip(results, scores))
+            #         results = sorted(tups, key=lambda x: x[1], reverse=True)
+            #         results = [x[0] for x in results]
+            #         print("done reranking...")
 
             mrr = -1
             i = 1
@@ -124,33 +185,30 @@ def eval(
         iDCG10_sum = 0
         count = 0
         for row in reader:
-            mrr3_sum += float(row[3]) if float(row[3]) <=3 else 0
-            mrr5_sum += float(row[3]) if float(row[3]) <=5 else 0
+            mrr3_sum += 1/float(row[3]) if float(row[3]) <=3 else 0
+            mrr5_sum += 1/float(row[3]) if float(row[3]) <=5 else 0
             DCG10_sum += float(row[4])
             iDCG10_sum += float(row[5])
             count += 1
 
-        MRR = mrr_sum / count
+        MRR3 = mrr3_sum / count
+        MRR5 = mrr5_sum / count
         NDCG10 = DCG10_sum / iDCG10_sum
 
-        print(f"MRR: {MRR}")
+        print(f"MRR@3: {MRR3}")
+        print(f"MRR@5: {MRR5}")
         print(f"NDCG@10: {NDCG10}")
 
 
 
 @app.command()
-def index(
+def run(
     experiment: str,
     split: str = 'en',
-    k: int = 5, 
-    start:int=0, 
-    stop:int=40000, 
-    num_procs:int=10, 
+    k: int = 5,
     nbits: int=1, 
     index_type="binarizer",
-    use_batch:bool=False,
-    batch_size:int=5,
-    checkpoint: str = "colbert-ir/colbertv2.0"):
+):
     print("Loading dataset...")
     dataset = load_dataset('miracl/miracl', split, use_auth_token=True)
     print("Dataset loaded.")
@@ -161,33 +219,19 @@ def index(
         # delete directory if exists
         shutil.rmtree(index_path)
 
-    index_type_enum = ldb.IndexEncoding_BINARIZER
-    if index_type == "binarizer":
-        index_type_enum = ldb.IndexEncoding_BINARIZER
-    elif index_type == 'pq':
-        index_type_enum = ldb.IndexEncoding_PRODUCT_QUANTIZER
-    elif index_type == 'none':
-        index_type_enum = ldb.IndexEncoding_NONE
-    elif index_type == 'xtr':
-        index_type_enum = ldb.IndexEncoding_XTR
-
-    print(f"using index type: {index_type_enum}")
+    if index_type != 'bge':
+        index_type_enum = get_index_type(index_type)
 
         # lifestyle full centroids == 65536
         #lifestyle-40k-benchmark centroids == 32768
-    dims = 128
+        index, collection = create_collection(index_path, index_type_enum, 128, 2)
+    else:
+        from FlagEmbedding import BGEM3FlagModel
 
-    config = ldb.Configuration()
-    config.nbits = nbits
-    config.dim = dims
-    config.quantizer_type = index_type_enum
+        model = BGEM3FlagModel("BAAI/bge-m3", use_fp16=True)
+        index_type_enum = get_index_type('binarizer') # use colbert
+        index, collection = create_collection(index_path, index_type_enum, 128, 2, num_centroids=942)
 
-    index = ldb.IndexIVF(index_path, config)
-    opts = ldb.CollectionOptions()
-    opts.model_file = "/home/matt/deployql/LintDB/assets/model.onnx"
-    opts.tokenizer_file = "/home/matt/deployql/LintDB/assets/colbert_tokenizer.json"
-
-    collection = ldb.Collection(index, opts)
 
     id=0
     passages = []
@@ -197,18 +241,41 @@ def index(
         passages.extend(data['positive_passages'])
         passages.extend(data['negative_passages'])
 
-    training_data = random.sample(passages, 1000)
+    training_data = random.sample(passages, 5000)
     training_data = [x['text'] for x in training_data]
 
-    collection.train(training_data)
+    if index_type != 'bge':
+        collection.train(training_data)
+    else:
+
+        if os.path.exists("miracl-bge-embeddings.npz"):
+            print("Loading embeddings...")
+            training_embeds = np.load("miracl-bge-embeddings.npz")['arr_0']
+        else:
+            training_embeds = None
+
+            for sent in training_data:
+                embeds = model.encode(sent, max_length=1028, return_colbert_vecs=True)['colbert_vecs']
+                if training_embeds is None:
+                    training_embeds = embeds
+                else:
+                    training_embeds = np.append(training_embeds, embeds, axis=0)
+
+            print(np.sqrt(len(training_embeds)))
+            np.savez("miracl-bge-embeddings", training_embeds)
+        index.train(training_embeds)
 
     start = time.perf_counter()
     for passage in passages:
-        collection.add(0, id, passage['text'], {
-            'text': passage['text'],
-            'docid': passage['docid'],
-            'title': passage['title'],
-        })
+        if index_type != 'bge':
+            collection.add(0, id, passage['text'], {
+                'text': passage['text'],
+                'docid': passage['docid'],
+                'title': passage['title'],
+            })
+        else:
+            embeds = model.encode(passage['text'], max_length=1028, return_colbert_vecs=True)['colbert_vecs']
+            index.add(0, [{'embeddings': embeds, 'id': id, 'metadata': {'text': passage['text'], 'docid': passage['docid'], 'title': passage['title']}}])
         id += 1
 
     duration = time.perf_counter() - start

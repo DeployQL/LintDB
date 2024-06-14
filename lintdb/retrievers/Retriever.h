@@ -16,6 +16,7 @@ namespace lintdb {
         const size_t n_probe;
         const size_t num_docs_to_score = 4000;
         const size_t out_second_stage = 1000;
+        const size_t nearest_tokens_to_fetch = 100;
     };
     
     struct Retriever {

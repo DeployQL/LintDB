@@ -73,7 +73,7 @@ struct IndexIVF {
     /// load an existing index.
     IndexIVF(const std::string& path, bool read_only = false);
 
-    IndexIVF(const std::string& path, Configuration& config);
+    IndexIVF(std::string path, Configuration& config);
 
     IndexIVF(
             std::string path, /// path to the database.

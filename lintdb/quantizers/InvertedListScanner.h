@@ -21,8 +21,9 @@ namespace lintdb {
  */
 struct ScoredPartialDocumentCodes {
     idx_t doc_id;
-    idx_t token_id;
-    std::map<idx_t, float> query_token_scores; // score per token stored in the inverted list
+    idx_t doc_token_id;
+    idx_t query_token_id;
+    float score;
 };
 
 /**

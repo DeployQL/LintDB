@@ -30,9 +30,9 @@ struct Key {
 /**
  * TokenKey is an inverted list key that maps to the token of a document.
  *
- * The total key is: tenant::inverted_list_id::doc_id::token_id.
+ * The total key is: tenant::inverted_list_id::doc_id::doc_token_id.
  *
- * When searching against this key, exclude_id removes both the doc_id and token_id.
+ * When searching against this key, exclude_id removes both the doc_id and doc_token_id.
  */
 struct TokenKey {
     uint64_t tenant;

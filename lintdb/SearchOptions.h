@@ -35,6 +35,7 @@ struct SearchOptions {
     size_t num_second_pass =
             1024; /// the number of second pass candidates to consider.
     size_t n_probe = 32; /// the number of centroids to search overall.
+    size_t nearest_tokens_to_fetch = 100; /// the number of nearest tokens to fetch in XTR.
 
     SearchOptions() : expected_id(-1){};
 };
