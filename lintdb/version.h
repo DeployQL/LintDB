@@ -1,6 +1,6 @@
 #pragma once
 
-#define LINTDB_VERSION_STRING "0.3.0"
+#define LINTDB_VERSION_STRING "0.3.2"
 
 
 namespace lintdb {
