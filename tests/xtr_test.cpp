@@ -19,10 +19,16 @@ TEST(XTRTest, InitializesCorrectly) {
 TEST(XTRTest, GetDocumentScores) {
     size_t n = 3; // Number of tokens per document
 
-    vector<lintdb::ScoredPartialDocumentCodes> all_doc_codes = {
-            {1, 0, {{0, 0.1f}, {1, 0.2f}, {2, 0.3f}}},
-            {2, 1, {{0, 0.3f}, {1, 0.1f}, {2, 0.2f}}},
-            {1, 2, {{0, 0.4f}, {1, 0.5f}, {2, 0.1f}}}
+    std::vector<lintdb::ScoredPartialDocumentCodes> all_doc_codes = {
+            {1, 0, 0, 0.1f},
+            {1, 0, 1, 0.2f},
+            {1, 0, 2, 0.3f},
+            {2, 1, 0, 0.3f},
+            {2, 1, 1, 0.1f},
+            {2, 1, 2, 0.2f},
+            {1, 2, 0, 0.4f},
+            {1, 2, 1, 0.5f},
+            {1, 2, 2, 0.1f}
     };
 
     std::map<idx_t, std::vector<float>> document_scores;

@@ -82,10 +82,7 @@ std::vector<InvertedData> EncodedDocument::serialize_inverted_data() const {
 
         InvertedData data;
         data.key = codes[i];
-//        Buffer buf;
-//        auto written = bitsery::quickSerialization(OutputAdapter{buf}, view);
-//        data.value = std::string(buf.begin(), buf.begin()+written);
-//        LOG(INFO) << "code size: " << code_size << " residuals size: " << view.size();
+
         data.value = std::string(residuals_start, residuals_start+code_size);
         data.token_id = i;
 
@@ -99,11 +96,6 @@ std::vector<InvertedData> EncodedDocument::serialize_inverted_data() const {
 
 PartialDocumentCodes PartialDocumentCodes::deserialize(idx_t id, std::string& data) {
     LINTDB_THROW_IF_NOT(!data.empty());
-
-//    using InputAdapter = bitsery::InputBufferAdapter<std::string>;
-//    std::vector<residual_t> residuals;
-//    auto state = bitsery::quickDeserialization(InputAdapter{data.begin(), data.size()}, residuals);
-//    assert(state.first == bitsery::ReaderError::NoError && state.second);
 
     std::vector<residual_t> residuals(data.begin(), data.end());
 

@@ -27,7 +27,7 @@ test-python: build-python
 # had to fix up conda to make this work--
 # conda install -c conda-forge gcc=12.1.0
 # https://stackoverflow.com/questions/72540359/glibcxx-3-4-30-not-found-for-librosa-in-conda-virtual-environment-after-tryin
-	GLOG_v=100 PYTHONPATH="build/lintdb/python/build/lib" pytest tests/test_*.py
+	GLOG_v=100 PYTHONPATH="builds/python/lintdb/python/build/lib" pytest -v  tests/test_*.py
 
 run-python: build-python
 	PYTHONPATH="build/lintdb/python/build/lib" python tests/runner.py

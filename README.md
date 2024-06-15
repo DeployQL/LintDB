@@ -23,22 +23,36 @@ conda install lintdb -c deployql -c conda-forge
 LintDB makes it easy to upload data, even if you have multiple tenants.
 
 ```python
+tenant_id = 1
 index = ldb.IndexIVF(index_path)
+
+collection_options = lintdb.CollectionOptions()
+collection_options.model_file = "model.onnx"
+collection_options.tokenizer_file = "colbert_tokenizer.json"
+collection = lintdb.Collection(index, collection_options)
 ...
 # we use an IVF index, so we need to train the centroids.
 index.train(training_data)
 ...
-# add documents to the index.
-doc = ldb.RawPassage(embeddings, id)
-index.add(tenant_id, [doc])
+# add documents to the collection.
+collection.add(tenant_id, [{'id': 1, 'text': 'hello world', 'metadata': {'doc_id': 'abc123'}}])
 
-results = index.search(
+opts = ldb.SearchOptions()
+opts.k_top_centroids = 2 # number of centroids to search per query token.
+
+results = collection.search(
     tenant_id,
     embeddings, 
-    32, # number of centroids to search
     100, # k to return
+    opts
 )
 ```
+
+## Late Interaction Model Support
+LintDB aims to support late interaction and more advanced retrieval models. 
+
+- [x] ColBERTv2 with PLAID
+- [x] XTR (experimental)
 
 # Roadmap
 
@@ -47,7 +61,6 @@ LintDB aims to be a full retrieval platform.
 We want to extend LintDB's features to include:
 - Snippet highlighting and explainability features.
 - Support for more algorithms for retrieval and ranking.
-    - [XTR](https://arxiv.org/pdf/2304.01982.pdf)
     - Fine tuning and pretraining, like [PreFLMR](https://arxiv.org/pdf/2402.08327.pdf)
 - Increased support for document filtering.
 

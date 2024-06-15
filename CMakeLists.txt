@@ -17,7 +17,6 @@ project(lintdb
   LANGUAGES CXX
 )
 set(LINTDB_VERSION ${version})
-configure_file(lintdb/version.h.in ${CMAKE_CURRENT_SOURCE_DIR}/lintdb/version.h @ONLY)
 
 include(GNUInstallDirs)
 

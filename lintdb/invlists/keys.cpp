@@ -87,7 +87,7 @@ TokenKey TokenKey::from_slice(const rocksdb::Slice& slice) {
     auto doc_id = load_bigendian<idx_t>(
             key_ptr + sizeof(tenant) + sizeof(inverted_list_id));
 
-    // check if there's a token key. If not, return the key without the token_id.
+    // check if there's a token key. If not, return the key without the doc_token_id.
     if(slice.size() == 24) {
         return TokenKey{tenant, inverted_list_id, doc_id, 0};
     }

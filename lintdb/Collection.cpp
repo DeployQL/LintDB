@@ -36,7 +36,7 @@ namespace lintdb {
         input.attention_mask = attn;
 
         auto output = model->encode(input);
-        normalize_vector(output.data(), ids.size(), model->get_dims());
+//        normalize_vector(output.data(), ids.size(), model->get_dims());
     
         auto passage = EmbeddingPassage(output.data(), ids.size(), model->get_dims(), id, metadata);
         index->add(tenant, {passage});
@@ -44,7 +44,7 @@ namespace lintdb {
 
     void Collection::add_batch(
         const uint64_t tenant,
-        const std::vector<TextPassage> passages
+        const std::vector<TextPassage>& passages
         ) const {
 
         for(const auto& passage: passages) {
@@ -76,7 +76,7 @@ namespace lintdb {
         auto output = model->encode(input);
 
         std::vector<float> query_data = output;
-        normalize_vector(query_data.data(), ids.size(), model->get_dims());
+//        normalize_vector(query_data.data(), ids.size(), model->get_dims());
 
         return index->search(tenant, query_data.data(), size, model->get_dims(), opts.n_probe, k, opts);
     }

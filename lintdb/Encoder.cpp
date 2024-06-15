@@ -329,29 +329,32 @@ void DefaultEncoder::train(
         const int n_iter) {
     try {
         faiss::ClusteringParameters cp;
-        if (this->niter != 0 && n_iter == 0) {
-            cp.niter = this->niter;
-        } else {
+        // always prefer the values passed in
+        if (n_iter != 0) {
+            niter = n_iter;
             cp.niter = n_iter;
         }
-        if(this->nlist == 0 && n_list != 0) {
+        if(n_list != 0) {
             this->nlist = n_list;
         }
 
         LINTDB_THROW_IF_NOT(this->nlist != 0);
 
-        cp.nredo = 1;
-        cp.seed = 123;
+//        cp.nredo = 1;
+//        cp.seed = 123;
         faiss::Clustering clus(dim, this->nlist, cp);
         clus.verbose = true;
 
         // clustering uses L2 distance.
-        faiss::IndexFlatL2 assigner(dim);
+        faiss::IndexFlatIP assigner(dim);
         clus.train(n, embeddings, assigner);
 
-        normalize_vector(clus.centroids.data(), nlist, dim);
 
         coarse_quantizer->add(nlist, clus.centroids.data());
+
+        std::vector<float> first_embed(dim);
+        coarse_quantizer->reconstruct(0, first_embed.data());
+        LOG(INFO) << "First centroid: " << first_embed[0] << ", " << first_embed[1] << ", " << first_embed[2];
 
         if (quantizer != nullptr) {
             // residual quantizers are trained on residuals. we aren't

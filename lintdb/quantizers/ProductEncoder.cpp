@@ -6,6 +6,7 @@
 #include <list>
 #include <faiss/IndexPQ.h>
 #include <faiss/utils/distances.h>
+#include <glog/logging.h>
 
 namespace lintdb {
 ProductEncoder::ProductEncoder(
@@ -13,6 +14,7 @@ ProductEncoder::ProductEncoder(
         size_t nbits,
         size_t num_subquantizers = 16)
         : Quantizer(), nbits(nbits), dim(dim), num_subquantizers(num_subquantizers){
+
     this->pq = std::make_unique<faiss::IndexPQ>(
             dim /*input dimensions*/,
             num_subquantizers /* number of sub quantizers */,
@@ -20,6 +22,7 @@ ProductEncoder::ProductEncoder(
             faiss::METRIC_INNER_PRODUCT);
     dsub = pq->pq.dsub;
     ksub = pq->pq.ksub;
+
 }
 
 void ProductEncoder::sa_encode(size_t n, const float* x, residual_t* codes) {

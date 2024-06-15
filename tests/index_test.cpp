@@ -334,6 +334,7 @@ TEST_P(IndexTest, MergeCorrectly) {
 
     auto opts = lintdb::SearchOptions();
     opts.centroid_score_threshold = 0;
+    opts.nearest_tokens_to_fetch = 1000;
 
     std::vector<float> buf_two(dim * num_tokens, 0);
     for(size_t i=0; i< num_tokens; i++) {
@@ -345,8 +346,7 @@ TEST_P(IndexTest, MergeCorrectly) {
 
     // faiss::rand_smooth_vectors(num_tokens, dim, buf_two.data(), 1234);
     lintdb::EmbeddingBlock block_two{buf_two.data(), num_tokens, dim};
-    auto results = index.search(lintdb::kDefaultTenant, block_two, 2, 5, opts);
-    std::cout << "searched merged index" << std::endl;
+    auto results = index.search(lintdb::kDefaultTenant, block_two, 200, 5, opts);
     EXPECT_EQ(results.size(), 2);
 }
 

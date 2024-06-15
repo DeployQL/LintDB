@@ -9,7 +9,7 @@ namespace lintdb {
         std::shared_ptr<ForwardIndex> index, 
         std::shared_ptr<Encoder> encoder,
         std::shared_ptr<ProductEncoder> product_encoder
-    ) : Retriever(), inverted_list_(std::move(inverted_list)), index_(std::move(index)), encoder_(std::move(encoder)), product_encoder_(std::move(product_encoder)) {}
+    ) : Retriever(), inverted_list_(inverted_list), index_(index), encoder_(encoder), product_encoder_(product_encoder) {}
 
     std::vector<SearchResult> XTRRetriever::retrieve(
         const idx_t tenant, 
@@ -18,6 +18,7 @@ namespace lintdb {
         const size_t k, // num to return
         const RetrieverOptions& opts
     ) {
+
     std::vector<idx_t> coarse_idx(n * opts.total_centroids_to_calculate);
     std::vector<float> distances(n * opts.total_centroids_to_calculate);
     encoder_->search_quantizer(
@@ -38,12 +39,8 @@ namespace lintdb {
             max_centroids_to_return);
 
     // step 1: get the top token neighbors.
-    auto all_doc_codes = get_document_codes(
-            tenant,
-            top_centroids,
-            query_data,
-            n
-    );
+    auto all_doc_codes = get_tokens(
+            tenant, top_centroids, query_data, n, opts.nearest_tokens_to_fetch);
 
     // for each doc partial result, we need to assemble the top scores per query token.
     std::map<idx_t, std::vector<float>> document_scores;
@@ -88,17 +85,19 @@ namespace lintdb {
     return results;
 }
 
-std::vector<ScoredPartialDocumentCodes> XTRRetriever::get_document_codes(
+std::vector<ScoredPartialDocumentCodes> XTRRetriever::get_tokens(
         const idx_t tenant,
         const std::vector<QueryTokenCentroidScore>& token_centroid_scores,
         const gsl::span<const float> query_data,
-        const size_t n) {
+        const size_t n,
+        const size_t num_tokens_to_return) {
 
     InvertedListScanner scanner(product_encoder_, query_data.data(), n);
 
     std::vector<ScoredPartialDocumentCodes> all_doc_codes;
 #pragma omp parallel for
     for(const auto centroid_score : token_centroid_scores) {
+        centroid_score.query_token;
         auto centroid_idx = centroid_score.centroid_id;
         // get the query tokens that want to search this centroid_score and their distance to the centroid_score.
 
@@ -113,7 +112,29 @@ std::vector<ScoredPartialDocumentCodes> XTRRetriever::get_document_codes(
     }
     }
 
-    return all_doc_codes;
+    // TODO: the below could be done much more efficiently. We can heap sort these once
+    // and likely reduce using openmp.
+
+    // top document tokens per query token.
+    std::map<size_t, std::vector<ScoredPartialDocumentCodes>> doc_codes_map;
+    for (const auto& doc_code : all_doc_codes) {
+        if (doc_codes_map.find(doc_code.query_token_id) == doc_codes_map.end()) {
+            doc_codes_map[doc_code.query_token_id] = std::vector<ScoredPartialDocumentCodes>();
+        }
+        doc_codes_map[doc_code.query_token_id].push_back(doc_code);
+    }
+
+    std::vector<ScoredPartialDocumentCodes> cutoff_results;
+    // sort each map value
+    for (auto&[_, doc_codes]: doc_codes_map) {
+            std::sort(doc_codes.begin(), doc_codes.end(), [&](ScoredPartialDocumentCodes a, ScoredPartialDocumentCodes b) {
+                return a.score > b.score;
+        });
+            auto amount_to_take = std::min(num_tokens_to_return, doc_codes.size());
+            cutoff_results.insert(cutoff_results.end(), doc_codes.begin(), doc_codes.begin() + amount_to_take);
+    }
+
+    return cutoff_results;
 }
 
 void XTRRetriever::impute_missing_scores(
@@ -147,13 +168,11 @@ void XTRRetriever::get_document_scores(
 
         // we want to keep around the highest score per query token for document scores
         // while finding the lowest score per query token to impute missing scores.
-        for(const auto&[key, value]: doc_code.query_token_scores) {
-            if (value > document_scores[doc_code.doc_id][key]) {
-                document_scores[doc_code.doc_id][key] = value;
-            }
-            if (value < lowest_query_scores[key]) {
-                lowest_query_scores[key] = value;
-            }
+        if (doc_code.score > document_scores[doc_code.doc_id][doc_code.query_token_id]) {
+            document_scores[doc_code.doc_id][doc_code.query_token_id] = doc_code.score;
+        }
+        if (doc_code.score < lowest_query_scores[doc_code.query_token_id]) {
+            lowest_query_scores[doc_code.query_token_id] = doc_code.score;
         }
     }
 }

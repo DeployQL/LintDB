@@ -2,6 +2,8 @@
 #include <faiss/IndexPQ.h>
 #include <glog/logging.h>
 #include <memory>
+#include <vector>
+#include <faiss/utils/distances.h>
 
 namespace lintdb {
 InvertedListScanner::InvertedListScanner(
@@ -40,7 +42,7 @@ std::vector<ScoredPartialDocumentCodes> InvertedListScanner::scan(
         ScoredPartialDocumentCodes doc_results;
         auto token_key = list_iterator->get_key();
         doc_results.doc_id = token_key.doc_id;
-        doc_results.token_id = token_key.token_id;
+        doc_results.doc_token_id = token_key.token_id;
 
        auto scores = distance_tables->calculate_query_distances(
                query_token_ids,
@@ -50,7 +52,8 @@ std::vector<ScoredPartialDocumentCodes> InvertedListScanner::scan(
 
         for(idx_t i=0; i < scores.size(); i++) {
             const auto query_token_id = query_token_ids[i];
-            doc_results.query_token_scores.insert({query_token_id, scores[i]});
+            doc_results.query_token_id = query_token_id;
+            doc_results.score = scores[i];
         }
 
         results.push_back(doc_results);
