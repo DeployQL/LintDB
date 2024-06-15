@@ -86,8 +86,7 @@ jobs:
           elif [ "${{github.event.action}}" == "prereleased" ]; then
             label="dev"
           else
-            echo "The trigger type ${{github.event.action}} is not compatible with `label: auto`"
-            exit 1
+            label="nightly"
           fi
           conda activate lintdb-build
           conda config --set anaconda_upload yes
