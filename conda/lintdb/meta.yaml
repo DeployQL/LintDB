@@ -64,7 +64,6 @@ outputs:
         - conda inspect linkages -p $PREFIX $PKG_NAME  # [not win]
         - conda inspect objects -p $PREFIX $PKG_NAME   # [osx]
 
-
   - name: lintdb
     script: build-pkg.sh  # [x86_64 and linux]
     script: build-pkg-osx.sh  # [x86_64 and osx]
