@@ -63,8 +63,7 @@ jobs:
 
       - name: Update environment
         run:
-          mamba init
-          mamba env update -n lintdb-build -f
+          conda env update -n lintdb-build -f
           conda/environment.yaml
         if: steps.cache.outputs.cache-hit != 'true'
       
@@ -91,12 +90,12 @@ jobs:
             label="nightly"
             upload="no"
           fi
-          mamba activate lintdb-build
-          mamba config --set anaconda_upload ${upload}
+          conda activate lintdb-build
+          conda config --set anaconda_upload ${upload}
           out_dir=`mktemp -d -t compilation-XXXXXXXXXX`
           echo "::group::Building conda package for host platform"
           echo "conda build lintdb --user deployql --cache-dir "conda-${{ runner.os }}--${{ runner.arch }}-build-cache" --output-folder $out_dir"
-          mamba build lintdb --user deployql --label $label --cache-dir "conda-${{ runner.os }}--${{ runner.arch }}-build-cache" --output-folder $out_dir
+          conda build lintdb --user deployql --label $label --cache-dir "conda-${{ runner.os }}--${{ runner.arch }}-build-cache" --output-folder $out_dir
           echo "::set-output name=out_dir::'$out_dir'"
           echo "::endgroup::"
       - uses: actions/upload-artifact@v4
