@@ -44,14 +44,14 @@ outputs:
         - lapack # [linux]
         - conda-forge::swig >=4.0.2
         - conda-forge::numpy
-        - mkl-devel =2023  # [x86_64]
+        - mkl-devel =2024  # [x86_64]
         - conda-forge::onnxruntime-cpp==1.17.3
       host:
-        - mkl =2023  # [x86_64]
+        - mkl =2024  # [x86_64]
         - openblas  # [not x86_64]
         - conda-forge::onnxruntime-cpp==1.17.3
       run:
-        - mkl =2023  # [x86_64]
+        - mkl =2024  # [x86_64]
         - openblas  # [not x86_64]
         - conda-forge::onnxruntime-cpp==1.17.3
         - __osx >={{ MACOSX_DEPLOYMENT_TARGET|default("10.13") }}  # [osx and x86_64]
