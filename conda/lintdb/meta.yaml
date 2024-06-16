@@ -43,7 +43,7 @@ outputs:
         - make  # [not win]
         - lapack # [linux]
         - conda-forge::swig >=4.0.2
-        - conda-forge::numpy
+        - numpy
         - mkl-devel =2024  # [x86_64]
         - conda-forge::onnxruntime-cpp==1.17.3
       host:
@@ -75,10 +75,9 @@ outputs:
       build:
         - {{ compiler('cxx') }}
         - llvm-openmp # [osx]
-        # - lapack # [linux]
         - sysroot_linux-64 =2.17 # [linux64]
         - conda-forge::swig >= 4.0.2
-        - conda-forge::numpy
+        - numpy
         - cmake >=3.23.1
         - make  # [not win]
         - python {{ python }}
