@@ -37,20 +37,21 @@ outputs:
     requirements:
       build:
         - {{ compiler('cxx') }}
+        - {{ compiler('fortran')}}
         - sysroot_linux-64 =2.17 # [linux64]
         - llvm-openmp # [osx]
         - cmake >=3.23.1
         - make  # [not win]
         - conda-forge::swig >=4.0.2
         - numpy
-        - mkl-devel =2024  # [x86_64]
+        - mkl-devel =2023  # [x86_64]
         - conda-forge::onnxruntime-cpp==1.17.3
       host:
-        - mkl =2024  # [x86_64]
+        - mkl =2023  # [x86_64]
         - openblas  # [not x86_64]
         - conda-forge::onnxruntime-cpp==1.17.3
       run:
-        - mkl =2024  # [x86_64]
+        - mkl =2023  # [x86_64]
         - openblas  # [not x86_64]
         - conda-forge::onnxruntime-cpp==1.17.3
         - __osx >={{ MACOSX_DEPLOYMENT_TARGET|default("10.13") }}  # [osx and x86_64]
@@ -73,6 +74,7 @@ outputs:
     requirements:
       build:
         - {{ compiler('cxx') }}
+        - {{ compiler('fortran')}}
         - llvm-openmp # [osx]
         - sysroot_linux-64 =2.17 # [linux64]
         - conda-forge::swig >= 4.0.2
@@ -82,17 +84,17 @@ outputs:
         - python {{ python }}
       host:
         - python {{ python }}
-        - conda-forge::numpy
+        - numpy
         - {{ pin_subpackage('liblintdb', exact=True) }}
       run:
         - python {{ python }}
-        - conda-forge::numpy
+        - numpy
         - packaging
         - {{ pin_subpackage('liblintdb', exact=True) }}
         - __osx >={{ MACOSX_DEPLOYMENT_TARGET|default("10.13") }}  # [osx and x86_64]
     test:
       requires:
-        - conda-forge::numpy
+        - numpy
         - pytorch
       commands:
         - python -X faulthandler -m unittest discover -v -s tests/ -p "test_*"
