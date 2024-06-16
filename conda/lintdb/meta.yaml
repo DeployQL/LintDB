@@ -38,10 +38,9 @@ outputs:
       build:
         - {{ compiler('cxx') }}
         - sysroot_linux-64 =2.17 # [linux64]
-        - llvm-openmp
+        - llvm-openmp # [osx]
         - cmake >=3.23.1
         - make  # [not win]
-        - lapack # [linux]
         - conda-forge::swig >=4.0.2
         - numpy
         - mkl-devel =2024  # [x86_64]
