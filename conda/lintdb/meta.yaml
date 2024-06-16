@@ -39,7 +39,7 @@ outputs:
         - {{ compiler('cxx') }}
         - {{ compiler('fortran') }}
         - sysroot_linux-64 =2.17 # [linux64]
-        - llvm-openmp # [osx]
+        - llvm-openmp
         - cmake >=3.25
         - make  # [not win]
         - conda-forge::swig >=4.0.2
@@ -74,7 +74,7 @@ outputs:
     requirements:
       build:
         - {{ compiler('cxx') }}
-        - llvm-openmp # [osx]
+        - llvm-openmp
         - sysroot_linux-64 =2.17 # [linux64]
         - conda-forge::swig >= 4.0.2
         - numpy
