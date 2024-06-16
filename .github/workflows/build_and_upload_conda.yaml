@@ -63,6 +63,7 @@ jobs:
 
       - name: Update environment
         run:
+          mamba init
           mamba env update -n lintdb-build -f
           conda/environment.yaml
         if: steps.cache.outputs.cache-hit != 'true'
