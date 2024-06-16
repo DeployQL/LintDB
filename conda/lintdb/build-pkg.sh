@@ -4,7 +4,7 @@ set -e
       # -DPYTHON_INCLUDE_DIR=$(python -c "import sysconfig; print(sysconfig.get_path('include'))")  \
       # -DPYTHON_LIBRARY=$(python -c "import sysconfig; print(sysconfig.get_config_var('LIBDIR'))") \
 
-cmake -B _build_python_${PY_VER} \
+MKLROOT=_build_python_${PY_VER}/vcpkg_installed/x64-linux/lib/intel64 cmake -B _build_python_${PY_VER} \
       -DBUILD_SHARED_LIBS=ON \
       -DBUILD_TESTING=OFF \
       -Dlintdb_ROOT=_liblintdb_stage/ \
@@ -12,7 +12,7 @@ cmake -B _build_python_${PY_VER} \
       -DPython_EXECUTABLE=$PYTHON \
       .
 
-make -C _build_python_${PY_VER} -j$(nproc) pylintdb
+MKLROOT=_build_python_${PY_VER}/vcpkg_installed/x64-linux/lib/intel64 make -C _build_python_${PY_VER} -j$(nproc) pylintdb
 
 # Build actual python module.
 cd _build_python_${PY_VER}/lintdb/python

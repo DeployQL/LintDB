@@ -2,7 +2,7 @@
 
 set -e
 
-cmake -B _build \
+MKLROOT=_build/vcpkg_installed/x64-linux/lib/intel64 cmake -B _build \
       -DBUILD_SHARED_LIBS=ON \
       -DBUILD_TESTING=OFF \
       -DENABLE_PYTHON=OFF \
