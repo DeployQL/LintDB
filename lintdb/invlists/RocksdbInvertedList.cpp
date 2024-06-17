@@ -36,10 +36,7 @@ RocksdbInvertedList::RocksdbInvertedList(
         Version& version)
         : db_(db), column_families(column_families), version(version) {}
 
-void RocksdbInvertedList::add(
-        const uint64_t tenant,
-        EncodedDocument* doc) {
-
+void RocksdbInvertedList::add(const uint64_t tenant, EncodedDocument* doc) {
     rocksdb::WriteOptions wo;
     std::unordered_set<idx_t> unique_coarse_idx(
             doc->codes.begin(), doc->codes.end());
@@ -74,8 +71,7 @@ void RocksdbInvertedList::add(
             rocksdb::Slice(
                     reinterpret_cast<const char*>(
                             mapping_ptr->GetBufferPointer()),
-                    mapping_ptr->GetSize())
-    );
+                    mapping_ptr->GetSize()));
     LINTDB_THROW_IF_NOT(mapping_status.ok());
 }
 
@@ -140,7 +136,8 @@ void RocksdbInvertedList::merge(
     while (it->Valid()) {
         auto key = it->key();
         auto value = it->value();
-        auto status = db_->Put(wo, column_families[kIndexColumnIndex], key, value);
+        auto status =
+                db_->Put(wo, column_families[kIndexColumnIndex], key, value);
         assert(status.ok());
         it->Next();
     }
@@ -151,12 +148,12 @@ void RocksdbInvertedList::merge(
     while (map_it->Valid()) {
         auto key = map_it->key();
         auto value = map_it->value();
-        auto status = db_->Put(wo, column_families[kMappingColumnIndex], key, value);
+        auto status =
+                db_->Put(wo, column_families[kMappingColumnIndex], key, value);
         assert(status.ok());
         map_it->Next();
     }
 }
-
 
 unique_ptr<Iterator> RocksdbInvertedList::get_iterator(
         const uint64_t tenant,

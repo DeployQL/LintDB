@@ -1,10 +1,10 @@
-#include "lintdb/index_builder/Tokenizer.h"
-#include "lintdb/index_builder/EmbeddingModel.h"
 #include <gtest/gtest.h>
-#include <string>
 #include <iostream>
+#include <string>
+#include "lintdb/index_builder/EmbeddingModel.h"
+#include "lintdb/index_builder/Tokenizer.h"
 //
-//TEST(TokenizerTest, TestTokenizers) {
+// TEST(TokenizerTest, TestTokenizers) {
 //    std::string path = "colbert_tokenizer.json";
 //    lintdb::Tokenizer tokenizer(path, 512);
 //    std::string text = "hello, world!";
@@ -17,7 +17,7 @@
 //    ASSERT_EQ("[CLS] [unused0] hello world [SEP]", query_decoded);
 //}
 //
-//TEST(EmbeddingModelTest, TestModel) {
+// TEST(EmbeddingModelTest, TestModel) {
 //    std::string path = "model.onnx";
 //    lintdb::EmbeddingModel model(path);
 //
@@ -43,7 +43,7 @@
 //    ASSERT_EQ(output.size(), input.attention_mask.size()*128);
 //}
 //
-//TEST(EmbeddingModelTest, TestBatch) {
+// TEST(EmbeddingModelTest, TestBatch) {
 //    std::string path = "model.onnx";
 //    lintdb::EmbeddingModel model(path);
 //
@@ -75,7 +75,7 @@
 //    }
 //}
 //
-//TEST(EmbeddingModelTest, TestBatchIsSameAsSingle) {
+// TEST(EmbeddingModelTest, TestBatchIsSameAsSingle) {
 //    std::string path = "model.onnx";
 //    lintdb::EmbeddingModel model(path);
 //
@@ -104,7 +104,8 @@
 //
 //    auto input = create_input(text);
 //    auto input_two = create_input("this is a longer sentence in the batch!");
-//    auto input_three = create_input("asldfhk alsdhkfl asfjksdlkjf lsjkdflj lasdfj aslkf hasdlfkhlasjdf aslfk aslkd fh");
+//    auto input_three = create_input("asldfhk alsdhkfl asfjksdlkjf lsjkdflj
+//    lasdfj aslkf hasdlfkhlasjdf aslfk aslkd fh");
 //
 //    std::vector<lintdb::ModelInput> batch = {input, input_two, input_three};
 //

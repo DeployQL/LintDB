@@ -1,4 +1,6 @@
 #include "lintdb/retrievers/EMVBRetriever.h"
+#include <faiss/IndexPQ.h>
+#include <faiss/impl/ProductQuantizer.h>
 #include <glog/logging.h>
 #include <omp.h>
 #include <numeric>
@@ -12,32 +14,30 @@
 #include "lintdb/retrievers/emvb.h"
 #include "lintdb/retrievers/emvb_util.h"
 #include "lintdb/retrievers/plaid.h"
-#include <faiss/impl/ProductQuantizer.h>
-#include <faiss/IndexPQ.h>
 
 namespace lintdb {
 extern "C" {
-    // this is to keep the clang syntax checker happy
-    #ifndef FINTEGER
-    #define FINTEGER int
-    #endif
+// this is to keep the clang syntax checker happy
+#ifndef FINTEGER
+#define FINTEGER int
+#endif
 
-    /* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
+/* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
 
-    int sgemm_(
-            const char* transa,
-            const char* transb,
-            FINTEGER* m,
-            FINTEGER* n,
-            FINTEGER* k,
-            const float* alpha,
-            const float* a,
-            FINTEGER* lda,
-            const float* b,
-            FINTEGER* ldb,
-            float* beta,
-            float* c,
-            FINTEGER* ldc);
+int sgemm_(
+        const char* transa,
+        const char* transb,
+        FINTEGER* m,
+        FINTEGER* n,
+        FINTEGER* k,
+        const float* alpha,
+        const float* a,
+        FINTEGER* lda,
+        const float* b,
+        FINTEGER* ldb,
+        float* beta,
+        float* c,
+        FINTEGER* ldc);
 }
 
 EMVBRetriever::EMVBRetriever(
@@ -63,7 +63,6 @@ std::vector<idx_t> EMVBRetriever::top_passages(
         const RetrieverOptions& opts,
         std::vector<float>& query_scores,
         std::vector<uint32_t>& bitvectors) {
-
     FINTEGER m = FINTEGER(n);
     FINTEGER nn = FINTEGER(encoder_->nlist);
     FINTEGER k = FINTEGER(encoder_->dim);
@@ -76,20 +75,19 @@ std::vector<idx_t> EMVBRetriever::top_passages(
     // we need to treat this as operating in column major format.
     // we want doc_res x query_vectors^T = C, but have row major data.
     // because of that, we want to calculate query_vectors x doc_res = C^T
-    sgemm_(
-            "T",
-            "N",
-            &nn,
-            &m,
-            &k,
-            &alpha,
-            encoder_->get_centroids(), // size: (nlist x dim)
-            &lda,
-            query_data.data(), // size: (num_query_tok x dim)
-            &ldb,
-            &beta,
-            query_scores.data(), // size: (num_query_tok x nlist)
-            &out_dim);
+    sgemm_("T",
+           "N",
+           &nn,
+           &m,
+           &k,
+           &alpha,
+           encoder_->get_centroids(), // size: (nlist x dim)
+           &lda,
+           query_data.data(), // size: (num_query_tok x dim)
+           &ldb,
+           &beta,
+           query_scores.data(), // size: (num_query_tok x nlist)
+           &out_dim);
 
     std::vector<size_t> start_sorted(n * encoder_->get_num_centroids());
     size_t offset = 0;
@@ -215,7 +213,7 @@ std::vector<DocCandidate<float>> EMVBRetriever::rank_by_centroids(
         const RetrieverOptions& opts) {
     std::vector<DocCandidate<float>> pid_scores(doc_codes.size());
 
-#pragma omp parallel for if(candidates.size() > 10000)
+#pragma omp parallel for if (candidates.size() > 10000)
     for (int i = 0; i < candidates.size(); i++) {
         auto index = candidates[i].index_position;
         auto codes = doc_codes[index]->codes;

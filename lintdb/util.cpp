@@ -6,18 +6,16 @@
 
 namespace lintdb {
 extern "C" {
-    // this is to keep the clang syntax checker happy
-    #ifndef FINTEGER
-    #define FINTEGER int
-    #endif
+// this is to keep the clang syntax checker happy
+#ifndef FINTEGER
+#define FINTEGER int
+#endif
 
-    /* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
+/* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
 
-    float cblas_snrm2(FINTEGER n, const float* x, FINTEGER incx);
+float cblas_snrm2(FINTEGER n, const float* x, FINTEGER incx);
 
-    int cblas_sscal(FINTEGER n, const float alpha, float* x, FINTEGER incx);
-
-
+int cblas_sscal(FINTEGER n, const float alpha, float* x, FINTEGER incx);
 }
 
 void normalize_vector(

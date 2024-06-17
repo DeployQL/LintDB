@@ -30,15 +30,19 @@ std::vector<float> max_score_by_centroid(
         size_t num_centroids);
 
 float colbert_centroid_score(
-        const std::vector<code_t>& doc_codes, /// codes from the document. each token is assigned a code.
-        const std::vector<float>& centroid_scores, /// the score of those codes to the query.
+        const std::vector<code_t>& doc_codes, /// codes from the document. each
+                                              /// token is assigned a code.
+        const std::vector<float>&
+                centroid_scores,     /// the score of those codes to the query.
         const size_t nquery_vectors, /// the number of query vectors.
-        const size_t n_centroids, /// how many centroids there are. this may change based on how many scores we choose to calculate.
+        const size_t n_centroids,    /// how many centroids there are. this may
+                                  /// change based on how many scores we choose
+                                  /// to calculate.
         const idx_t expected_id);
 
 struct DocumentScore {
-        float score;
-        std::vector<float> tokens;
+    float score;
+    std::vector<float> tokens;
 };
 
 DocumentScore score_document_by_residuals(
@@ -48,7 +52,7 @@ DocumentScore score_document_by_residuals(
         float* doc_residuals, // size: (num_doc_tokens, num_dim)
         const size_t num_doc_tokens,
         const size_t dim,
-        bool normalize=true);
+        bool normalize = true);
 
 } // namespace lintdb
 

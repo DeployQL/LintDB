@@ -15,27 +15,27 @@
 namespace lintdb {
 
 extern "C" {
-    // this is to keep the clang syntax checker happy
-    #ifndef FINTEGER
-    #define FINTEGER int
-    #endif
+// this is to keep the clang syntax checker happy
+#ifndef FINTEGER
+#define FINTEGER int
+#endif
 
-    /* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
+/* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
 
-    int sgemm_(
-            const char* transa,
-            const char* transb,
-            FINTEGER* m,
-            FINTEGER* n,
-            FINTEGER* k,
-            const float* alpha,
-            const float* a,
-            FINTEGER* lda,
-            const float* b,
-            FINTEGER* ldb,
-            float* beta,
-            float* c,
-            FINTEGER* ldc);
+int sgemm_(
+        const char* transa,
+        const char* transb,
+        FINTEGER* m,
+        FINTEGER* n,
+        FINTEGER* k,
+        const float* alpha,
+        const float* a,
+        FINTEGER* lda,
+        const float* b,
+        FINTEGER* ldb,
+        float* beta,
+        float* c,
+        FINTEGER* ldc);
 }
 
 DefaultEncoder::DefaultEncoder(
@@ -45,9 +45,7 @@ DefaultEncoder::DefaultEncoder(
         size_t dim,
         size_t num_subquantizers,
         IndexEncoding type)
-        : Encoder(),
-          dim(dim),
-          quantizer_type(type) {
+        : Encoder(), dim(dim), quantizer_type(type) {
     this->nlist = nlist;
     this->niter = niter;
     // colBERT uses L2 during clustering.
@@ -67,9 +65,7 @@ DefaultEncoder::DefaultEncoder(
         size_t dim,
         size_t num_subquantizers,
         IndexEncoding type)
-        : Encoder(),
-          dim(dim),
-          quantizer_type(type) {
+        : Encoder(), dim(dim), quantizer_type(type) {
     // colBERT uses L2 during clustering.
     // for normalized vectors, this should be the same as IP.
     this->coarse_quantizer = std::make_unique<faiss::IndexFlatIP>(dim);
@@ -81,9 +77,8 @@ DefaultEncoder::DefaultEncoder(
     this->quantizer = create_quantizer(type, quantizer_config);
 }
 
-DefaultEncoder::DefaultEncoder(
-        size_t dim,
-        std::shared_ptr<Quantizer> quantizer): dim(dim), quantizer(quantizer) {
+DefaultEncoder::DefaultEncoder(size_t dim, std::shared_ptr<Quantizer> quantizer)
+        : dim(dim), quantizer(quantizer) {
     this->coarse_quantizer = std::make_unique<faiss::IndexFlatIP>(dim);
 }
 
@@ -112,7 +107,8 @@ std::unique_ptr<EncodedDocument> DefaultEncoder::encode_vectors(
     std::vector<residual_t> residual_codes;
     size_t code_size;
     if (quantizer != nullptr) {
-        residual_codes = std::vector<residual_t>(num_tokens * quantizer->code_size());
+        residual_codes =
+                std::vector<residual_t>(num_tokens * quantizer->code_size());
         quantizer->sa_encode(
                 num_tokens, raw_residuals.data(), residual_codes.data());
         code_size = quantizer->code_size();
@@ -125,7 +121,12 @@ std::unique_ptr<EncodedDocument> DefaultEncoder::encode_vectors(
     }
 
     return std::make_unique<EncodedDocument>(EncodedDocument(
-            coarse_idx, residual_codes, num_tokens, doc.id, code_size, doc.metadata));
+            coarse_idx,
+            residual_codes,
+            num_tokens,
+            doc.id,
+            code_size,
+            doc.metadata));
 }
 
 std::vector<float> DefaultEncoder::decode_vectors(
@@ -186,71 +187,74 @@ void DefaultEncoder::search(
     FINTEGER ldb = FINTEGER(dim);
     FINTEGER ldc = FINTEGER(nlist);
 
-    sgemm_(
-        "T",
-        "N",
-        &n,
-        &m,
-        &k,
-        &alpha,
-        coarse_quantizer->get_xb(), // size: (nlist x dim). transposed = (dim x nlist)
-        &lda,
-        data, // size: (num_query_tok x dim). transposed = (dim x num_query_tok)
-        &ldb,
-        &beta,
-        query_scores.data(), // size: (nlist x num_query_tok)
-        &ldc);
+    sgemm_("T",
+           "N",
+           &n,
+           &m,
+           &k,
+           &alpha,
+           coarse_quantizer->get_xb(), // size: (nlist x dim). transposed = (dim
+                                       // x nlist)
+           &lda,
+           data, // size: (num_query_tok x dim). transposed = (dim x
+                 // num_query_tok)
+           &ldb,
+           &beta,
+           query_scores.data(), // size: (nlist x num_query_tok)
+           &ldc);
 
     auto comparator = [](std::pair<float, idx_t> p1,
                          std::pair<float, idx_t> p2) {
         return p1.first < p2.first;
     };
 
-    std::vector<std::pair<float, idx_t>> centroid_scores(num_query_tok * k_top_centroids);
+    std::vector<std::pair<float, idx_t>> centroid_scores(
+            num_query_tok * k_top_centroids);
 
 #pragma omp parallel
-{
-    std::vector<std::pair<float, idx_t>> token_centroid_scores;
-    token_centroid_scores.reserve(k_top_centroids);
+    {
+        std::vector<std::pair<float, idx_t>> token_centroid_scores;
+        token_centroid_scores.reserve(k_top_centroids);
 
 #pragma omp for nowait schedule(dynamic, 1)
-    for (int i = 0; i < num_query_tok; i++) {
-        for (int j = 0; j < nlist; j++) {
-            idx_t key = j;
-            float score = query_scores[i * nlist + j];
-            if (token_centroid_scores.size() < k_top_centroids) {
-                token_centroid_scores.push_back(
-                        std::pair<float, idx_t>(score, key));
+        for (int i = 0; i < num_query_tok; i++) {
+            for (int j = 0; j < nlist; j++) {
+                idx_t key = j;
+                float score = query_scores[i * nlist + j];
+                if (token_centroid_scores.size() < k_top_centroids) {
+                    token_centroid_scores.push_back(
+                            std::pair<float, idx_t>(score, key));
 
-                if (token_centroid_scores.size() == k_top_centroids) {
-                    std::make_heap(
+                    if (token_centroid_scores.size() == k_top_centroids) {
+                        std::make_heap(
+                                token_centroid_scores.begin(),
+                                token_centroid_scores.end(),
+                                comparator);
+                    }
+                } else if (score > token_centroid_scores.front().first) {
+                    std::pop_heap(
+                            token_centroid_scores.begin(),
+                            token_centroid_scores.end(),
+                            comparator);
+                    token_centroid_scores.front() =
+                            std::pair<float, idx_t>(score, key);
+                    std::push_heap(
                             token_centroid_scores.begin(),
                             token_centroid_scores.end(),
                             comparator);
                 }
-            } else if (score > token_centroid_scores.front().first) {
-                std::pop_heap(
-                        token_centroid_scores.begin(),
-                        token_centroid_scores.end(),
-                        comparator);
-                token_centroid_scores.front() =
-                        std::pair<float, idx_t>(score, key);
-                std::push_heap(
-                        token_centroid_scores.begin(),
-                        token_centroid_scores.end(),
-                        comparator);
             }
-        }
 
-        for (idx_t k = 0; k < k_top_centroids; k++) {
-            auto top = token_centroid_scores[k];
-            float score = top.first;
-            idx_t idx = top.second;
-            centroid_scores[i * k_top_centroids + k] = std::pair<float, idx_t>(score, idx);
-        }
-        token_centroid_scores.clear();
-    } // end for loop
-} // end parallel
+            for (idx_t k = 0; k < k_top_centroids; k++) {
+                auto top = token_centroid_scores[k];
+                float score = top.first;
+                idx_t idx = top.second;
+                centroid_scores[i * k_top_centroids + k] =
+                        std::pair<float, idx_t>(score, idx);
+            }
+            token_centroid_scores.clear();
+        } // end for loop
+    } // end parallel
     for (int i = 0; i < num_query_tok; i++) {
         for (int j = 0; j < k_top_centroids; j++) {
             auto pair = centroid_scores[i * k_top_centroids + j];
@@ -305,10 +309,7 @@ std::unique_ptr<Encoder> DefaultEncoder::load(
     }
 
     auto encoder = std::make_unique<DefaultEncoder>(DefaultEncoder(
-            config.nbits,
-            config.dim,
-            config.num_subquantizers,
-            config.type));
+            config.nbits, config.dim, config.num_subquantizers, config.type));
     encoder->coarse_quantizer = std::move(coarse_quantizer);
 
     encoder->quantizer = quantizer;
@@ -334,14 +335,14 @@ void DefaultEncoder::train(
             niter = n_iter;
             cp.niter = n_iter;
         }
-        if(n_list != 0) {
+        if (n_list != 0) {
             this->nlist = n_list;
         }
 
         LINTDB_THROW_IF_NOT(this->nlist != 0);
 
-//        cp.nredo = 1;
-//        cp.seed = 123;
+        //        cp.nredo = 1;
+        //        cp.seed = 123;
         faiss::Clustering clus(dim, this->nlist, cp);
         clus.verbose = true;
 
@@ -349,12 +350,12 @@ void DefaultEncoder::train(
         faiss::IndexFlatIP assigner(dim);
         clus.train(n, embeddings, assigner);
 
-
         coarse_quantizer->add(nlist, clus.centroids.data());
 
         std::vector<float> first_embed(dim);
         coarse_quantizer->reconstruct(0, first_embed.data());
-        LOG(INFO) << "First centroid: " << first_embed[0] << ", " << first_embed[1] << ", " << first_embed[2];
+        LOG(INFO) << "First centroid: " << first_embed[0] << ", "
+                  << first_embed[1] << ", " << first_embed[2];
 
         if (quantizer != nullptr) {
             // residual quantizers are trained on residuals. we aren't

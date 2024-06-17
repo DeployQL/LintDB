@@ -43,10 +43,10 @@ void RocksdbForwardIndex::add(
         auto size = doc_ptr->GetSize();
 
         const rocksdb::Slice slice(reinterpret_cast<const char*>(ptr), size);
-        auto codes_status = batch.Put(column_families[kCodesColumnIndex], rocksdb::Slice(fks), slice);
+        auto codes_status = batch.Put(
+                column_families[kCodesColumnIndex], rocksdb::Slice(fks), slice);
         LINTDB_THROW_IF_NOT(codes_status.ok());
     }
-
 
     // store document residuals.
     auto forward_doc_ptr = create_forward_index_document(
@@ -95,9 +95,7 @@ void RocksdbForwardIndex::remove(
             rocksdb::WriteOptions wo;
             std::string value;
             rocksdb::Status status = db_->Delete(
-                    wo,
-                    column_families[i],
-                    rocksdb::Slice(serialized_key));
+                    wo, column_families[i], rocksdb::Slice(serialized_key));
         }
     }
 }
@@ -160,8 +158,9 @@ std::vector<std::unique_ptr<DocumentResiduals>> RocksdbForwardIndex::
     return docs;
 }
 
-std::vector<std::unique_ptr<DocumentCodes>> RocksdbForwardIndex::
-        get_codes(const uint64_t tenant, const std::vector<idx_t>& ids) const {
+std::vector<std::unique_ptr<DocumentCodes>> RocksdbForwardIndex::get_codes(
+        const uint64_t tenant,
+        const std::vector<idx_t>& ids) const {
     std::vector<std::string> key_strings;
     std::vector<rocksdb::Slice> keys;
     // rocksdb slices don't take ownership of the underlying data, so we need to
@@ -223,10 +222,9 @@ std::vector<std::unique_ptr<DocumentCodes>> RocksdbForwardIndex::
     return docs;
 }
 
-std::vector<std::unique_ptr<DocumentMetadata>> RocksdbForwardIndex::get_metadata(
-    const uint64_t tenant,
-    const std::vector<idx_t>& ids) const {
-
+std::vector<std::unique_ptr<DocumentMetadata>> RocksdbForwardIndex::
+        get_metadata(const uint64_t tenant, const std::vector<idx_t>& ids)
+                const {
     std::vector<std::string> key_strings;
     std::vector<rocksdb::Slice> keys;
     // rocksdb slices don't take ownership of the underlying data, so we need to
@@ -246,18 +244,19 @@ std::vector<std::unique_ptr<DocumentMetadata>> RocksdbForwardIndex::get_metadata
     std::vector<rocksdb::PinnableSlice> values(ids.size());
     std::vector<rocksdb::Status> statuses(ids.size());
 
-    #pragma omp parallel for
+#pragma omp parallel for
     for (int i = 0; i < key_strings.size(); i++) {
         auto key = rocksdb::Slice(key_strings[i].data(), key_strings[i].size());
 
-        statuses[i] = db_->Get(
-                ro, column_families[kDocColumnIndex], key, &values[i]);
+        statuses[i] =
+                db_->Get(ro, column_families[kDocColumnIndex], key, &values[i]);
     }
 
     for (size_t i = 0; i < ids.size(); i++) {
         if (statuses[i].ok() && values[i].size() > 0) {
             auto doc = values[i].ToString();
-            std::unique_ptr<DocumentMetadata> metadata = DocumentMetadata::deserialize(doc);
+            std::unique_ptr<DocumentMetadata> metadata =
+                    DocumentMetadata::deserialize(doc);
 
             docs.push_back(std::move(metadata));
             // release the memory used by rocksdb for this value.

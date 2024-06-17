@@ -5,20 +5,11 @@
 
 #include <memory>
 
-
 TEST(EncodedDocumentTest, SerializeInvertedData) {
-
     std::vector<code_t> codes = {1, 2, 3};
-        std::vector<residual_t> residuals = {1, 1, 1};
+    std::vector<residual_t> residuals = {1, 1, 1};
 
-    lintdb::EncodedDocument doc (
-            codes,
-            residuals,
-            3,
-            555,
-            1,
-            {}
-            );
+    lintdb::EncodedDocument doc(codes, residuals, 3, 555, 1, {});
 
     ASSERT_EQ(doc.code_size, 1);
 

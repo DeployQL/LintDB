@@ -2,11 +2,11 @@
 #define LINTDB_INVLISTS_ENCODED_DOCUMENT_H
 
 #include <stddef.h>
+#include <map>
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 #include "lintdb/api.h"
-#include <map>
 
 namespace lintdb {
 
@@ -16,9 +16,9 @@ namespace lintdb {
  * If we have N posting lists, we need to return N data structures, one
  * for each posting list.
  */
-struct InvertedData{
-    code_t key; /// the posting list we're assigning data to.
-    idx_t token_id; /// the token id.
+struct InvertedData {
+    code_t key;        /// the posting list we're assigning data to.
+    idx_t token_id;    /// the token id.
     std::string value; /// the serialized data.
 };
 
@@ -51,7 +51,7 @@ struct EncodedDocument {
 
     std::string serialize_metadata() const;
 
-    std::vector<InvertedData>  serialize_inverted_data() const;
+    std::vector<InvertedData> serialize_inverted_data() const;
 
     const std::vector<code_t> codes;
     const std::vector<residual_t> residuals;
@@ -70,7 +70,10 @@ struct PartialDocumentCodes {
     idx_t id;
     std::vector<residual_t> partial_residuals;
 
-    explicit PartialDocumentCodes(idx_t id, std::vector<residual_t>& partial_residuals): id(id), partial_residuals(partial_residuals) {}
+    explicit PartialDocumentCodes(
+            idx_t id,
+            std::vector<residual_t>& partial_residuals)
+            : id(id), partial_residuals(partial_residuals) {}
 
     static PartialDocumentCodes deserialize(idx_t id, std::string& data);
 };
@@ -82,9 +85,15 @@ struct DocumentCodes {
 
     DocumentCodes(idx_t id, std::vector<code_t> codes, size_t num_tokens)
             : id(id), codes(codes), num_tokens(num_tokens) {}
-    
-    DocumentCodes(idx_t id, const code_t* codes, size_t codes_size, size_t num_tokens)
-            : id(id), codes(codes, codes + codes_size), num_tokens(num_tokens) {}
+
+    DocumentCodes(
+            idx_t id,
+            const code_t* codes,
+            size_t codes_size,
+            size_t num_tokens)
+            : id(id),
+              codes(codes, codes + codes_size),
+              num_tokens(num_tokens) {}
 };
 
 struct DocumentResiduals {
@@ -92,18 +101,28 @@ struct DocumentResiduals {
     const std::vector<residual_t> residuals;
     const size_t num_tokens;
 
-    DocumentResiduals(idx_t id, std::vector<residual_t> residuals, size_t num_tokens)
+    DocumentResiduals(
+            idx_t id,
+            std::vector<residual_t> residuals,
+            size_t num_tokens)
             : id(id), residuals(residuals), num_tokens(num_tokens) {}
 
-    DocumentResiduals(idx_t id, const residual_t* residuals, size_t residuals_size, size_t num_tokens)
-            : id(id), residuals(residuals, residuals + residuals_size), num_tokens(num_tokens) {}
+    DocumentResiduals(
+            idx_t id,
+            const residual_t* residuals,
+            size_t residuals_size,
+            size_t num_tokens)
+            : id(id),
+              residuals(residuals, residuals + residuals_size),
+              num_tokens(num_tokens) {}
 };
 
 /**
  * DocumentMetadata is a struct that holds metadata for a document.
- * 
- * When creating a DocumentMetadata object, the metadata is owned by this object.
-*/
+ *
+ * When creating a DocumentMetadata object, the metadata is owned by this
+ * object.
+ */
 struct DocumentMetadata {
     std::map<std::string, std::string> metadata;
 
@@ -115,9 +134,6 @@ struct DocumentMetadata {
     static std::unique_ptr<DocumentMetadata> deserialize(std::string& metadata);
 };
 
-
-
 } // namespace lintdb
-
 
 #endif
