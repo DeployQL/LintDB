@@ -63,7 +63,7 @@ jobs:
 
       - name: Update environment
         run:
-          mamba env update -n lintdb-build -f
+          conda env update -n lintdb-build -f
           conda/environment.yaml
         if: steps.cache.outputs.cache-hit != 'true'
       
@@ -81,16 +81,17 @@ jobs:
           MKLROOT: ${{ github.workspace }}/builds/release/vcpkg_installed/x64-linux/lib/intel64
         run: |
           label=""
+          upload="yes"
           if [ "${{github.event.action}}" == "released" ]; then
             label="main"
           elif [ "${{github.event.action}}" == "prereleased" ]; then
             label="dev"
           else
-            echo "The trigger type ${{github.event.action}} is not compatible with `label: auto`"
-            exit 1
+            label="nightly"
+            upload="no"
           fi
           conda activate lintdb-build
-          conda config --set anaconda_upload yes
+          conda config --set anaconda_upload ${upload}
           out_dir=`mktemp -d -t compilation-XXXXXXXXXX`
           echo "::group::Building conda package for host platform"
           echo "conda build lintdb --user deployql --cache-dir "conda-${{ runner.os }}--${{ runner.arch }}-build-cache" --output-folder $out_dir"

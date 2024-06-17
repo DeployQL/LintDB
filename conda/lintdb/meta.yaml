@@ -37,24 +37,25 @@ outputs:
     requirements:
       build:
         - {{ compiler('cxx') }}
-        - {{ compiler('fortran')}} 
+        - {{ compiler('fortran') }}
         - sysroot_linux-64 =2.17 # [linux64]
-        - llvm-openmp  # [osx]
-        - cmake >=3.23.1
+        - llvm-openmp # [osx]
+        - intel::intel-openmp =2023.0.0 #[linux]
+        - cmake >=3.25
         - make  # [not win]
-        - lapack # [linux]
         - conda-forge::swig >=4.0.2
-        - conda-forge::numpy
-        - mkl-devel =2023  # [x86_64]
-        - conda-forge::onnxruntime-cpp
+        - numpy
+        - mkl-devel =2023.0.0  # [x86_64]
+        - conda-forge::onnxruntime-cpp==1.17.3
       host:
-        - mkl =2023  # [x86_64]
+        - intel::intel-openmp =2023.0.0 #[linux]
+        - mkl =2023.0.0  # [x86_64]
         - openblas  # [not x86_64]
-        - conda-forge::onnxruntime-cpp
+        - conda-forge::onnxruntime-cpp==1.17.3
       run:
-        - mkl =2023  # [x86_64]
+        - mkl =2023.0.0  # [x86_64]
         - openblas  # [not x86_64]
-        - conda-forge::onnxruntime-cpp
+        - conda-forge::onnxruntime-cpp==1.17.3
         - __osx >={{ MACOSX_DEPLOYMENT_TARGET|default("10.13") }}  # [osx and x86_64]
     test:
       requires:
@@ -63,7 +64,6 @@ outputs:
         - test -f $PREFIX/lib/liblintdb$SHLIB_EXT       # [not win]
         - conda inspect linkages -p $PREFIX $PKG_NAME  # [not win]
         - conda inspect objects -p $PREFIX $PKG_NAME   # [osx]
-
 
   - name: lintdb
     script: build-pkg.sh  # [x86_64 and linux]
@@ -76,28 +76,26 @@ outputs:
     requirements:
       build:
         - {{ compiler('cxx') }}
-        - {{ compiler('fortran') }}
-        - llvm-openmp  # [osx]
-        # - lapack # [linux]
+        - llvm-openmp
         - sysroot_linux-64 =2.17 # [linux64]
         - conda-forge::swig >= 4.0.2
-        - conda-forge::numpy
-        - cmake >=3.23.1
+        - numpy
+        - cmake >=3.25
         - make  # [not win]
         - python {{ python }}
       host:
         - python {{ python }}
-        - conda-forge::numpy
+        - numpy
         - {{ pin_subpackage('liblintdb', exact=True) }}
       run:
         - python {{ python }}
-        - conda-forge::numpy
+        - numpy
         - packaging
         - {{ pin_subpackage('liblintdb', exact=True) }}
         - __osx >={{ MACOSX_DEPLOYMENT_TARGET|default("10.13") }}  # [osx and x86_64]
     test:
       requires:
-        - conda-forge::numpy
+        - numpy
         - pytorch
       commands:
         - python -X faulthandler -m unittest discover -v -s tests/ -p "test_*"
