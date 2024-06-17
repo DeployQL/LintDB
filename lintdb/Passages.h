@@ -1,19 +1,19 @@
 #ifndef LINTDB_RAW_DOCUMENT_H
 #define LINTDB_RAW_DOCUMENT_H
 
+#include <map>
+#include <string>
+#include <type_traits>
 #include <vector>
 #include "lintdb/EmbeddingBlock.h"
 #include "lintdb/api.h"
-#include <string>
-#include <map>
-#include <type_traits>
 
 namespace lintdb {
 /**
  * TextPassage is a simple struct to hold information about text.
  *
  * This represents a document before it's embedded.
-*/
+ */
 struct TextPassage {
     /// embedding_block contains the document's embeddings.
     /// this is an array, and can be any number of embeddings, but they'll all
@@ -37,7 +37,7 @@ struct TextPassage {
 
 /**
  * EmbeddingPassage holds information on a document after it's been embedded.
-*/
+ */
 struct EmbeddingPassage {
     /// embedding_block contains the document's embeddings.
     /// this is an array, and can be any number of embeddings, but they'll all
@@ -58,7 +58,9 @@ struct EmbeddingPassage {
             int dim,            /// dimensions of the embeddings.
             int64_t id,
             const std::map<std::string, std::string>& metadata = {})
-            : embedding_block(block, num_tokens, dim), id(id), metadata(metadata) {}
+            : embedding_block(block, num_tokens, dim),
+              id(id),
+              metadata(metadata) {}
 };
 
 } // namespace lintdb

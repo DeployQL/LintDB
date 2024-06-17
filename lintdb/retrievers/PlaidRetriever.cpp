@@ -1,11 +1,11 @@
 #include "lintdb/retrievers/PlaidRetriever.h"
 #include <glog/logging.h>
 #include <omp.h>
+#include <tuple>
 #include "lintdb/SearchOptions.h"
 #include "lintdb/invlists/EncodedDocument.h"
 #include "lintdb/retrievers/Retriever.h"
 #include "lintdb/retrievers/plaid.h"
-#include <tuple>
 
 #ifndef LINTDB_CHUNK_SIZE
 #define LINTDB_CHUNK_SIZE 1000
@@ -58,7 +58,6 @@ std::vector<idx_t> PlaidRetriever::top_passages(
             opts.total_centroids_to_calculate,
             opts.k_top_centroids,
             opts.n_probe);
-
 
     auto num_centroids_to_eval =
             std::min<size_t>(opts.n_probe, centroid_scores.size());
@@ -130,16 +129,18 @@ std::vector<std::pair<float, idx_t>> PlaidRetriever::rank_phase_one(
     return pid_scores;
 }
 
-std::vector<std::tuple<float, idx_t, DocumentScore>> PlaidRetriever::rank_phase_two(
-        const std::vector<idx_t>& top_25_ids,
-        const std::vector<std::unique_ptr<DocumentCodes>>& doc_codes,
-        const std::vector<std::unique_ptr<DocumentResiduals>>& doc_residuals,
-        const std::unordered_map<idx_t, size_t>& pid_to_index,
-        const gsl::span<const float> query_data,
-        const size_t n,
-        const RetrieverOptions& opts) {
-        
-    std::vector<std::tuple<float, idx_t, DocumentScore>> actual_scores(top_25_ids.size());
+std::vector<std::tuple<float, idx_t, DocumentScore>> PlaidRetriever::
+        rank_phase_two(
+                const std::vector<idx_t>& top_25_ids,
+                const std::vector<std::unique_ptr<DocumentCodes>>& doc_codes,
+                const std::vector<std::unique_ptr<DocumentResiduals>>&
+                        doc_residuals,
+                const std::unordered_map<idx_t, size_t>& pid_to_index,
+                const gsl::span<const float> query_data,
+                const size_t n,
+                const RetrieverOptions& opts) {
+    std::vector<std::tuple<float, idx_t, DocumentScore>> actual_scores(
+            top_25_ids.size());
 #pragma omp for schedule(dynamic, LINTDB_CHUNK_SIZE)
     for (int i = 0; i < top_25_ids.size(); i++) {
         auto residuals = doc_residuals[i]->residuals;
@@ -162,16 +163,15 @@ std::vector<std::tuple<float, idx_t, DocumentScore>> PlaidRetriever::rank_phase_
                 encoder_->get_dim(),
                 true);
 
-        actual_scores[i] = std::tuple<float, idx_t, DocumentScore>(score.score, top_25_ids[i], score);
+        actual_scores[i] = std::tuple<float, idx_t, DocumentScore>(
+                score.score, top_25_ids[i], score);
     }
 
-    auto comparator = [](std::tuple<float, idx_t, DocumentScore> p1, std::tuple<float, idx_t, DocumentScore> p2) {
+    auto comparator = [](std::tuple<float, idx_t, DocumentScore> p1,
+                         std::tuple<float, idx_t, DocumentScore> p2) {
         return std::get<0>(p1) > std::get<0>(p2);
     };
-    std::sort(
-            actual_scores.begin(),
-            actual_scores.end(),
-            comparator);
+    std::sort(actual_scores.begin(), actual_scores.end(), comparator);
 
     return actual_scores;
 }

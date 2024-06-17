@@ -1,20 +1,22 @@
 #include "lintdb/quantizers/ProductEncoder.h"
+#include <faiss/IndexPQ.h>
 #include <faiss/index_io.h>
+#include <faiss/utils/distances.h>
+#include <glog/logging.h>
+#include <list>
 #include <memory>
 #include "lintdb/assert.h"
 #include "lintdb/exception.h"
-#include <list>
-#include <faiss/IndexPQ.h>
-#include <faiss/utils/distances.h>
-#include <glog/logging.h>
 
 namespace lintdb {
 ProductEncoder::ProductEncoder(
         size_t dim,
         size_t nbits,
         size_t num_subquantizers = 16)
-        : Quantizer(), nbits(nbits), dim(dim), num_subquantizers(num_subquantizers){
-
+        : Quantizer(),
+          nbits(nbits),
+          dim(dim),
+          num_subquantizers(num_subquantizers) {
     this->pq = std::make_unique<faiss::IndexPQ>(
             dim /*input dimensions*/,
             num_subquantizers /* number of sub quantizers */,
@@ -22,7 +24,6 @@ ProductEncoder::ProductEncoder(
             faiss::METRIC_INNER_PRODUCT);
     dsub = pq->pq.dsub;
     ksub = pq->pq.ksub;
-
 }
 
 void ProductEncoder::sa_encode(size_t n, const float* x, residual_t* codes) {
@@ -84,8 +85,8 @@ void ProductEncoder::train(
 std::unique_ptr<PQDistanceTables> ProductEncoder::get_distance_tables(
         const float* query_data,
         size_t num_tokens) const {
-    return std::make_unique<PQDistanceTables>(query_data, num_tokens, dim, this->pq, true);
+    return std::make_unique<PQDistanceTables>(
+            query_data, num_tokens, dim, this->pq, true);
 }
-
 
 } // namespace lintdb

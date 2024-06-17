@@ -56,7 +56,6 @@ ForwardIndexKey ForwardIndexKey::from_slice(const rocksdb::Slice& slice) {
     uint64_t tenant = load_bigendian<uint64_t>(key_ptr);
     idx_t id = load_bigendian<idx_t>(key_ptr + sizeof(tenant));
 
-
     return ForwardIndexKey{tenant, id};
 }
 
@@ -87,13 +86,15 @@ TokenKey TokenKey::from_slice(const rocksdb::Slice& slice) {
     auto doc_id = load_bigendian<idx_t>(
             key_ptr + sizeof(tenant) + sizeof(inverted_list_id));
 
-    // check if there's a token key. If not, return the key without the doc_token_id.
-    if(slice.size() == 24) {
+    // check if there's a token key. If not, return the key without the
+    // doc_token_id.
+    if (slice.size() == 24) {
         return TokenKey{tenant, inverted_list_id, doc_id, 0};
     }
 
     auto token_id = load_bigendian<idx_t>(
-            key_ptr + sizeof(tenant) + sizeof(inverted_list_id) + sizeof(doc_id));
+            key_ptr + sizeof(tenant) + sizeof(inverted_list_id) +
+            sizeof(doc_id));
 
     return TokenKey{tenant, inverted_list_id, doc_id, token_id};
 }

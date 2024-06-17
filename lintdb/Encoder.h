@@ -6,8 +6,8 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "lintdb/Passages.h"
 #include "lintdb/EmbeddingBlock.h"
+#include "lintdb/Passages.h"
 #include "lintdb/SearchOptions.h"
 #include "lintdb/api.h"
 #include "lintdb/invlists/EncodedDocument.h"
@@ -40,8 +40,9 @@ struct Encoder {
     virtual size_t get_num_centroids() const = 0;
     virtual size_t get_nbits() const = 0;
     /**
-     * Encode vectors translates the embeddings given to us in EmbeddingPassage to
-     * the internal representation that we expect to see in the inverted lists.
+     * Encode vectors translates the embeddings given to us in EmbeddingPassage
+     * to the internal representation that we expect to see in the inverted
+     * lists.
      */
     virtual std::unique_ptr<EncodedDocument> encode_vectors(
             const EmbeddingPassage& doc) = 0;
@@ -107,7 +108,7 @@ struct Encoder {
  * That's it.
  */
 struct DefaultEncoder : public Encoder {
-    size_t dim;   // number of dimensions per embedding.
+    size_t dim;                   // number of dimensions per embedding.
     IndexEncoding quantizer_type; // the type of quantizer we encode the
                                   // residuals with.
 
@@ -129,10 +130,7 @@ struct DefaultEncoder : public Encoder {
             size_t num_subquantizers,
             IndexEncoding type = IndexEncoding::BINARIZER);
 
-    DefaultEncoder(
-            size_t dim,
-            std::shared_ptr<Quantizer> quantizer
-            );
+    DefaultEncoder(size_t dim, std::shared_ptr<Quantizer> quantizer);
 
     size_t get_dim() const override {
         return dim;
@@ -180,8 +178,12 @@ struct DefaultEncoder : public Encoder {
             std::string path,
             std::shared_ptr<Quantizer> quantizer,
             EncoderConfig& config);
-    void train(const float* embeddings, const size_t n, const size_t dim, const int n_list=0, const int n_iter=10)
-            override;
+    void train(
+            const float* embeddings,
+            const size_t n,
+            const size_t dim,
+            const int n_list = 0,
+            const int n_iter = 10) override;
 
     /**
      * set_centroids overwrites the centroids in the encoder.

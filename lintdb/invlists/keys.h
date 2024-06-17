@@ -32,7 +32,8 @@ struct Key {
  *
  * The total key is: tenant::inverted_list_id::doc_id::doc_token_id.
  *
- * When searching against this key, exclude_id removes both the doc_id and doc_token_id.
+ * When searching against this key, exclude_id removes both the doc_id and
+ * doc_token_id.
  */
 struct TokenKey {
     uint64_t tenant;

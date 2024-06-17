@@ -90,7 +90,7 @@ def run(
     batch_size:int=5,
     checkpoint: str = "colbert-ir/colbertv2.0"):
     print("Loading dataset...")
-    d = load_lotte(dataset, split, stop=40000)
+    d = load_lotte(dataset, split, stop=stop)
     print("Dataset loaded.")
 
     index_path = f"experiments/py_index_bench_{experiment}"
@@ -100,10 +100,10 @@ def run(
 
     # lifestyle full centroids == 65536
     #lifestyle-40k-benchmark centroids == 32768
-    index, collection = create_collection(index_path, index_type_enum, 128, nbits, num_centroids=32768)
+    index, collection = create_collection(index_path, index_type_enum, 128, nbits, num_centroids=65536)
 
-    training_data = random.sample(d.collection, 1000)
-    collection.train(training_data)
+    training_data = random.sample(d.collection, 20000)
+    collection.train(training_data, 65536, 10)
 
     start = time.perf_counter()
 
@@ -119,11 +119,11 @@ def run(
     print(f"Indexing complete. duration: {duration:.2f}s")
 
 @app.command()
-def eval(dataset, experiment, index_type='binarizer', split='dev'):
+def eval(dataset, experiment, index_type='binarizer', split='dev', stop=40000):
     index_type_enum = get_index_type(index_type)
 
     index, collection = open_collection(f"experiments/py_index_bench_{experiment}", index_type_enum)
-    data = load_lotte(dataset, split, stop=40000)
+    data = load_lotte(dataset, split, stop=stop)
 
     with open(f"experiments/{experiment}.ranking.tsv", "w") as f:
         for id, query in zip(data.qids, data.queries):

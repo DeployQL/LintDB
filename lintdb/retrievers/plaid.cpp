@@ -12,27 +12,27 @@
 namespace lintdb {
 
 extern "C" {
-    // this is to keep the clang syntax checker happy
-    #ifndef FINTEGER
-    #define FINTEGER int
-    #endif
+// this is to keep the clang syntax checker happy
+#ifndef FINTEGER
+#define FINTEGER int
+#endif
 
-    /* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
+/* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
 
-    extern int sgemm_(
-            const char* transa,
-            const char* transb,
-            FINTEGER* m,
-            FINTEGER* n,
-            FINTEGER* k,
-            const float* alpha,
-            const float* a,
-            FINTEGER* lda,
-            const float* b,
-            FINTEGER* ldb,
-            float* beta,
-            float* c,
-            FINTEGER* ldc);
+extern int sgemm_(
+        const char* transa,
+        const char* transb,
+        FINTEGER* m,
+        FINTEGER* n,
+        FINTEGER* k,
+        const float* alpha,
+        const float* a,
+        FINTEGER* lda,
+        const float* b,
+        FINTEGER* ldb,
+        float* beta,
+        float* c,
+        FINTEGER* ldc);
 }
 
 float score_documents_by_codes(
@@ -126,9 +126,11 @@ DocumentScore score_document_by_residuals(
         bool normalize) {
     // use BLAS functions to matmul doc residuals with the transposed query
     // vectors. we'll use the sum of the max scores for each centroid.
-    FINTEGER m = FINTEGER(num_doc_tokens);   // rows of op(A) and of matrix C.
-    FINTEGER n = FINTEGER(num_query_tokens); // columns of matrix op(B) and of matrix C.
-    FINTEGER k = FINTEGER(dim); // the number of columns of op(A) and rows of op(B).
+    FINTEGER m = FINTEGER(num_doc_tokens); // rows of op(A) and of matrix C.
+    FINTEGER n = FINTEGER(
+            num_query_tokens); // columns of matrix op(B) and of matrix C.
+    FINTEGER k =
+            FINTEGER(dim); // the number of columns of op(A) and rows of op(B).
     float alpha = 1.0;
     float beta = 0.0;
 
@@ -144,27 +146,25 @@ DocumentScore score_document_by_residuals(
     // we need to treat this as operating in column major format.
     // we want doc_res x query_vectors^T = C, but have row major data.
     // because of that, we want to calculate query_vectors x doc_res = C^T
-        sgemm_(
-        "T",
-        "N",
-        &n, // 8
-        &m, // 4
-        &k, // 128
-        &alpha,
-        query_vectors.data(), // n x k
-        &lda, // leading dimension is the length of the first dimension
-            // (columns)
-        doc_residuals, // should be k x m after transpose
-        &ldb,             // this is the leading dimension of B, not op(b)
-        &beta,
-        output.data(), // m x n. (col major is n x m)
-        &out
-    );
+    sgemm_("T",
+           "N",
+           &n, // 8
+           &m, // 4
+           &k, // 128
+           &alpha,
+           query_vectors.data(), // n x k
+           &lda, // leading dimension is the length of the first dimension
+                 // (columns)
+           doc_residuals, // should be k x m after transpose
+           &ldb,          // this is the leading dimension of B, not op(b)
+           &beta,
+           output.data(), // m x n. (col major is n x m)
+           &out);
 
     DocumentScore doc;
     // find the max score for each doc_token.
     std::vector<float> max_scores(n, 0);
-    for (size_t i = 0; i < m; i++) {     // per num_doc_tokens
+    for (size_t i = 0; i < m; i++) { // per num_doc_tokens
         float max_token_score = 0.0;
         for (size_t j = 0; j < n; j++) { // per num_query_tokens
             auto score = output[i * n + j];

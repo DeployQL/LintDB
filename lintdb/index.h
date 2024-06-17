@@ -36,11 +36,13 @@ static const std::string METADATA_FILENAME = "_lintdb_metadata.json";
  *
  */
 struct Configuration {
-    Version lintdb_version = LINTDB_VERSION; /// the current version of the index. Used internally for feature compatibility.
-    size_t nlist = 256; /// the number of centroids to train.
-    size_t nbits = 2;   /// the number of bits to use in residual compression.
-    size_t niter = 10;  /// the number of iterations to use during training.
-    size_t dim;         /// the dimensions expected for incoming vectors.
+    Version lintdb_version =
+            LINTDB_VERSION; /// the current version of the index. Used
+                            /// internally for feature compatibility.
+    size_t nlist = 256;     /// the number of centroids to train.
+    size_t nbits = 2;  /// the number of bits to use in residual compression.
+    size_t niter = 10; /// the number of iterations to use during training.
+    size_t dim;        /// the dimensions expected for incoming vectors.
     size_t num_subquantizers =
             16; /// the number of subquantizers to use in the product quantizer.
     IndexEncoding quantizer_type =
@@ -104,12 +106,28 @@ struct IndexIVF {
      *
      * @param n the number of embeddings to train on.
      * @param embeddings the embeddings to train on.
-     * @param nlist the number of centroids to train. Required if not provided at initialization.
-     * @param niter the number of iterations to train. Required if not provided at initialization.
+     * @param nlist the number of centroids to train. Required if not provided
+     * at initialization.
+     * @param niter the number of iterations to train. Required if not provided
+     * at initialization.
      */
-    void train(size_t n, std::vector<float>& embeddings, size_t nlist=0, size_t niter = 0);
-    void train(float* embeddings, size_t n, size_t dim, size_t nlist=0, size_t niter = 0);
-    void train(float* embeddings, int n, int dim, size_t nlist = 0, size_t niter = 0);
+    void train(
+            size_t n,
+            std::vector<float>& embeddings,
+            size_t nlist = 0,
+            size_t niter = 0);
+    void train(
+            float* embeddings,
+            size_t n,
+            size_t dim,
+            size_t nlist = 0,
+            size_t niter = 0);
+    void train(
+            float* embeddings,
+            int n,
+            int dim,
+            size_t nlist = 0,
+            size_t niter = 0);
 
     /**
      * set_centroids overwrites the centroids in the encoder.
@@ -146,10 +164,10 @@ struct IndexIVF {
             const SearchOptions& opts = SearchOptions()) const;
 
     std::vector<SearchResult> search(
-        const uint64_t tenant,
-        const EmbeddingBlock& block,
-        const size_t k,
-        const SearchOptions& opts = SearchOptions()) const;
+            const uint64_t tenant,
+            const EmbeddingBlock& block,
+            const size_t k,
+            const SearchOptions& opts = SearchOptions()) const;
 
     std::vector<SearchResult> search(
             const uint64_t tenant,
@@ -171,7 +189,8 @@ struct IndexIVF {
      * Add will add a block of embeddings to the index.
      *
      * @param tenant the tenant to assign the document to.
-     * @param docs a vector of EmbeddingPassages. This includes embeddings and ids.
+     * @param docs a vector of EmbeddingPassages. This includes embeddings and
+     * ids.
      */
     void add(const uint64_t tenant, const std::vector<EmbeddingPassage>& docs);
 
@@ -191,7 +210,9 @@ struct IndexIVF {
     /**
      * Update is a convenience function for remove and add.
      */
-    void update(const uint64_t tenant, const std::vector<EmbeddingPassage>& docs);
+    void update(
+            const uint64_t tenant,
+            const std::vector<EmbeddingPassage>& docs);
 
     /**
      * Merge will combine the index with another index.
@@ -229,8 +250,8 @@ struct IndexIVF {
 
     // helper to initialize the inverted list.
     void initialize_inverted_list(Version& version);
-    // helper to initialize the encoder, quantizer, and retrievers. These are all
-    // inter-related.
+    // helper to initialize the encoder, quantizer, and retrievers. These are
+    // all inter-related.
     void initialize_retrieval(IndexEncoding quantizer_type);
     // instead of initializing, load from disk.
     void load_retrieval(std::string path, const Configuration& config);
