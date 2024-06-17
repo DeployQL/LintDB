@@ -39,7 +39,8 @@ outputs:
         - {{ compiler('cxx') }}
         - {{ compiler('fortran') }}
         - sysroot_linux-64 =2.17 # [linux64]
-        - llvm-openmp
+        - llvm-openmp # [osx]
+        - intel::intel-openmp =2023.0.0 #[linux]
         - cmake >=3.25
         - make  # [not win]
         - conda-forge::swig >=4.0.2
@@ -47,6 +48,7 @@ outputs:
         - mkl-devel =2023.0.0  # [x86_64]
         - conda-forge::onnxruntime-cpp==1.17.3
       host:
+        - intel::intel-openmp =2023.0.0 #[linux]
         - mkl =2023.0.0  # [x86_64]
         - openblas  # [not x86_64]
         - conda-forge::onnxruntime-cpp==1.17.3
