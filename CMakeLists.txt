@@ -2,6 +2,9 @@
 cmake_minimum_required(VERSION 3.25)
 
 include(CMakeFindDependencyMacro)
+include(FetchContent)
+
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # allow faiss to build on m1 mac even though it's listed as unsupported.
 set(VCPKG_INSTALL_OPTIONS "--allow-unsupported")
@@ -34,7 +37,6 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET 10.13)
 #     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ")
 # endif()
 
-list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # download assets from huggingface.
 if(NOT EXISTS "assets/colbert_tokenizer.json")

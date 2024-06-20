@@ -14,31 +14,9 @@
 #include "lintdb/retrievers/emvb.h"
 #include "lintdb/retrievers/emvb_util.h"
 #include "lintdb/retrievers/plaid.h"
+#include "lintdb/utils/math.h"
 
 namespace lintdb {
-extern "C" {
-// this is to keep the clang syntax checker happy
-#ifndef FINTEGER
-#define FINTEGER int
-#endif
-
-/* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
-
-int sgemm_(
-        const char* transa,
-        const char* transb,
-        FINTEGER* m,
-        FINTEGER* n,
-        FINTEGER* k,
-        const float* alpha,
-        const float* a,
-        FINTEGER* lda,
-        const float* b,
-        FINTEGER* ldb,
-        float* beta,
-        float* c,
-        FINTEGER* ldc);
-}
 
 EMVBRetriever::EMVBRetriever(
         std::shared_ptr<InvertedList> inverted_list,
@@ -63,19 +41,19 @@ std::vector<idx_t> EMVBRetriever::top_passages(
         const RetrieverOptions& opts,
         std::vector<float>& query_scores,
         std::vector<uint32_t>& bitvectors) {
-    FINTEGER m = FINTEGER(n);
-    FINTEGER nn = FINTEGER(encoder_->nlist);
-    FINTEGER k = FINTEGER(encoder_->dim);
+    size_t m = n;
+    size_t nn = encoder_->nlist;
+    size_t k = encoder_->dim;
     float alpha = 1.0;
     float beta = 0.0;
 
-    FINTEGER lda = FINTEGER(encoder_->dim);
-    FINTEGER ldb = FINTEGER(encoder_->dim);
-    FINTEGER out_dim = FINTEGER(encoder_->nlist);
+    size_t lda = size_t(encoder_->dim);
+    size_t ldb = size_t(encoder_->dim);
+    size_t out_dim = size_t(encoder_->nlist);
     // we need to treat this as operating in column major format.
     // we want doc_res x query_vectors^T = C, but have row major data.
     // because of that, we want to calculate query_vectors x doc_res = C^T
-    sgemm_("T",
+    MlasGemm("T",
            "N",
            &nn,
            &m,

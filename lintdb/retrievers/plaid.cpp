@@ -8,32 +8,9 @@
 #include <unordered_set>
 #include "lintdb/api.h"
 #include "lintdb/util.h"
+#include "lintdb/utils/math.h"
 
 namespace lintdb {
-
-extern "C" {
-// this is to keep the clang syntax checker happy
-#ifndef FINTEGER
-#define FINTEGER int
-#endif
-
-/* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
-
-extern int sgemm_(
-        const char* transa,
-        const char* transb,
-        FINTEGER* m,
-        FINTEGER* n,
-        FINTEGER* k,
-        const float* alpha,
-        const float* a,
-        FINTEGER* lda,
-        const float* b,
-        FINTEGER* ldb,
-        float* beta,
-        float* c,
-        FINTEGER* ldc);
-}
 
 float score_documents_by_codes(
         const gsl::span<float>
@@ -126,17 +103,17 @@ DocumentScore score_document_by_residuals(
         bool normalize) {
     // use BLAS functions to matmul doc residuals with the transposed query
     // vectors. we'll use the sum of the max scores for each centroid.
-    FINTEGER m = FINTEGER(num_doc_tokens); // rows of op(A) and of matrix C.
-    FINTEGER n = FINTEGER(
+    size_t m = size_t(num_doc_tokens); // rows of op(A) and of matrix C.
+    size_t n = size_t(
             num_query_tokens); // columns of matrix op(B) and of matrix C.
-    FINTEGER k =
-            FINTEGER(dim); // the number of columns of op(A) and rows of op(B).
+    size_t k =
+            size_t(dim); // the number of columns of op(A) and rows of op(B).
     float alpha = 1.0;
     float beta = 0.0;
 
-    FINTEGER out = FINTEGER(num_query_tokens);
-    FINTEGER lda = FINTEGER(dim);
-    FINTEGER ldb = FINTEGER(dim);
+    size_t out = size_t(num_query_tokens);
+    size_t lda = size_t(dim);
+    size_t ldb = size_t(dim);
 
     if (normalize) {
         normalize_vector(doc_residuals, num_doc_tokens, dim);
@@ -146,7 +123,7 @@ DocumentScore score_document_by_residuals(
     // we need to treat this as operating in column major format.
     // we want doc_res x query_vectors^T = C, but have row major data.
     // because of that, we want to calculate query_vectors x doc_res = C^T
-    sgemm_("T",
+    MlasGemm("T",
            "N",
            &n, // 8
            &m, // 4
