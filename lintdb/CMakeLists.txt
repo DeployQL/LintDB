@@ -69,7 +69,6 @@ set(
     schema/mapping_generated.h
     schema/util.h
     utils/progress_bar.h
-    utils/math.h
     version.h
 )
 
@@ -86,14 +85,6 @@ find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
     target_link_libraries(lintdb PUBLIC OpenMP::OpenMP_CXX)
 endif()
-
-# Find the MLAS library
-find_package(MLAS REQUIRED)
-target_link_libraries(my_executable PRIVATE MLAS::MLAS)
-
-find_package(CTPL REQUIRED)
-target_link_libraries(lintdb PRIVATE CTPL::CTPL)
-
 
 message(STATUS "using MKL root: $ENV{MKLROOT}")
 find_package(MKL)

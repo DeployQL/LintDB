@@ -1,6 +1,7 @@
 #include "lintdb/Encoder.h"
 #include <faiss/Clustering.h>
 #include <faiss/IndexFlat.h>
+#include <faiss/IndexLSH.h>
 #include <faiss/impl/FaissException.h>
 #include <faiss/index_io.h>
 #include <glog/logging.h>
@@ -10,9 +11,32 @@
 #include "lintdb/exception.h"
 #include "lintdb/quantizers/io.h"
 #include "lintdb/util.h"
-#include "lintdb/utils/math.h"
 
 namespace lintdb {
+
+extern "C" {
+// this is to keep the clang syntax checker happy
+#ifndef FINTEGER
+#define FINTEGER int
+#endif
+
+/* declare BLAS functions, see http://www.netlib.org/clapack/cblas/ */
+
+int sgemm_(
+        const char* transa,
+        const char* transb,
+        FINTEGER* m,
+        FINTEGER* n,
+        FINTEGER* k,
+        const float* alpha,
+        const float* a,
+        FINTEGER* lda,
+        const float* b,
+        FINTEGER* ldb,
+        float* beta,
+        float* c,
+        FINTEGER* ldc);
+}
 
 DefaultEncoder::DefaultEncoder(
         size_t nlist,
@@ -163,7 +187,7 @@ void DefaultEncoder::search(
     FINTEGER ldb = FINTEGER(dim);
     FINTEGER ldc = FINTEGER(nlist);
 
-    MlasGemm("T",
+    sgemm_("T",
            "N",
            &n,
            &m,

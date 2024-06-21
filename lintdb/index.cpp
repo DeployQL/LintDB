@@ -405,6 +405,7 @@ void IndexIVF::add(
 void IndexIVF::add_single(const uint64_t tenant, const EmbeddingPassage& doc) {
     auto encoded = encoder->encode_vectors(doc);
     inverted_list_->add(tenant, encoded.get());
+    //
     index_->add(
             tenant, encoded.get(), config.quantizer_type != IndexEncoding::XTR);
 }

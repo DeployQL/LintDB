@@ -16,7 +16,7 @@ build-python:
 	cd builds/python/lintdb/python && python setup.py build
 
 build-python-mac: 
-	cmake --preset python-blas
+	cmake --preset python
 	cmake --build --preset python-blas -j12
 	cd builds/python/lintdb/python && python setup.py build
 
