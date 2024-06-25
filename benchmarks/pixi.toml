@@ -1,0 +1,26 @@
+[project]
+name = "benchmarks"
+version = "0.1.0"
+description = "Add a short description here"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[tasks]
+
+[dependencies]
+python = ">=3.10,<3.12"
+clang-17 = ">=17.0.6,<17.1"
+faiss = ">=1.7.4,<1.8"
+
+[pypi-dependencies]
+typer = "*"
+colbert-ai = "*"
+jsonlines = "*"
+tqdm = "*"
+lintdb = { path = "../builds/python/lintdb/python", editable = true }
+setuptools = "*"
+numpy = { version = "==1.26.4" }
+torch = "*"
+datasets = "*"
+transformers = "*"
+fsspec = { version = "==2023.9.2" }

@@ -1,0 +1,9 @@
+{
+   "dim" : 128,
+   "lintdb_version" : "0.4.0",
+   "nbits" : 1,
+   "niter" : 6,
+   "nlist" : 4096,
+   "num_subquantizers" : 16,
+   "quantizer_type" : "BINARIZER"
+}

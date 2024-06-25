@@ -11,6 +11,7 @@ set(
     xtr_test.cpp
     inverted_list_test.cpp
     encoded_doc_test.cpp
+    colbert_test.cpp
 )
 
 add_executable(
@@ -45,4 +46,7 @@ FetchContent_Declare(
 target_link_libraries(lintdb-tests PRIVATE GTest::gtest GTest::gtest_main GTest::gmock GTest::gmock_main)
 
 include(GoogleTest)
-gtest_discover_tests(lintdb-tests)
+gtest_discover_tests(
+        lintdb-tests
+        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/tests"
+)

@@ -52,6 +52,7 @@ DocumentScore score_document_by_residuals(
         float* doc_residuals, // size: (num_doc_tokens, num_dim)
         const size_t num_doc_tokens,
         const size_t dim,
+        const idx_t doc_id,
         bool normalize = true);
 
 } // namespace lintdb

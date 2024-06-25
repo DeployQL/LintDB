@@ -2,6 +2,8 @@
 #include <glog/logging.h>
 #include <omp.h>
 #include <tuple>
+#include <algorithm>
+#include <vector>
 #include "lintdb/SearchOptions.h"
 #include "lintdb/invlists/EncodedDocument.h"
 #include "lintdb/retrievers/Retriever.h"
@@ -26,9 +28,8 @@ std::vector<idx_t> PlaidRetriever::top_passages(
         std::vector<float>& reordered_distances) {
     std::vector<idx_t> coarse_idx(n * opts.total_centroids_to_calculate);
     std::vector<float> distances(n * opts.total_centroids_to_calculate);
-    // this method is no longer spitting out data.
-    // top_centroids shows zero centroids found.
-    encoder_->search(
+
+    encoder_->search_quantizer(
             query_data.data(),
             n,
             coarse_idx,
@@ -147,12 +148,10 @@ std::vector<std::tuple<float, idx_t, DocumentScore>> PlaidRetriever::
 
         auto id = doc_residuals[i]->id;
         auto codes = doc_codes[pid_to_index.at(id)]->codes;
-
         std::vector<float> decompressed = encoder_->decode_vectors(
                 gsl::span<code_t>(codes),
                 gsl::span<residual_t>(residuals),
                 doc_residuals[i]->num_tokens);
-
         const auto data_span =
                 gsl::span(query_data.data(), n * encoder_->get_dim());
         DocumentScore score = score_document_by_residuals(
@@ -161,12 +160,11 @@ std::vector<std::tuple<float, idx_t, DocumentScore>> PlaidRetriever::
                 decompressed.data(),
                 doc_residuals[i]->num_tokens,
                 encoder_->get_dim(),
+                doc_residuals[i]->id,
                 true);
-
         actual_scores[i] = std::tuple<float, idx_t, DocumentScore>(
                 score.score, top_25_ids[i], score);
     }
-
     auto comparator = [](std::tuple<float, idx_t, DocumentScore> p1,
                          std::tuple<float, idx_t, DocumentScore> p2) {
         return std::get<0>(p1) > std::get<0>(p2);
@@ -186,7 +184,6 @@ std::vector<SearchResult> PlaidRetriever::retrieve(
     auto pid_list = top_passages(tenant, query_data, n, opts, distances);
 
     auto doc_codes = index_->get_codes(tenant, pid_list);
-
     // create a mapping from pid to the index. we'll need this to hydrate
     // residuals.
     std::unordered_map<idx_t, size_t> pid_to_index;
@@ -196,7 +193,6 @@ std::vector<SearchResult> PlaidRetriever::retrieve(
     }
 
     auto pid_scores = rank_phase_one(doc_codes, distances, n, opts);
-
     // colBERT has a ndocs param which limits the number of documents to score.
     size_t cutoff = pid_scores.size();
     if (opts.num_second_pass != 0) {
@@ -226,7 +222,6 @@ std::vector<SearchResult> PlaidRetriever::retrieve(
     VLOG(10) << "num to rerank: " << num_rerank;
     std::vector<std::pair<float, idx_t>> top_25_scores(
             pid_scores.begin(), pid_scores.begin() + num_rerank);
-
     /**
      * score by passage residuals
      */
@@ -237,7 +232,6 @@ std::vector<SearchResult> PlaidRetriever::retrieve(
             std::back_inserter(top_25_ids),
             [](std::pair<float, idx_t> p) { return p.second; });
     auto doc_residuals = index_->get_residuals(tenant, top_25_ids);
-
     auto actual_scores = rank_phase_two(
             top_25_ids,
             doc_codes,
@@ -282,7 +276,6 @@ std::vector<SearchResult> PlaidRetriever::retrieve(
                 res.token_scores = doc_score.tokens;
                 return res;
             });
-
     return results;
 }
 
@@ -337,8 +330,6 @@ std::vector<std::pair<float, idx_t>> PlaidRetriever::get_top_centroids(
     for (int i = 0; i < high_scores.size(); i++) {
         auto key = i;
         auto score = high_scores[i];
-        // Note(MB): removing the filtering by score enables searching with
-        // exact copies.
         if (score > 0) {
             if (centroid_scores.size() < n_probe) {
                 centroid_scores.push_back(std::pair<float, idx_t>(score, key));

@@ -1,7 +1,15 @@
-  
 cmake_minimum_required(VERSION 3.25)
 
 include(CMakeFindDependencyMacro)
+
+execute_process(COMMAND ${CMAKE_CXX_COMPILER} --version OUTPUT_VARIABLE clang_full_version_string)
+string(REGEX REPLACE ".*clang version ([0-9]+\\.[0-9]+).*" "\\1" CLANG_VERSION_STRING ${clang_full_version_string})
+if (CLANG_VERSION_STRING VERSION_GREATER 16)
+  # Print CMake version and project name
+  message(STATUS "Building ${PROJECT_NAME} with CMake version: ${CMAKE_VERSION} On CLANG-${CLANG_VERSION_STRING}")
+else ()
+  message(FATAL_ERROR, "Please use clang version 17.0 and above, current version: " , ${CLANG_VERSION_STRING})
+endif ()
 
 # allow faiss to build on m1 mac even though it's listed as unsupported.
 set(VCPKG_INSTALL_OPTIONS "--allow-unsupported")
@@ -10,6 +18,8 @@ set(VCPKG_INSTALL_OPTIONS "--allow-unsupported")
 set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake CACHE STRING "Vcpkg toolchain file")
 
 file(READ "version.txt" version)
+
+#add_subdirectory(third_party EXCLUDE_FROM_ALL)
 
 project(lintdb
   VERSION ${version}
@@ -24,7 +34,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 # set(BLA_VENDOR OpenBLAS)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -std=c++17 -O3 -D_LIBCPP_DISABLE_AVAILABILITY")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -fopenmp -O3 -D_LIBCPP_DISABLE_AVAILABILITY")
 
 # the below is caused by github actions failing to build flatbuffers.
 # therefore, we set this value so that we use a higher sdk version to build it.
