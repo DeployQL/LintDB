@@ -19,7 +19,7 @@
  * because of GPU/CPU usage using float16 vs float32.
  */
 TEST(ColBertTests, ScoresCorrectly) {
-    auto index = lintdb::IndexIVF("../benchmarks/experiments/py_index_bench_lintdb-202400622");
+    auto index = lintdb::IndexIVF("data/testdb");
 
     // read query embeddings
     ifstream queryFile;
