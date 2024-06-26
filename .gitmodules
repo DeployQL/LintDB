@@ -2,6 +2,6 @@
 	path = tools/vcpkg
 	url = https://github.com/Microsoft/vcpkg.git
 	ignore = dirty
-[submodule "lib/tokenizers-cpp"]
-	path = lib/tokenizers-cpp
+[submodule "third_party/tokenizers-cpp"]
+	path = third_party/tokenizers-cpp
 	url = https://github.com/DeployQL/tokenizers-cpp.git

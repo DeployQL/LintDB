@@ -59,7 +59,6 @@ build
 builds
 .vscode
 
-data
 models
 tests/__pycache__
 experiments

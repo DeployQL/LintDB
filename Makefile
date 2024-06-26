@@ -1,27 +1,33 @@
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 build-release:
-# CC=clang CXX=clang++ cmake -S . -B build -DCMAKE_MAKE_PROGRAM=make -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_LIBDIR=lib -DBUILD_SHARED_LIBS=ON
-	MKLROOT=${ROOT_DIR}/builds/release/vcpkg_installed/x64-linux/lib/intel64 cmake --preset release
-	MKLROOT=${ROOT_DIR}/builds/release/vcpkg_installed/x64-linux/lib/intel64 cmake --build -j12 --preset release
+	CC=clang-18 CXX=clang++-18 MKLROOT=${ROOT_DIR}/builds/release/vcpkg_installed/x64-linux/lib/intel64 cmake --preset release
+	CC=clang-18 CXX=clang++-18 MKLROOT=${ROOT_DIR}/builds/release/vcpkg_installed/x64-linux/lib/intel64 cmake --build -j12 --preset release
 
 build-debug:
-# CC=clang CXX=clang++ cmake -Wall -S . -B build -DCMAKE_MAKE_PROGRAM=make -DCMAKE_BUILD_TYPE=Debug -DLLDB_EXPORT_ALL_SYMBOLS=ON -DBUILD_SHARED_LIBS=ON
-	MKLROOT=${ROOT_DIR}/builds/debug/vcpkg_installed/x64-linux/lib/intel64 cmake --preset debug
-	MKLROOT=${ROOT_DIR}/builds/debug/vcpkg_installed/x64-linux/lib/intel64 cmake --build -j12 --preset debug
+	MKLROOT=${ROOT_DIR}/builds/debug/vcpkg_installed/x64-linux/lib/intel64 cmake \
+	--preset debug \
+	-DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
+	-DOpenMP_CXX_LIB_NAMES=libiomp5 \
+	-DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/builds/debug/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
+	.
 
-build-python: 
-	MKLROOT=${ROOT_DIR}/builds/python/vcpkg_installed/x64-linux/lib/intel64 cmake --preset python
-	MKLROOT=${ROOT_DIR}/builds/python/vcpkg_installed/x64-linux/lib/intel64 cmake --build --preset python -j12
-	cd builds/python/lintdb/python && python setup.py build
+	cmake --build --preset debug -j12
 
-build-python-mac: 
-	cmake --preset python
-	cmake --build --preset python-blas -j12
+build-python:
+	MKLROOT=${ROOT_DIR}/builds/python/vcpkg_installed/x64-linux/lib/intel64 cmake \
+	--preset python \
+	-DCMAKE_CXX_COMPILER=clang++-18 \
+	-DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
+	-DOpenMP_CXX_LIB_NAMES=libiomp5 \
+	-DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/builds/python/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
+	.
+
+	cmake --build --preset python -j12
 	cd builds/python/lintdb/python && python setup.py build
 
 test:
-	cd builds/debug && cmake -E env GLOG_v=5 GLOG_logtostderr=1 MKL_THREADING_LAYER=GNU ctest --output-on-failure
+	cd builds/debug && cmake -E env GLOG_v=5 GLOG_logtostderr=1 ctest --output-on-failure
 
 test-python: build-python
 # had to fix up conda to make this work--
@@ -43,7 +49,6 @@ format:
 	find ./lintdb -iname '*.h' -o -iname '*.cpp' | xargs clang-format -i
 
 valgrind:
-# we need valgrind?-3.20 to process dwarf5
 	valgrind -s --trace-children=yes --track-origins=yes --keep-stacktraces=alloc-and-free --suppressions=debug/valgrind-python.supp env PYTHONPATH="_build_python_/lintdb/python/build/lib/lintdb" python benchmarks/bench_lintdb.py --index-path=experiments/py_index_bench_test-collection-xtr
 
 callgrind:
@@ -62,12 +67,7 @@ debug-conda:
 	conda debug lintdb --python 3.10 --output-id 'lintdb-*-py*' 
 
 build-conda:
-# this command mimicks how conda builds the package. it also makes it easier to build and augment the pythonpath than the regular build-python command
-# -DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
-# -DOpenMP_CXX_LIB_NAMES=libiomp5 \
-# -DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/_build_python_/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
-
-	MKLROOT=${ROOT_DIR}/_build_python_/vcpkg_installed/x64-linux/lib/intel64 cmake -B _build_python_${PY_VER} \
+	CC=clang-18 CXX=clang++-18 MKLROOT=${ROOT_DIR}/_build_python_/vcpkg_installed/x64-linux/lib/intel64 cmake -B _build_python_${PY_VER} \
 	-DBUILD_SHARED_LIBS=ON \
 	-DENABLE_PYTHON=ON \
 	-DBUILD_TESTING=OFF \
@@ -78,8 +78,8 @@ build-conda:
 	-DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/_build_python_/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
 	.
 
-	cmake --build _build_python_${PY_VER} --target pylintdb -j12
-	cd _build_python_/lintdb/python && python setup.py build 
+	cmake --build _build_python_${PY_VER} --target lintdb -j12
+	cd _build_python_/lintdb/python && python setup.py build
 
 build-benchmarks:
 	MKLROOT=${ROOT_DIR}/build_benchmarks/vcpkg_installed/x64-linux/lib/intel64 cmake -B build_benchmarks \

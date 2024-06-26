@@ -16,17 +16,12 @@ Building from source
 
 LintDB is built in C++ using CMake. 
 
-LintDB depends on a few libraries:
-- OpenBLAS  
-- OpenMP  
+```
+sudo apt install gcc libg++-12 gfortran
+wget https://apt.llvm.org/llvm.sh
+chmod +x llvm.sh
+sudo ./llvm.sh all
 
-We prefer building through conda, which tracks dependencies and build scripts.
-
-.. code-block:: console
-
-   conda install conda-build
-   cd conda && conda build lintdb
-   conda install --use-local lintdb
 
 
 Below are methods to build outside of conda on linux.

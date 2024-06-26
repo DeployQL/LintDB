@@ -341,8 +341,6 @@ void DefaultEncoder::train(
 
         LINTDB_THROW_IF_NOT(this->nlist != 0);
 
-        //        cp.nredo = 1;
-        //        cp.seed = 123;
         faiss::Clustering clus(dim, this->nlist, cp);
         clus.verbose = true;
 
@@ -354,8 +352,6 @@ void DefaultEncoder::train(
 
         std::vector<float> first_embed(dim);
         coarse_quantizer->reconstruct(0, first_embed.data());
-        LOG(INFO) << "First centroid: " << first_embed[0] << ", "
-                  << first_embed[1] << ", " << first_embed[2];
 
         if (quantizer != nullptr) {
             // residual quantizers are trained on residuals. we aren't

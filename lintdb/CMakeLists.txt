@@ -81,10 +81,12 @@ if (${finteger_idx} EQUAL -1)
   target_compile_definitions(lintdb PRIVATE FINTEGER=int)
 endif()
 
-find_package(OpenMP)
+find_package(OpenMP REQUIRED)
 if(OpenMP_CXX_FOUND)
+  message(STATUS "found openMP")
     target_link_libraries(lintdb PUBLIC OpenMP::OpenMP_CXX)
 endif()
+
 
 message(STATUS "using MKL root: $ENV{MKLROOT}")
 find_package(MKL)
@@ -123,16 +125,12 @@ target_link_libraries(lintdb PRIVATE JsonCpp::JsonCpp)
 find_package(Bitsery CONFIG REQUIRED)
 target_link_libraries(lintdb PRIVATE Bitsery::bitsery)
 
-# # this is heuristically generated, and may not be correct
-# find_package(protobuf CONFIG REQUIRED)
-# target_link_libraries(lintdb PRIVATE protobuf::libprotoc protobuf::libprotobuf protobuf::libprotobuf-lite)
-
 # this is always dynamically linked! This places more responsbility on the user's environment!
 find_library(ONNXRUNTIME_LIBRARY onnxruntime)
 target_link_libraries(lintdb PRIVATE ${ONNXRUNTIME_LIBRARY})
 
 
-set(TOKENZIER_CPP_PATH ${PROJECT_SOURCE_DIR}/lib/tokenizers-cpp)
+set(TOKENZIER_CPP_PATH ${PROJECT_SOURCE_DIR}/third_party/tokenizers-cpp)
 add_subdirectory(${TOKENZIER_CPP_PATH} tokenizers EXCLUDE_FROM_ALL)
 target_include_directories(lintdb PRIVATE ${TOKENZIER_CPP_PATH}/include)
 target_link_libraries(lintdb PRIVATE tokenizers_cpp)

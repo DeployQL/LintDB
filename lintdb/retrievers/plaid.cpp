@@ -123,6 +123,7 @@ DocumentScore score_document_by_residuals(
         float* doc_residuals, // size: (num_doc_tokens, num_dim)
         const size_t num_doc_tokens,
         const size_t dim,
+        const idx_t doc_id,
         bool normalize) {
     // use BLAS functions to matmul doc residuals with the transposed query
     // vectors. we'll use the sum of the max scores for each centroid.
@@ -141,7 +142,6 @@ DocumentScore score_document_by_residuals(
     if (normalize) {
         normalize_vector(doc_residuals, num_doc_tokens, dim);
     }
-
     std::vector<float> output(m * n, 0);
     // we need to treat this as operating in column major format.
     // we want doc_res x query_vectors^T = C, but have row major data.
@@ -160,7 +160,6 @@ DocumentScore score_document_by_residuals(
            &beta,
            output.data(), // m x n. (col major is n x m)
            &out);
-
     DocumentScore doc;
     // find the max score for each doc_token.
     std::vector<float> max_scores(n, 0);

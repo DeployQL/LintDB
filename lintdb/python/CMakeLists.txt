@@ -6,9 +6,6 @@ project(pylintdb
     LANGUAGES CXX
 )
 
-set(PYTHON_INCLUDE)
-
-
 set(CMAKE_CXX_STANDARD 17)
 find_package(SWIG REQUIRED COMPONENTS python)
 find_package(Python REQUIRED COMPONENTS NumPy Development.Module)

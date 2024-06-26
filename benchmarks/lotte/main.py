@@ -10,6 +10,7 @@ import jsonlines
 from collections import defaultdict
 from tqdm import tqdm
 import time
+import faiss
 import numpy as np
 import typer
 import random 
@@ -22,21 +23,22 @@ app = typer.Typer()
 
 @app.command()
 def colbert(dataset, experiment, split='dev', k: int=5, checkpoint: str = "colbert-ir/colbertv2.0"):
-    d = load_lotte(dataset, split, stop=40000)
+    d = load_lotte(dataset, split, stop=1000)
 
     with Run().context(RunConfig(nranks=1, experiment=experiment)):
         config = ColBERTConfig.load_from_checkpoint(checkpoint)
         # config.kmeans_niters=4
         start = time.perf_counter()
         indexer = Indexer(checkpoint=checkpoint, config=config)
-        indexer.index(name=experiment, collection=d.collection)
+        indexer.index(name=experiment, collection=d.collection, overwrite=True)
         index_duration = time.perf_counter() - start
         print(f"Indexing duration: {index_duration:.2f}s")
 
         searcher = Searcher(index=experiment, config=config, collection=d.collection)
 
         mapped_queries = {id: q for id, q in zip(d.qids, d.queries)}
-        queries = Queries(data = mapped_queries) 
+        print(mapped_queries)
+        queries = Queries(data = mapped_queries)
         ranking = searcher.search_all(queries, k=100)
         ranking.save(f"{experiment}.ranking.tsv")
 
@@ -129,7 +131,7 @@ def run_failures_colbert(dataset, experiment, split='dev', k:int=5, failure: Ann
         # 19: [5619]
     }
 
-    with Run().context(RunConfig(nranks=1, experiment='colbert-lifestyle-40k-benchmark')):
+    with Run().context(RunConfig(nranks=1, experiment='colbert-202400622')):
         config = ColBERTConfig.load_from_checkpoint(checkpoint)
         config.kmeans_niters=4
         config.ncells = 2
@@ -139,7 +141,7 @@ def run_failures_colbert(dataset, experiment, split='dev', k:int=5, failure: Ann
         # indexer.index(name=experiment, collection=dataset.collection) # "/path/to/MSMARCO/collection.tsv"
         from colbert.modeling.checkpoint import Checkpoint
         from colbert import Searcher
-        searcher = Searcher(index='colbert-lifestyle-40k-benchmark', config=config, collection=d.collection)
+        searcher = Searcher(index='colbert-202400622', config=config, collection=d.collection)
         
         failure = failure if failure else list(failures.keys())
         for id, apids in [(int(x), failures.get(int(x), [])) for x in failure]:
@@ -155,7 +157,7 @@ def run_failures_colbert(dataset, experiment, split='dev', k:int=5, failure: Ann
             Q_ = Q[:,:32]
             print(Q_.shape)
             Q_ = Q_.squeeze(0)
-            cells, scores = searcher.ranker.get_cells(Q_, 2)
+            cells, scores = searcher.ranker.get_cells(Q_.cpu(), 2)
             print("num cells: ", len(cells.tolist()))
             print("cells: ", cells)
             print("scores: ", scores)
