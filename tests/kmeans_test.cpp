@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
-#include "kmeans.hpp"  // Include your kmeans implementation
+#include "lintdb/quantizers/impl/kmeans.h"  // Include your kmeans implementation
 
+using namespace lintdb;
 // Test fixture for kmeans tests
 class KMeansTest : public ::testing::Test {
    protected:

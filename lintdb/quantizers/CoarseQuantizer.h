@@ -26,48 +26,32 @@ namespace lintdb {
  */
 class CoarseQuantizer {
    public:
-    bool is_trained; ///< Indicates if the quantizer is trained or not
+    bool is_trained; // Is the quantizer trained
 
-    /**
-     * @brief Constructor that initializes the dimensionality of input vectors.
-     * @param d Dimensionality of input vectors
-     */
-    CoarseQuantizer(size_t d);
-
-    /**
-     * @brief Trains the quantizer.
-     * @param n Number of vectors
-     * @param x Pointer to the vectors
-     * @param k Number of centroids
-     * @param num_iter Number of iterations for training, default is 10
-     */
+    explicit CoarseQuantizer(size_t d);
     void train(const size_t n, const float* x, size_t k, size_t num_iter=10);
-
-    /**
-     * @brief Saves the quantizer to a file.
-     * @param path Path to the file
-     */
     void save(const std::string& path);
-
-    /**
-     * @brief Assigns codes to vectors.
-     * @param n Number of vectors
-     * @param x Pointer to the vectors
-     * @param codes Pointer to the codes
-     */
     void assign(size_t n, const float* x, idx_t* codes);
-
-    /**
-     * @brief Decodes the codes to vectors.
-     * @param n Number of codes
-     * @param codes Pointer to the codes
-     * @param x Pointer to the vectors
-     */
     void sa_decode(size_t n, const idx_t* codes, float* x);
+    void compute_residual(const float* vec, float* residual, idx_t centroid_id);
+    void compute_residual_n(int n, const float* vec, float* residual, idx_t* centroid_ids);
+    void reconstruct(idx_t centroid_id, float* embedding);
+    void search(size_t num_query_tok, const float* data, size_t k_top_centroids, float* distances, idx_t* coarse_idx);
+    void reset();
+    void add(int n, float* data);
+    size_t code_size();
+    QuantizerType get_type();
+    float* get_xb();
+    void serialize(const std::string& filename) const;
+    static std::unique_ptr<CoarseQuantizer> deserialize(const std::string& filename, const Version& version);
 
-    /**
-     * @brief Computes the residual of a vector.
-     * @param vec Pointer to the vector
-     * @param residual Pointer to the residual
-     * @param centroid_id ID of the centroid
-     */
+   private:
+    size_t d; // Dimensionality of data points
+    size_t k; // Number of centroids
+    std::vector<float> centroids; // Stored centroids
+
+    uint8_t find_nearest_centroid_index(gsl::span<const float> vec) const;
+};
+
+} // namespace lintdb
+#endif // LINTDB_COARSEQUANTIZER_H
