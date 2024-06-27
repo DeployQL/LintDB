@@ -1,11 +1,13 @@
 #pragma once
 
-#define LINTDB_VERSION_STRING "0.4.0"
+#include <string>
+
+#define LINTDB_VERSION_STRING "0.4.1"
 
 namespace lintdb {
 struct Version {
     Version() = default;
-    Version(string versionStr) {
+    Version(std::string versionStr) {
         sscanf(versionStr.c_str(), "%d.%d.%d", &major, &minor, &revision);
         metadata_enabled = major >= 0 && minor >= 3 && revision >= 0;
     }

@@ -12,6 +12,7 @@
 #include "lintdb/api.h"
 #include "lintdb/invlists/EncodedDocument.h"
 #include "lintdb/quantizers/Quantizer.h"
+#include "lintdb/version.h"
 
 namespace lintdb {
 static const std::string ENCODER_FILENAME = "_quantizer.bin";
@@ -23,6 +24,7 @@ struct EncoderConfig {
     size_t dim;
     size_t num_subquantizers;
     IndexEncoding type;
+    Version version;
 };
 
 // TODO(mbarta): stop using Encoder as an abstract class. It's not necessary.

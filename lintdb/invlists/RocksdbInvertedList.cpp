@@ -25,7 +25,7 @@ RocksDBIterator::RocksDBIterator(
     prefix_slice = rocksdb::Slice(this->prefix);
     auto options = rocksdb::ReadOptions();
 
-    this->it = unique_ptr<rocksdb::Iterator>(
+    this->it = std::unique_ptr<rocksdb::Iterator>(
             db->NewIterator(options, column_family));
     it->Seek(this->prefix);
 }
@@ -124,7 +124,7 @@ std::vector<idx_t> RocksdbInvertedList::get_mapping(
 // merge uses the index and mapping column families.
 void RocksdbInvertedList::merge(
         rocksdb::DB* db,
-        std::vector<rocksdb::ColumnFamilyHandle*> cfs) {
+        std::vector<rocksdb::ColumnFamilyHandle*>& cfs) {
     // very weak check to make sure the column families are the same.
     LINTDB_THROW_IF_NOT(cfs.size() == column_families.size());
 

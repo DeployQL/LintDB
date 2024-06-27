@@ -13,6 +13,7 @@ enum QuantizerType {
     NONE,
     BINARIZER,
     PRODUCT_ENCODER,
+    COARSE,
 };
 
 struct QuantizerConfig {

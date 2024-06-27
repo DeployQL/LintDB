@@ -12,6 +12,9 @@ set(
     inverted_list_test.cpp
     encoded_doc_test.cpp
     colbert_test.cpp
+    product_quantizer_test.cpp
+    coarse_quantizer_test.cpp
+    kmeans_test.cpp
 )
 
 add_executable(

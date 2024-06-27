@@ -19,7 +19,7 @@ class MockInvertedList : public lintdb::InvertedList {
    public:
     MOCK_METHOD(void, add, (const uint64_t tenant, lintdb::EncodedDocument* doc), (override));
     MOCK_METHOD(void, remove, (const uint64_t tenant, std::vector<idx_t> ids), (override));
-    MOCK_METHOD(void, merge, (rocksdb::DB* db, std::vector<rocksdb::ColumnFamilyHandle*> cfs), (override));
+    MOCK_METHOD(void, merge, (rocksdb::DB* db, std::vector<rocksdb::ColumnFamilyHandle*>& cfs), (override));
 
     MOCK_METHOD(std::unique_ptr<lintdb::Iterator>, get_iterator, (const uint64_t tenant, const idx_t inverted_list), (const, override));
     MOCK_METHOD(std::vector<idx_t>, get_mapping, (const uint64_t tenant, idx_t id), (const, override));
@@ -37,7 +37,7 @@ class MockForwardIndex : public lintdb::ForwardIndex {
     MOCK_METHOD(void, add, (const uint64_t tenant, lintdb::EncodedDocument* doc, bool store_codes), (override));
     MOCK_METHOD(void, remove, (const uint64_t tenant, std::vector<idx_t> ids), (override));
 
-    MOCK_METHOD(void, merge, (rocksdb::DB* db, std::vector<rocksdb::ColumnFamilyHandle*> cfs), (override));
+    MOCK_METHOD(void, merge, (rocksdb::DB* db, std::vector<rocksdb::ColumnFamilyHandle*>& cfs), (override));
 };
 
 class MockEncoder : public lintdb::Encoder {

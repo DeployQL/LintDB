@@ -71,6 +71,8 @@ void RocksdbForwardIndex::add(
                 column_families[kDocColumnIndex],
                 rocksdb::Slice(fks),
                 metadata_slice);
+
+        LINTDB_THROW_IF_NOT(metadata_status.ok());
     }
 
     auto status = db_->Write(wo, &batch);
@@ -244,7 +246,7 @@ std::vector<std::unique_ptr<DocumentMetadata>> RocksdbForwardIndex::
     std::vector<rocksdb::PinnableSlice> values(ids.size());
     std::vector<rocksdb::Status> statuses(ids.size());
 
-#pragma omp parallel for
+//#pragma omp parallel for
     for (int i = 0; i < key_strings.size(); i++) {
         auto key = rocksdb::Slice(key_strings[i].data(), key_strings[i].size());
 
@@ -273,7 +275,7 @@ std::vector<std::unique_ptr<DocumentMetadata>> RocksdbForwardIndex::
 
 void RocksdbForwardIndex::merge(
         rocksdb::DB* db,
-        std::vector<rocksdb::ColumnFamilyHandle*> cfs) {
+        std::vector<rocksdb::ColumnFamilyHandle*>& cfs) {
     // very weak check to make sure the column families are the same.
     LINTDB_THROW_IF_NOT(cfs.size() == column_families.size());
 

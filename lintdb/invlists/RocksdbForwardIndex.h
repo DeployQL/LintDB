@@ -32,7 +32,7 @@ struct RocksdbForwardIndex : public ForwardIndex {
             bool store_codes = true) override;
     void remove(const uint64_t tenant, std::vector<idx_t> ids) override;
 
-    void merge(rocksdb::DB* db, std::vector<rocksdb::ColumnFamilyHandle*> cfs)
+    void merge(rocksdb::DB* db, std::vector<rocksdb::ColumnFamilyHandle*>& cfs)
             override;
 
     std::vector<std::unique_ptr<DocumentCodes>> get_codes(
