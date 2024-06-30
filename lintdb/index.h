@@ -233,6 +233,8 @@ struct IndexIVF {
      */
     void save();
 
+    void close();
+
     ~IndexIVF() {
         for (auto cf : column_families) {
             db->DestroyColumnFamilyHandle(cf);

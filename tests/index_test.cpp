@@ -243,9 +243,9 @@ TEST_P(IndexTest, SearchCorrectly) {
     auto opts = lintdb::SearchOptions();
     opts.centroid_score_threshold = 0;
     opts.k_top_centroids = 250;
-    auto results = index.search(lintdb::kDefaultTenant, block, 64, 5, opts);
+    auto results = index.search(lintdb::kDefaultTenant, block, 250, 5, opts);
 
-    EXPECT_GT(results.size(), 0);
+    ASSERT_GT(results.size(), 0);
 
     auto actual = results[0].id;
     EXPECT_EQ(actual, 1);
@@ -274,12 +274,10 @@ TEST_P(IndexTest, LoadsCorrectly) {
 
     lintdb::IndexIVF* index = new lintdb::IndexIVF(
             temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
-
+    std::cout << temp_db.string() << std::endl;
     index->train(num_docs * num_tokens, buf);
 
-    delete index;
-
-    auto loaded_index = lintdb::IndexIVF(temp_db.string());
+    auto loaded_index = lintdb::IndexIVF(temp_db.string(), true);
 
     std::vector<float> query(dim * num_tokens, 1);
     loaded_index.search(
@@ -407,9 +405,9 @@ TEST_P(IndexTest, SearchWithMetadataCorrectly) {
     auto opts = lintdb::SearchOptions();
     opts.centroid_score_threshold = 0;
     opts.k_top_centroids = 250;
-    auto results = index.search(lintdb::kDefaultTenant, block, 64, 5, opts);
+    auto results = index.search(lintdb::kDefaultTenant, block, 250, 5, opts);
 
-    EXPECT_GT(results.size(), 0);
+    ASSERT_GT(results.size(), 0);
 
     auto actual = results[0].id;
     EXPECT_EQ(actual, 1);

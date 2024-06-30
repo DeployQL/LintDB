@@ -82,7 +82,7 @@ struct RocksdbInvertedList : public InvertedList {
 
     void add(uint64_t tenant, EncodedDocument* doc) override;
     void remove(uint64_t tenant, std::vector<idx_t> ids) override;
-    void merge(rocksdb::DB* db, std::vector<rocksdb::ColumnFamilyHandle*> cfs)
+    void merge(rocksdb::DB* db, std::vector<rocksdb::ColumnFamilyHandle*>& cfs)
             override;
 
     std::vector<idx_t> get_mapping(const uint64_t tenant, idx_t id)

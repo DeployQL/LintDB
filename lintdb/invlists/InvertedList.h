@@ -21,7 +21,7 @@ struct InvertedList {
     virtual void remove(const uint64_t tenant, std::vector<idx_t> ids) = 0;
     virtual void merge(
             rocksdb::DB* db,
-            std::vector<rocksdb::ColumnFamilyHandle*> cfs) = 0;
+            std::vector<rocksdb::ColumnFamilyHandle*>& cfs) = 0;
 
     virtual std::unique_ptr<Iterator> get_iterator(
             const uint64_t tenant,
@@ -56,7 +56,7 @@ struct ForwardIndex {
 
     virtual void merge(
             rocksdb::DB* db,
-            std::vector<rocksdb::ColumnFamilyHandle*> cfs) = 0;
+            std::vector<rocksdb::ColumnFamilyHandle*>& cfs) = 0;
 
     virtual ~ForwardIndex() = default;
 };

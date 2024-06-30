@@ -5,6 +5,7 @@ set(
     index.cpp
     quantizers/Binarizer.cpp
     Encoder.cpp
+    EncoderV2.cpp
     quantizers/ProductEncoder.cpp
     quantizers/io.cpp
     util.cpp
@@ -22,6 +23,8 @@ set(
     retrievers/XTRRetriever.cpp
     quantizers/InvertedListScanner.cpp
     quantizers/PQDistanceTables.cpp
+    quantizers/impl/kmeans.cpp
+    quantizers/CoarseQuantizer.cpp
 )
 
 set(
@@ -35,6 +38,7 @@ set(
     cf.h
     EmbeddingBlock.h
     Encoder.h
+    EncoderV2.h
     env.h
     Passages.h
     quantizers/Binarizer.h
@@ -53,6 +57,9 @@ set(
     invlists/RocksdbInvertedListV2.h
     quantizers/PQDistanceTables.h
     quantizers/InvertedListScanner.h
+    quantizers/impl/product_quantizer.h
+    quantizers/CoarseQuantizer.h
+    quantizers/impl/kmeans.h
     invlists/RocksdbInvertedList.h
     retrievers/XTRRetriever.h
     invlists/keys.h

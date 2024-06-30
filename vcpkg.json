@@ -1,6 +1,6 @@
 {
   "name": "lintdb",
-  "version-string": "0.4.0",
+  "version-string": "0.4.1",
   "license": "MIT",
   "dependencies": [
     "faiss",
