@@ -19,6 +19,7 @@
 #include "lintdb/retrievers/PlaidRetriever.h"
 #include "lintdb/retrievers/Retriever.h"
 #include "lintdb/version.h"
+#include "lintdb/schema/schema.h"
 
 // forward declare these classes and avoid including the rocksdb headers.
 namespace rocksdb {
@@ -77,6 +78,9 @@ struct IndexIVF {
 
     IndexIVF(std::string path, Configuration& config);
 
+    IndexIVF(const std::string path, const Schema& schema, const Configuration& config);
+
+    [[deprecated("use the constructor with Configuration")]]
     IndexIVF(
             std::string path, /// path to the database.
             size_t nlist,     /// number of centroids to use in L1 quantizing.
@@ -88,7 +92,6 @@ struct IndexIVF {
             IndexEncoding quantizer_type = IndexEncoding::BINARIZER,
             bool read_only = false);
 
-    // TODO(mbarta): this breaks SWIG. SWIG needs to ignore this, but won't.
     /**
      * Copy creates a new index at the given path from a trained index. The copy
      * will always be writeable.
@@ -245,6 +248,7 @@ struct IndexIVF {
     std::string path;
     std::shared_ptr<rocksdb::DB> db;
     std::vector<rocksdb::ColumnFamilyHandle*> column_families;
+    Schema schema;
 
     std::shared_ptr<Encoder> encoder;
     std::shared_ptr<Quantizer> quantizer;

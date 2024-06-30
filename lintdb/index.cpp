@@ -59,8 +59,25 @@ IndexIVF::IndexIVF(const std::string& path, bool read_only)
 
 IndexIVF::IndexIVF(std::string path, Configuration& config)
         : config(config), read_only(false), path(path) {
+    std::vector<Field> fields;
+    QuantizationType qt;
+    if(config.quantizer_type == IndexEncoding::BINARIZER) {
+        qt = QuantizationType::BINARIZER;
+    } else if(config.quantizer_type == IndexEncoding::PRODUCT_QUANTIZER) {
+        qt = QuantizationType::PQ;
+    } else {
+        qt = QuantizationType::NONE;
+    }
+    fields.push_back({"colbert", DataType::TENSOR_ARRAY, FieldType::Stored, {128, "", qt}});
+    fields.push_back({"metadata", DataType::STRING, FieldType::Stored, {0, "", QuantizationType::NONE}});
+    Schema schema = Schema{}
+}
+
+IndexIVF(const std::string path, const Schema& schema, const Configuration& config) {
     LINTDB_THROW_IF_NOT(config.nlist <= std::numeric_limits<code_t>::max());
+
     this->config = config;
+    this->schema = schema;
 
     initialize_inverted_list(config.lintdb_version);
     initialize_retrieval(this->config.quantizer_type);
