@@ -44,6 +44,27 @@ inline float inner_product(gsl::span<const float> a, gsl::span<const float> b) {
     return result;
 }
 
+inline float inner_product(std::vector<float>& a, std::vector<float>& b) {
+    size_t size = a.size();
+    size_t i = 0;
+    float result = 0.0f;
+
+    // Use manual loop unrolling for better performance
+    for (; i + 4 <= size; i += 4) {
+        result += a[i] * b[i];
+        result += a[i + 1] * b[i + 1];
+        result += a[i + 2] * b[i + 2];
+        result += a[i + 3] * b[i + 3];
+    }
+
+    // Process remaining elements
+    for (; i < size; ++i) {
+        result += a[i] * b[i];
+    }
+
+    return result;
+}
+
 // K-means clustering for a single sub-vector
 std::vector<float> kmeans(const std::vector<float>& data, size_t n, size_t dim, size_t k, Metric metric, int iterations = 100);
 

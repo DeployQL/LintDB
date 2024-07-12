@@ -20,13 +20,12 @@ namespace lintdb {
 
 /**
  * @class CoarseQuantizer
- * @brief This class is used for quantization of vectors.
+ * @brief This class is used for IVF of vectors.
  *
- * It provides methods for training, saving, assigning, decoding, computing residuals, reconstructing, searching, resetting, adding, getting type, getting xb, serializing and deserializing.
  */
 class CoarseQuantizer {
    public:
-    bool is_trained; // Is the quantizer trained
+    bool is_trained = false; // Is the quantizer trained
 
     explicit CoarseQuantizer(size_t d);
     void train(const size_t n, const float* x, size_t k, size_t num_iter=10);
@@ -40,7 +39,7 @@ class CoarseQuantizer {
     void reset();
     void add(int n, float* data);
     size_t code_size();
-    QuantizerType get_type();
+    size_t num_centroids();
     float* get_xb();
     void serialize(const std::string& filename) const;
     static std::unique_ptr<CoarseQuantizer> deserialize(const std::string& filename, const Version& version);

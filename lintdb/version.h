@@ -12,6 +12,10 @@ struct Version {
         metadata_enabled = major >= 0 && minor >= 3 && revision >= 0;
     }
 
+    bool operator==(const Version& otherVersion) const {
+        return major == otherVersion.major && minor == otherVersion.minor && revision == otherVersion.revision;
+    }
+
     bool operator<(const Version& otherVersion) {
         if (major < otherVersion.major)
             return true;

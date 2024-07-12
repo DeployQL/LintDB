@@ -96,23 +96,23 @@ void Binarizer::save(std::string path) {
     }
 
     // Write JSON object to file
-    std::ofstream out(path + "/" + QUANTIZER_FILENAME);
+    std::ofstream out(path);
     Json::StyledWriter writer;
     if (out.is_open()) {
         out << writer.write(root);
         out.close();
     } else {
         LOG(ERROR) << "Unable to open file for writing: "
-                   << path + "/" + QUANTIZER_FILENAME;
+                   << path;
     }
 }
 
 std::unique_ptr<Binarizer> Binarizer::load(std::string path) {
     // Read JSON file
-    std::ifstream file(path + "/" + QUANTIZER_FILENAME);
+    std::ifstream file(path );
     if (!file.is_open()) {
         LOG(ERROR) << "Unable to open file for writing: "
-                   << path + "/" + QUANTIZER_FILENAME;
+                   << path;
         return nullptr;
     }
 

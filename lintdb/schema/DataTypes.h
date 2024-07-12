@@ -5,6 +5,7 @@
 #include <vector>
 #include <variant>
 #include <chrono>
+#include <map>
 #include <stdexcept>
 #include <bitsery/bitsery.h>
 #include <bitsery/ext/std_variant.h>
@@ -15,65 +16,147 @@
 #include <bitsery/traits/vector.h>
 #include <bitsery/ext/std_variant.h>
 #include <bitsery/ext/std_chrono.h>
+#include <bitsery/ext/std_map.h>
+#include <gsl/span>
+#include "lintdb/api.h"
+#include "lintdb/assert.h"
 
-namespace bitsery {
 
-
-template<typename S>
-void serialize(S& s, lintdb::FieldValue& fv) {
-    s.value4b(fv.data_type);
-    s.ext(fv.value, bitsery::ext::StdVariant{});
-}
-
-template<typename S>
-void serialize(S& s, lintdb::DataType& dt) {
-    s.value4b(dt);
-}
-
-template<typename S>
-void serialize(S& s, lintdb::Tensor& tensor) {
-    s.container(tensor, 1000); // Adjust size as needed
-}
-
-template<typename S>
-void serialize(S& s, lintdb::TensorArray& tensorArray) {
-    s.container(tensorArray, 100); // Adjust size as needed
-}
-
-template<typename S>
-void serialize(S& s, lintdb::DateTime& dt) {
-    s.ext(dt, bitsery::ext::StdChrono{});
-}
-}
+#define MAX_TENSOR_SIZE 10000
+#define MAX_CENTROIDS_TO_STORE 40000000
 
 namespace lintdb {
 
 enum DataType {
     TENSOR,
+    QUANTIZED_TENSOR,
     INTEGER,
     FLOAT,
     TEXT,
     DATETIME,
-    _LEGACY_TEXT_MAP, /// This is a legacy type, and should not be used.
 };
 
-using Tensor = gsl::span<const float>;
-using TensorArray = gsl::span<const float>;
+    const std::unordered_map<int, DataType> IntToDataType = {
+            {0, DataType::TENSOR},
+            {1, DataType::QUANTIZED_TENSOR},
+            {2, DataType::INTEGER},
+            {3, DataType::FLOAT},
+            {4, DataType::TEXT},
+            {5, DataType::DATETIME}
+    };
+
+    const std::unordered_map<DataType, int> DataTypeToInt = {
+            {DataType::TENSOR, 0},
+            {DataType::QUANTIZED_TENSOR, 1},
+            {DataType::INTEGER, 2},
+            {DataType::FLOAT, 3},
+            {DataType::TEXT, 4},
+            {DataType::DATETIME, 5}
+    };
+
+using Tensor = std::vector< float>;
+using TensorArray = std::vector< float>;
 using QuantizedTensor = std::vector<uint8_t>;
-using QuantizedTensorArray = std::vector<QuantizedTensor>;
-using DateTime = std::chrono::system_clock::time_point;
+using QuantizedTensorArray = std::vector<uint8_t>;
+using Duration = std::chrono::duration<int64_t, std::milli>;
+using DateTime = std::chrono::time_point<std::chrono::system_clock, Duration>;
+
+using SupportedTypes = std::variant<idx_t, float, lintdb::DateTime, lintdb::Tensor, lintdb::QuantizedTensor, std::string>;
 
 struct FieldValue {
-    DataType data_type;
-    std::variant<int, float, DateTime, Tensor, TensorArray, std::string> value;
+    lintdb::DataType data_type;
+    size_t num_tensors = 0;
+    SupportedTypes value;
+
+    FieldValue() = default;
 
     FieldValue(int v) : data_type(DataType::INTEGER), value(v) {}
     FieldValue(float v) : data_type(DataType::FLOAT), value(v) {}
     FieldValue(std::string v) : data_type(DataType::TEXT), value(v) {}
     FieldValue(DateTime v) : data_type(DataType::DATETIME), value(v) {}
-    FieldValue(Tensor v) : data_type(DataType::TENSOR), value(v) {}
-    FieldValue(TensorArray v) : data_type(DataType::TENSOR_ARRAY), value(v) {}
-    FieldValue(std::map<std::string, std::string> v) : data_type(DataType::_LEGACY_TEXT_MAP), value(v) {}
+    FieldValue(Tensor v) : data_type(DataType::TENSOR), num_tensors(1), value(v) {}
+    FieldValue(Tensor v, size_t num_tensors) : data_type(DataType::TENSOR), num_tensors(num_tensors), value(v) {}
+    FieldValue(QuantizedTensor v) : data_type(DataType::QUANTIZED_TENSOR), num_tensors(1), value(v) {}
+    FieldValue(QuantizedTensorArray v, size_t num_tensors) : data_type(DataType::QUANTIZED_TENSOR), num_tensors(num_tensors), value(v) {}
 };
+
 }
+
+namespace bitsery {
+
+
+    template<typename S>
+    void serialize(S& s, lintdb::SupportedTypes& fv) {
+        s.ext(fv, bitsery::ext::StdVariant{
+                [](S& p, float& o) {
+                    p.value4b(o);
+                },
+                [](S& p, idx_t& o) {
+                    p.value8b(o);
+                },
+                [](S& p, std::string& o) {
+                    p.text1b(o, 0xFFFF);
+                },
+                [](S& p, lintdb::Tensor& o) {
+                    p.container4b(o, MAX_TENSOR_SIZE);
+                },
+                [](S& p, lintdb::QuantizedTensor& o) {
+                    p.container1b(o, MAX_TENSOR_SIZE);
+                },
+                [](S& p, lintdb::DateTime& o) {
+                    p.ext8b(o, bitsery::ext::StdTimePoint{});
+                }
+        });
+    }
+
+    template<typename S>
+    void serialize(S& s, std::map<uint8_t, lintdb::SupportedTypes>& st) {
+        s.ext(st,
+              bitsery::ext::StdMap{256},
+              [](S& s, uint8_t& key, lintdb::SupportedTypes& value) {
+                  s.value1b(key);
+                  s.ext(value, bitsery::ext::StdVariant{
+                          [](S& p, float& o) {
+                              p.value4b(o);
+                          },
+                          [](S& p, idx_t& o) {
+                              p.value8b(o);
+                          },
+                          [](S& p, std::string& o) {
+                              p.text1b(o, 0xFFFF);
+                          },
+                          [](S& p, lintdb::Tensor& o) {
+                              p.container4b(o, MAX_TENSOR_SIZE);
+                          },
+                          [](S& p, lintdb::QuantizedTensor& o) {
+                              p.container1b(o, MAX_TENSOR_SIZE);
+                          },
+                          [](S& p, lintdb::DateTime& o) {
+                              p.ext8b(o, bitsery::ext::StdTimePoint{});
+                          }
+                  });
+              });
+    }
+
+    template<typename S>
+    void serialize(S& s, lintdb::QuantizedTensor& tensor) {
+        s.container1b(tensor, MAX_TENSOR_SIZE);
+    }
+
+    template<typename S>
+    void serialize(S& s, std::vector<idx_t>& v) {
+        s.container8b(v, MAX_CENTROIDS_TO_STORE);
+    }
+
+    template<typename S>
+    void serialize(S& s, lintdb::Tensor& tensor) {
+        s.container4b(tensor, MAX_TENSOR_SIZE); // Adjust size as needed
+    }
+
+    template<typename S>
+    void serialize(S& s, lintdb::DateTime& dt) {
+        s.ext8b(dt, bitsery::ext::StdTimePoint{});
+    }
+}
+
 #endif // FIELD_VALUE_H

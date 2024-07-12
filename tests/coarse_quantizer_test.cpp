@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "lintdb/quantizers/CoarseQuantizer.h"
 #include <iostream>
+#include <filesystem>
 #include "lintdb/version.h"
 
 using namespace lintdb;
@@ -13,6 +14,9 @@ class CoarseQuantizerTest : public ::testing::Test {
 
     void TearDown() override {
         delete cq;
+        if (std::filesystem::exists("coarse_quantizer.dat")) {
+            std::filesystem::remove("coarse_quantizer.dat");
+        }
     }
 
     CoarseQuantizer* cq;

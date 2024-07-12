@@ -5,6 +5,7 @@
 #include <iostream>
 #include <sstream>
 #include "lintdb/assert.h"
+#include "lintdb/utils/endian.h"
 
 namespace lintdb {
 std::string Key::serialize() const {
@@ -63,6 +64,7 @@ std::string TokenKey::serialize() const {
     std::vector<unsigned char> serialized_str;
 
     store_bigendian<uint64_t>(this->tenant, serialized_str);
+    store_bigendian<uint8_t>(this->field, serialized_str);
     store_bigendian<idx_t>(this->inverted_list_id, serialized_str);
 
     if (!exclude_id) {
@@ -82,20 +84,41 @@ TokenKey TokenKey::from_slice(const rocksdb::Slice& slice) {
 
     auto key_ptr = slice.data();
     auto tenant = load_bigendian<uint64_t>(key_ptr);
-    auto inverted_list_id = load_bigendian<idx_t>(key_ptr + sizeof(tenant));
+    auto field = load_bigendian<uint8_t>(key_ptr + sizeof(tenant));
+    auto inverted_list_id = load_bigendian<idx_t>(key_ptr + sizeof(tenant) + sizeof(field));
     auto doc_id = load_bigendian<idx_t>(
-            key_ptr + sizeof(tenant) + sizeof(inverted_list_id));
-
-    // check if there's a token key. If not, return the key without the
-    // doc_token_id.
-    if (slice.size() == 24) {
-        return TokenKey{tenant, inverted_list_id, doc_id, 0};
-    }
+            key_ptr + sizeof(tenant) + sizeof(inverted_list_id)+ sizeof(field));
 
     auto token_id = load_bigendian<idx_t>(
-            key_ptr + sizeof(tenant) + sizeof(inverted_list_id) +
+            key_ptr + sizeof(tenant) + sizeof(field) + sizeof(inverted_list_id) +
             sizeof(doc_id));
 
-    return TokenKey{tenant, inverted_list_id, doc_id, token_id};
+    return TokenKey{tenant, field, inverted_list_id, doc_id, token_id};
+}
+
+std::string ContextKey::serialize() const {
+    // size_t key_size = sizeof(this->tenant) + sizeof(this->id);
+    std::vector<unsigned char> serialized_str;
+
+    store_bigendian(this->tenant, serialized_str);
+    store_bigendian(this->field, serialized_str);
+    if(exclude_id) {
+        store_bigendian(this->id, serialized_str);
+    }
+
+    return std::string(serialized_str.begin(), serialized_str.end());
+}
+
+ContextKey ContextKey::from_slice(const rocksdb::Slice& slice) {
+    // 8 bytes are used for the prefix. tenant is 8 bytes, and id is 8 bytes.
+    // slices must have an id assigned.
+    LINTDB_THROW_IF_NOT(slice.size() > 8);
+
+    auto key_ptr = slice.data();
+    uint64_t tenant = load_bigendian<uint64_t>(key_ptr);
+    uint8_t field = load_bigendian<uint8_t>(key_ptr + sizeof(tenant));
+    idx_t id = load_bigendian<idx_t>(key_ptr + sizeof(tenant) + sizeof(field));
+
+    return ContextKey{tenant, field, id};
 }
 } // namespace lintdb

@@ -10,76 +10,15 @@
 #include "lintdb/exception.h"
 #include "lintdb/schema/forward_index_generated.h"
 #include "lintdb/schema/util.h"
+#include "lintdb/invlists/ForwardIndexIterator.h"
 
 namespace lintdb {
 
 RocksdbForwardIndex::RocksdbForwardIndex(
         std::shared_ptr<rocksdb::DB> db,
         std::vector<rocksdb::ColumnFamilyHandle*>& column_families,
-        Version& version)
-        : db_(db), column_families(column_families), version(version) {}
-
-void RocksdbForwardIndex::add(
-        const uint64_t tenant,
-        EncodedDocument* doc,
-        bool store_codes) {
-    rocksdb::WriteOptions wo;
-    // get unique indexes.
-    std::unordered_set<idx_t> unique_coarse_idx(
-            doc->codes.begin(), doc->codes.end());
-    VLOG(100) << "Unique coarse indexes: " << unique_coarse_idx.size();
-
-    rocksdb::WriteBatch batch;
-
-    // store forward doc id -> coarse idx mapping.
-    ForwardIndexKey forward_key = ForwardIndexKey{tenant, doc->id};
-    auto fks = forward_key.serialize();
-
-    // store document codes.
-    if (store_codes) {
-        auto doc_ptr = create_inverted_index_document(
-                doc->codes.data(), doc->codes.size());
-        auto* ptr = doc_ptr->GetBufferPointer();
-        auto size = doc_ptr->GetSize();
-
-        const rocksdb::Slice slice(reinterpret_cast<const char*>(ptr), size);
-        auto codes_status = batch.Put(
-                column_families[kCodesColumnIndex], rocksdb::Slice(fks), slice);
-        LINTDB_THROW_IF_NOT(codes_status.ok());
-    }
-
-    // store document residuals.
-    auto forward_doc_ptr = create_forward_index_document(
-            doc->num_tokens, doc->residuals.data(), doc->residuals.size());
-
-    auto* forward_ptr = forward_doc_ptr->GetBufferPointer();
-    auto forward_size = forward_doc_ptr->GetSize();
-    const rocksdb::Slice forward_slice(
-            reinterpret_cast<const char*>(forward_ptr), forward_size);
-
-    rocksdb::Status forward_status = batch.Put(
-            column_families[kResidualsColumnIndex],
-            rocksdb::Slice(fks),
-            forward_slice);
-    LINTDB_THROW_IF_NOT(forward_status.ok());
-
-    // store document metadata.
-    if (this->version.metadata_enabled) {
-        std::string metadata_serialized = doc->serialize_metadata();
-        const rocksdb::Slice metadata_slice(metadata_serialized);
-        rocksdb::Status metadata_status = batch.Put(
-                column_families[kDocColumnIndex],
-                rocksdb::Slice(fks),
-                metadata_slice);
-
-        LINTDB_THROW_IF_NOT(metadata_status.ok());
-    }
-
-    auto status = db_->Write(wo, &batch);
-    assert(status.ok());
-
-    LINTDB_THROW_IF_NOT(status.ok());
-};
+        const Version& version)
+        : version(version), db_(db), column_families(column_families) {}
 
 void RocksdbForwardIndex::remove(
         const uint64_t tenant,
@@ -302,6 +241,13 @@ void RocksdbForwardIndex::merge(
 
         delete it;
     }
+}
+
+std::unique_ptr<ForwardIndexIterator> RocksdbForwardIndex::get_iterator(
+            const uint64_t tenant,
+            idx_t column_index) const {
+    return std::make_unique<ForwardIndexIterator>(ForwardIndexIterator(
+            db_, column_families[kIndexColumnIndex], tenant));
 }
 
 } // namespace lintdb

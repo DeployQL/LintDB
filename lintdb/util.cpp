@@ -1,8 +1,10 @@
 #include "lintdb/util.h"
 #include <unordered_map>
+#include <fstream>
 #include "lintdb/SearchOptions.h"
 #include "lintdb/api.h"
 #include "lintdb/exception.h"
+#include <glog/logging.h>
 
 namespace lintdb {
 extern "C" {
@@ -71,5 +73,22 @@ IndexEncoding deserialize_encoding(const std::string& str) {
     } else {
         throw LintDBException("Unknown string: " + str);
     }
+}
+
+Json::Value loadJson(const std::string& path) {
+    Json::Value root;
+    std::ifstream in(path);
+    Json::CharReaderBuilder readerBuilder;
+    std::string errs;
+    if (in.is_open()) {
+        if (!Json::parseFromStream(readerBuilder, in, &root, &errs)) {
+            LOG(ERROR) << "Failed to parse JSON from file: " << path << ", Error: " << errs;
+        }
+        in.close();
+    } else {
+        LOG(ERROR) << "Unable to open file for reading: " << path;
+    }
+
+    return root;
 }
 } // namespace lintdb

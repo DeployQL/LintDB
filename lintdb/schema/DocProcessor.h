@@ -1,57 +1,43 @@
 #pragma once
 
 #include <memory>
-#include "lintdb/Encoder.h"
+#include <string>
+#include <unordered_map>
 #include "lintdb/quantizers/Quantizer.h"
 #include "lintdb/schema/DataTypes.h"
 #include "lintdb/schema/Document.h"
 #include "lintdb/schema/Schema.h"
-#include "lintdb/schema/schema.h"
+#include "lintdb/quantizers/CoarseQuantizer.h"
+#include "lintdb/schema/FieldMapper.h"
+#include "lintdb/schema/ProcessedData.h"
+#include "lintdb/invlists/IndexWriter.h"
 
 namespace lintdb {
-class CoarseQuantizer;
-
-class EncodedDocument {
-   public:
-    std::unordered_map<std::string, std::string> encoded_fields;
-    std::unordered_map<std::string, std::vector<int>> ivf_centroids;
-
-
-    void addField(const std::string& name, const std::string& value) {
-        encoded_fields[name] = value;
-    }
-
-    void addCentroids(const std::string& name, const std::vector<idx_t>& centroids) {
-        ivf_centroids[name] = centroids;
-    }
-};
 
 class DocumentProcessor {
-   private:
-    Schema schema;
-    std::unordered_map<std::string, Field> field_map;
-    // each tensor/tensor_array field has a quantizer
-    std::unordered_map<std::string, std::shared_ptr<Quantizer>> quantizer_map;
-    std::unordered_map<std::string, std::shared_ptr<CoarseQuantizer>> coarse_quantizer_map;
-
-   public:
+    public:
     DocumentProcessor(
         const Schema& schema,
-        const std::shared_ptr<Encoder> encoder,
-        const std::shared_ptr<Quantizer> quantizer
+        const std::unordered_map<std::string, std::shared_ptr<Quantizer>>& quantizer_map,
+        const std::unordered_map<std::string, std::shared_ptr<CoarseQuantizer>>& coarse_quantizer_map,
+        const std::shared_ptr<FieldMapper> field_mapper,
+        std::unique_ptr<IndexWriter> index_writer
     );
-    EncodedDocument processDocument(const Document& document);
+    void processDocument(const uint64_t tenant, const Document& document);
 
    private:
-    void validateField(const Field& field, const FieldValue& value);
-    std::string encodeField(const Field& field, const FieldValue& value);
-    void serializeEncodedDocument(
-        const EncodedDocument& encodedDoc,
-        InvertedIndexDocument& invertedDoc,
-        ForwardIndexDocument& forwardDoc
-    );
+    static void validateField(const Field& field, const FieldValue& value);
     FieldValue quantizeField(const Field& field, const FieldValue& value);
-    std::vector<idx_t> DocumentProcessor::assignIVFCentroids(const Field& field, const FieldValue& value)
+    std::vector<idx_t> assignIVFCentroids(const Field& field, const FieldValue& value);
+
+    Schema schema;
+    std::unordered_map<std::string, Field> field_map;
+    const std::shared_ptr<FieldMapper> field_mapper;
+    // each tensor/tensor_array field has a quantizer
+    const std::unordered_map<std::string, std::shared_ptr<Quantizer>>& quantizer_map;
+    const std::unordered_map<std::string, std::shared_ptr<CoarseQuantizer>>& coarse_quantizer_map;
+
+    std::unique_ptr<IndexWriter> index_writer;
 };
 
 } // namespace lintdb

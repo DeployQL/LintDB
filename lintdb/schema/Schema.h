@@ -1,73 +1,43 @@
 #pragma once
 
-/**
- * Schemas enable the index to intelligently index different types of data.
- * One of the main advantages of this is to
- */
-
 #include <vector>
 #include <string>
 #include <map>
 #include <stddef.h>
 #include <json/json.h>
-
+#include "lintdb/quantizers/Quantizer.h"
+#include "lintdb/schema/DataTypes.h"
 
 namespace lintdb {
-
-/**
- * {
- *   fields: [
- *      {
- *          name: 'text',
- *          type: lintdb.TENSOR,
- *          params: {
- *              'dim': 128,
-*          }
-*       },
- *      {
- *          name: 'filter-x',
- *          type: 'text',
- *          params: {
- *              'analyzer': 'en',
- *          }
- */
 
 enum FieldType {
     Indexed,
     Context,
     Stored,
-    Analyzed
-};
-
-enum QuantizationType {
-    NONE,
-    BINARIZER,
-    PQ,
-};
-
-enum LateInteractionType {
-    COLBERT,
-    XTR
+    Colbert
 };
 
 struct FieldParameters {
-    size_t dimensions;
-    std::string analyzer;
-    QuantizationType quantization;
-    LateInteractionType lateInteractionType;
+    size_t dimensions = 0;
+    std::string analyzer = "";
+    QuantizerType quantization = QuantizerType::UNKNOWN;
+    size_t num_centroids = 0;
+    size_t num_iterations = 10;
+    size_t num_subquantizers = 0; // used for PQ quantizer
+    size_t nbits = 1; // used for PQ quantizer
 };
 
 /**
- * A Document is made up of multiple fields.
+ * A Schema is made up of multiple fields.
  */
 struct Field {
     std::string name; /// the name of the field
     DataType data_type; /// the data type. e.g. int, float, string, embedding.
-    FieldType field_type; /// the field type. e.g. indexed or stored in the database.
+    std::vector<FieldType> field_types; /// the field types. e.g. indexed or stored in the database.
     FieldParameters parameters; /// parameters for the field.
 
     Json::Value toJson() const;
-    static Schema fromJson(const Json::Value& json);
+    static Field fromJson(const Json::Value& json);
 };
 
 /**
@@ -79,6 +49,10 @@ struct Schema {
 
     Json::Value toJson() const;
     static Schema fromJson(const Json::Value& json);
+
+    inline void add_field(Field& field) {
+        fields.push_back(field);
+    }
 };
 
 } // namespace lintdb

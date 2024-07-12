@@ -7,6 +7,8 @@
 #include <tuple>
 #include <vector>
 #include "lintdb/SearchOptions.h"
+#include <json/reader.h>
+#include <json/writer.h>
 
 namespace lintdb {
 /**
@@ -59,6 +61,9 @@ std::vector<T> product(
 
 std::string serialize_encoding(IndexEncoding type);
 IndexEncoding deserialize_encoding(const std::string& str);
+
+Json::Value loadJson(const std::string& path);
+
 } // namespace lintdb
 
 #endif

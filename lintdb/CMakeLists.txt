@@ -1,11 +1,8 @@
 
 set(
     LINT_DB_SRC
-    Collection.cpp
     index.cpp
     quantizers/Binarizer.cpp
-    Encoder.cpp
-    EncoderV2.cpp
     quantizers/ProductEncoder.cpp
     quantizers/io.cpp
     util.cpp
@@ -14,17 +11,35 @@ set(
     invlists/RocksdbForwardIndex.cpp
     invlists/keys.cpp
     invlists/EncodedDocument.cpp
-    retrievers/PlaidRetriever.cpp
-    retrievers/plaid.cpp
-    retrievers/EMVBRetriever.cpp
+        invlists/IndexWriter.cpp
+#    retrievers/PlaidRetriever.cpp
+#    retrievers/plaid.cpp
+#    retrievers/EMVBRetriever.cpp
     schema/util.cpp
-    invlists/RocksdbInvertedListV2.cpp
     invlists/RocksdbInvertedList.cpp
-    retrievers/XTRRetriever.cpp
-    quantizers/InvertedListScanner.cpp
+        invlists/ForwardIndexIterator.cpp
+        invlists/IndexWriter.cpp
+        invlists/InvertedIterator.cpp
+
+#    retrievers/XTRRetriever.cpp
+#    quantizers/InvertedListScanner.cpp
     quantizers/PQDistanceTables.cpp
     quantizers/impl/kmeans.cpp
     quantizers/CoarseQuantizer.cpp
+        query/DocIterator.cpp
+        query/Query.cpp
+        query/QueryNode.cpp
+        schema/DocEncoder.cpp
+    schema/DocProcessor.cpp
+    schema/Schema.cpp
+    schema/util.cpp
+        schema/FieldMapper.cpp
+        query/QueryExecutor.cpp
+        scoring/Scorer.cpp
+        query/KnnNearestCentroids.cpp
+        quantizers/IdentityQuantizer.cpp
+        invlists/KeyBuilder.h
+        utils/endian.h
 )
 
 set(
@@ -33,48 +48,67 @@ set(
     api.h
     assert.h
     exception.h
-    Collection.h
     constants.h
     cf.h
     EmbeddingBlock.h
-    Encoder.h
-    EncoderV2.h
     env.h
     Passages.h
     quantizers/Binarizer.h
     quantizers/Quantizer.h
     quantizers/ProductEncoder.h
     quantizers/io.h
+        query/DocIterator.h
+        query/Query.h
+        query/QueryNode.h
     SearchOptions.h
     SearchResult.h
     util.h
     index_builder/EmbeddingModel.h
     index_builder/Tokenizer.h
+        invlists/IndexWriter.h
     invlists/InvertedList.h
     invlists/Iterator.h
     invlists/EncodedDocument.h
     invlists/RocksdbForwardIndex.h
-    invlists/RocksdbInvertedListV2.h
+        invlists/InvertedIterator.h
     quantizers/PQDistanceTables.h
-    quantizers/InvertedListScanner.h
+#    quantizers/InvertedListScanner.h
     quantizers/impl/product_quantizer.h
     quantizers/CoarseQuantizer.h
     quantizers/impl/kmeans.h
-    invlists/RocksdbInvertedList.h
-    retrievers/XTRRetriever.h
+        quantizers/IdentityQuantizer.h
+
+        invlists/RocksdbInvertedList.h
+
+#    retrievers/XTRRetriever.h
     invlists/keys.h
+        invlists/ForwardIndexIterator.h
+        invlists/IndexWriter.h
+        invlists/PostingData.h
+        invlists/ContextIterator.h
     retrievers/Retriever.h
-    retrievers/PlaidRetriever.h
-    retrievers/plaid.h
-    retrievers/EMVBRetriever.h
-    retrievers/emvb_util.h
-    retrievers/emvb.h
-    retrievers/emvb_generic.h
-    retrievers/emvb_avx.h
+#    retrievers/PlaidRetriever.h
+#    retrievers/plaid.h
+#    retrievers/EMVBRetriever.h
+#    retrievers/emvb_util.h
+#    retrievers/emvb.h
+#    retrievers/emvb_generic.h
+#    retrievers/emvb_avx.h
     schema/forward_index_generated.h
     schema/inverted_index_generated.h
     schema/mapping_generated.h
-    schema/util.h
+      schema/Schema.h
+        schema/DocEncoder.h
+      schema/DocProcessor.h
+      schema/Document.h
+      schema/DataTypes.h
+        schema/FieldMapper.h
+      schema/ProcessedData.h
+        query/QueryContext.h
+        query/QueryExecutor.h
+        scoring/Scorer.h
+      query/KnnNearestCentroids.h
+        schema/util.h
     utils/progress_bar.h
     version.h
 )

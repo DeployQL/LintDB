@@ -5,14 +5,15 @@
 #include "DocumentProcessor.h"
 #include "InvertedIndexDocument.h"
 #include "ForwardIndexDocument.h"
+#include "mocks.h"
 
 // Helper function to create a sample schema
 Schema createSampleSchema() {
     Schema schema;
     Field field1 = {"intField", DataType::INTEGER, FieldType::Stored, {0, "", QuantizationType::NONE}};
     Field field2 = {"floatField", DataType::FLOAT, FieldType::Stored, {0, "", QuantizationType::NONE}};
-    Field field3 = {"tensorField", DataType::TENSOR, FieldType::Stored, {128, "", QuantizationType::PQ}};
-    Field field4 = {"tensorArrayField", DataType::TENSOR_ARRAY, FieldType::Stored, {128, "", QuantizationType::VQ}};
+    Field field3 = {"tensorField", DataType::TENSOR, FieldType::Stored, {2, "", QuantizationType::PQ}};
+    Field field4 = {"tensorArrayField", DataType::TENSOR_ARRAY, FieldType::Stored, {2, "", QuantizationType::VQ}};
     schema.fields.push_back(field1);
     schema.fields.push_back(field2);
     schema.fields.push_back(field3);
@@ -25,38 +26,72 @@ Document createSampleDocument() {
     Document document;
     document.fields["intField"] = FieldValue(42);
     document.fields["floatField"] = FieldValue(3.14f);
-    document.fields["tensorField"] = FieldValue(Tensor{0.1f, 0.2f, 0.3f});
+    document.fields["tensorField"] = FieldValue(Tensor{0.1f, 0.2f});
     document.fields["tensorArrayField"] = FieldValue(TensorArray{{0.1f, 0.2f}, {0.3f, 0.4f}});
     return document;
 }
 
-TEST(DocumentProcessorTests, EncodeDecodeDocument) {
-    // Create a schema and a document processor
-    Schema schema = createSampleSchema();
-    DocumentProcessor processor(schema);
 
-    // Create a sample document
-    Document document = createSampleDocument();
+TEST(DocumentProcessor, ProcessDocumentWithValidFields) {
+    auto mockIndexWriter = std::make_shared<MockIndexWriter>();
+    auto mockQuantizer = std::make_shared<MockQuantizer>();
+    lintdb::FieldMapper fieldMapper;
+    lintdb::Schema schema;
+    lintdb::Field field1 = {"field1", lintdb::DataType::INTEGER, lintdb::FieldType::Stored, {0, "", lintdb::QuantizationType::NONE}};
+    schema.fields.push_back(field1);
 
-    // Process the document
-    EncodedDocument encodedDoc = processor.processDocument(document);
+    std::unordered_map<std::string, std::shared_ptr<lintdb::Quantizer>> quantizerMap = {{"field1", mockQuantizer}};
+    std::unordered_map<std::string, std::shared_ptr<lintdb::CoarseQuantizer>> coarseQuantizerMap;
 
-    // Verify encoded document
-    ASSERT_EQ(encodedDoc.encoded_fields.size(), 4);
-    EXPECT_NE(encodedDoc.encoded_fields.find("intField"), encodedDoc.encoded_fields.end());
-    EXPECT_NE(encodedDoc.encoded_fields.find("floatField"), encodedDoc.encoded_fields.end());
-    EXPECT_NE(encodedDoc.encoded_fields.find("tensorField"), encodedDoc.encoded_fields.end());
-    EXPECT_NE(encodedDoc.encoded_fields.find("tensorArrayField"), encodedDoc.encoded_fields.end());
+    lintdb::DocumentProcessor processor(schema, quantizerMap, coarseQuantizerMap, fieldMapper, mockIndexWriter);
 
-    // Create index documents
-    InvertedIndexDocument invertedDoc;
-    ForwardIndexDocument forwardDoc;
-    processor.serializeEncodedDocument(encodedDoc, invertedDoc, forwardDoc);
+    lintdb::Document document;
+    document.fields = {{"field1", lintdb::FieldValue(10)}};
 
-    // Verify forward index document
-    ASSERT_EQ(forwardDoc.stored_fields.size(), 4);
-    EXPECT_NE(forwardDoc.stored_fields.find("intField"), forwardDoc.stored_fields.end());
-    EXPECT_NE(forwardDoc.stored_fields.find("floatField"), forwardDoc.stored_fields.end());
-    EXPECT_NE(forwardDoc.stored_fields.find("tensorField"), forwardDoc.stored_fields.end());
-    EXPECT_NE(forwardDoc.stored_fields.find("tensorArrayField"), forwardDoc.stored_fields.end());
+    EXPECT_CALL(*mockIndexWriter, addDocument(_)).Times(1);
+    // quantizer does not get called for non-tensor fields
+    EXPECT_CALL(*mockQuantizer, quantize(_)).Times(0);
+
+    processor.processDocument(1, document);
+}
+
+TEST(DocumentProcessor, ProcessDocumentWithInvalidField) {
+    auto mockIndexWriter = std::make_shared<MockIndexWriter>();
+    auto mockQuantizer = std::make_shared<MockQuantizer>();
+    lintdb::FieldMapper fieldMapper;
+    lintdb::Schema schema;
+    std::unordered_map<std::string, std::shared_ptr<lintdb::Quantizer>> quantizerMap = {{"field1", mockQuantizer}};
+    std::unordered_map<std::string, std::shared_ptr<lintdb::CoarseQuantizer>> coarseQuantizerMap;
+
+    lintdb::DocumentProcessor processor(schema, quantizerMap, coarseQuantizerMap, fieldMapper, mockIndexWriter);
+
+    lintdb::Document document;
+    document.fields = {{"invalid_field", lintdb::FieldValue(10)}};
+
+    EXPECT_CALL(*mockIndexWriter, addDocument(_)).Times(0);
+    EXPECT_CALL(*mockQuantizer, quantize(_)).Times(0);
+
+    EXPECT_THROW(processor.processDocument(1, document), std::invalid_argument);
+}
+
+TEST(DocumentProcessor, ProcessDocumentWithTensorField) {
+    auto mockIndexWriter = std::make_shared<MockIndexWriter>();
+    auto mockQuantizer = std::make_shared<MockQuantizer>();
+    lintdb::FieldMapper fieldMapper;
+    lintdb::Schema schema;
+    lintdb::Field field1 = {"field1", lintdb::DataType::TENSOR, lintdb::FieldType::Indexed, {3, "", lintdb::QuantizationType::PQ}};
+    schema.fields.push_back(field1);
+
+    std::unordered_map<std::string, std::shared_ptr<lintdb::Quantizer>> quantizerMap = {{"field1", mockQuantizer}};
+    std::unordered_map<std::string, std::shared_ptr<lintdb::CoarseQuantizer>> coarseQuantizerMap;
+
+    lintdb::DocumentProcessor processor(schema, quantizerMap, coarseQuantizerMap, fieldMapper, mockIndexWriter);
+
+    lintdb::Document document;
+    document.fields = {{"field1", lintdb::FieldValue(lintdb::Tensor{1.0f, 2.0f, 3.0f})}};
+
+    EXPECT_CALL(*mockIndexWriter, addDocument(_)).Times(1);
+    EXPECT_CALL(*mockQuantizer, quantize(_)).Times(1);
+
+    processor.processDocument(1, document);
 }

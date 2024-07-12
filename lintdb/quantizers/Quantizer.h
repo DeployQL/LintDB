@@ -10,10 +10,10 @@ static const std::string QUANTIZER_FILENAME = "_residual_quantizer.bin";
 static const std::string LEGACY_QUANTIZER_FILENAME = "_binarizer.bin";
 
 enum QuantizerType {
+    UNKNOWN,
     NONE,
     BINARIZER,
     PRODUCT_ENCODER,
-    COARSE,
 };
 
 struct QuantizerConfig {

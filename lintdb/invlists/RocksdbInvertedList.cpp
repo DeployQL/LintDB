@@ -3,77 +3,22 @@
 #include <rocksdb/slice.h>
 #include <rocksdb/utilities/transaction.h>
 #include <iostream>
-#include <unordered_set>
 #include "lintdb/assert.h"
 #include "lintdb/constants.h"
 #include "lintdb/exception.h"
 #include "lintdb/invlists/RocksdbForwardIndex.h"
 #include "lintdb/schema/forward_index_generated.h"
 #include "lintdb/schema/util.h"
+#include "lintdb/invlists/ContextIterator.h"
+#include "InvertedIterator.h"
 
 namespace lintdb {
 
-RocksDBIterator::RocksDBIterator(
-        shared_ptr<rocksdb::DB> db,
-        rocksdb::ColumnFamilyHandle* column_family,
-        const uint64_t tenant,
-        const idx_t inverted_list)
-        : lintdb::Iterator(), tenant(tenant), inverted_index(inverted_list) {
-    cf = column_family->GetID();
-    prefix = lintdb::TokenKey{tenant, inverted_list, 0, 0, true}.serialize();
-
-    prefix_slice = rocksdb::Slice(this->prefix);
-    auto options = rocksdb::ReadOptions();
-
-    this->it = std::unique_ptr<rocksdb::Iterator>(
-            db->NewIterator(options, column_family));
-    it->Seek(this->prefix);
-}
-
-RocksdbInvertedList::RocksdbInvertedList(
+    RocksdbInvertedList::RocksdbInvertedList(
         std::shared_ptr<rocksdb::DB> db,
         std::vector<rocksdb::ColumnFamilyHandle*>& column_families,
-        Version& version)
-        : db_(db), column_families(column_families), version(version) {}
-
-void RocksdbInvertedList::add(const uint64_t tenant, EncodedDocument* doc) {
-    rocksdb::WriteOptions wo;
-    std::unordered_set<idx_t> unique_coarse_idx(
-            doc->codes.begin(), doc->codes.end());
-    VLOG(100) << "Unique coarse indexes: " << unique_coarse_idx.size();
-    // store ivf -> doc mapping.
-    for (const code_t& idx : unique_coarse_idx) {
-        Key key = Key{tenant, idx, doc->id};
-        std::string k_string = key.serialize();
-        rocksdb::Status status = db_->Put(
-                wo,
-                column_families[kIndexColumnIndex],
-                rocksdb::Slice(k_string),
-                rocksdb::Slice() // store nothing. we only need the key
-                                 // to tell us what documents exist.
-        );
-        assert(status.ok());
-        VLOG(100) << "Added document with id: " << doc->id
-                  << " to inverted list " << idx;
-    }
-
-    // store forward doc id -> coarse idx mapping.
-    ForwardIndexKey forward_key = ForwardIndexKey{tenant, doc->id};
-    auto fks = forward_key.serialize();
-    std::vector<idx_t> unique_coarse_idx_vec(
-            unique_coarse_idx.begin(), unique_coarse_idx.end());
-    auto mapping_ptr = create_doc_mapping(
-            unique_coarse_idx_vec.data(), unique_coarse_idx_vec.size());
-    auto mapping_status = db_->Put(
-            wo,
-            column_families[kMappingColumnIndex],
-            rocksdb::Slice(fks),
-            rocksdb::Slice(
-                    reinterpret_cast<const char*>(
-                            mapping_ptr->GetBufferPointer()),
-                    mapping_ptr->GetSize()));
-    LINTDB_THROW_IF_NOT(mapping_status.ok());
-}
+        const Version& version)
+        : version(version), db_(db), column_families(column_families) {}
 
 void RocksdbInvertedList::remove(
         const uint64_t tenant,
@@ -155,10 +100,18 @@ void RocksdbInvertedList::merge(
     }
 }
 
-unique_ptr<Iterator> RocksdbInvertedList::get_iterator(
+std::unique_ptr<Iterator> RocksdbInvertedList::get_iterator(
         const uint64_t tenant,
+        const uint8_t field,
         const idx_t inverted_list) const {
-    return std::make_unique<RocksDBIterator>(RocksDBIterator(
-            db_, column_families[kIndexColumnIndex], tenant, inverted_list));
+    return std::make_unique<RocksDBIterator>(
+            db_, column_families[kIndexColumnIndex], tenant, field, inverted_list);
+}
+
+std::unique_ptr<ContextIterator> RocksdbInvertedList::get_context_iterator(
+        const uint64_t tenant,
+        const uint8_t field_id
+) const {
+    return std::make_unique<ContextIterator>(db_, column_families[kCodesColumnIndex], tenant, field_id);
 }
 } // namespace lintdb

@@ -38,7 +38,7 @@ size_t ProductEncoder::code_size() {
 }
 
 void ProductEncoder::save(std::string path) {
-    auto quantizer_path = path + "/" + QUANTIZER_FILENAME;
+    auto quantizer_path = path;
     faiss::write_index(pq.get(), quantizer_path.c_str());
 }
 
@@ -47,10 +47,10 @@ std::unique_ptr<ProductEncoder> ProductEncoder::load(
         QuantizerConfig& config) {
     std::unique_ptr<faiss::IndexPQ> quantizer;
 
-    if (FILE* file = fopen((path + "/" + QUANTIZER_FILENAME).c_str(), "r")) {
+    if (FILE* file = fopen((path).c_str(), "r")) {
         fclose(file);
         auto qptr = std::unique_ptr<faiss::Index>(
-                faiss::read_index((path + "/" + QUANTIZER_FILENAME).c_str()));
+                faiss::read_index((path).c_str()));
         quantizer = std::unique_ptr<faiss::IndexPQ>(
                 static_cast<faiss::IndexPQ*>(qptr.release()));
     } else {

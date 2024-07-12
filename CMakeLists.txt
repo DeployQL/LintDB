@@ -10,8 +10,6 @@ set(CMAKE_TOOLCHAIN_FILE ${CMAKE_CURRENT_SOURCE_DIR}/tools/vcpkg/scripts/buildsy
 
 file(READ "version.txt" version)
 
-#add_subdirectory(third_party EXCLUDE_FROM_ALL)
-
 project(lintdb
   VERSION ${version}
   DESCRIPTION "A multi-vector database for late interaction retrieval"
@@ -22,8 +20,6 @@ set(LINTDB_VERSION ${version})
 include(GNUInstallDirs)
 
 set(CMAKE_CXX_STANDARD 17)
-
-# set(BLA_VENDOR OpenBLAS)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -fopenmp -O3 -D_LIBCPP_DISABLE_AVAILABILITY")
 

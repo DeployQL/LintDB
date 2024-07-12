@@ -1,7 +1,7 @@
 #ifndef LINTDB_INDEX_IVF_H
 #define LINTDB_INDEX_IVF_H
 
-#include <stdint.h>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -19,7 +19,13 @@
 #include "lintdb/retrievers/PlaidRetriever.h"
 #include "lintdb/retrievers/Retriever.h"
 #include "lintdb/version.h"
-#include "lintdb/schema/schema.h"
+#include "lintdb/schema/Schema.h"
+#include "lintdb/quantizers/CoarseQuantizer.h"
+#include "lintdb/invlists/IndexWriter.h"
+#include "lintdb/schema/Document.h"
+#include "lintdb/schema/DocProcessor.h"
+#include "lintdb/schema/FieldMapper.h"
+#include "lintdb/query/Query.h"
 
 // forward declare these classes and avoid including the rocksdb headers.
 namespace rocksdb {
@@ -40,20 +46,9 @@ struct Configuration {
     Version lintdb_version =
             LINTDB_VERSION; /// the current version of the index. Used
                             /// internally for feature compatibility.
-    size_t nlist = 256;     /// the number of centroids to train.
-    size_t nbits = 2;  /// the number of bits to use in residual compression.
-    size_t niter = 10; /// the number of iterations to use during training.
-    size_t dim;        /// the dimensions expected for incoming vectors.
-    size_t num_subquantizers =
-            16; /// the number of subquantizers to use in the product quantizer.
-    IndexEncoding quantizer_type =
-            IndexEncoding::BINARIZER; /// whether to compress residuals.
 
     inline bool operator==(const Configuration& other) const {
-        return nlist == other.nlist && nbits == other.nbits &&
-                niter == other.niter && dim == other.dim &&
-                quantizer_type == other.quantizer_type &&
-                num_subquantizers == other.num_subquantizers;
+        return lintdb_version == other.lintdb_version;
     }
 
     Configuration() = default;
@@ -76,21 +71,7 @@ struct IndexIVF {
     /// load an existing index.
     IndexIVF(const std::string& path, bool read_only = false);
 
-    IndexIVF(std::string path, Configuration& config);
-
-    IndexIVF(const std::string path, const Schema& schema, const Configuration& config);
-
-    [[deprecated("use the constructor with Configuration")]]
-    IndexIVF(
-            std::string path, /// path to the database.
-            size_t nlist,     /// number of centroids to use in L1 quantizing.
-            size_t dim,       /// number of dimensions per embedding.
-            size_t binarize_nbits =
-                    2, /// nbits used in the LSH encoding for esiduals.
-            size_t niter = 10,
-            size_t num_subquantizers = 16,
-            IndexEncoding quantizer_type = IndexEncoding::BINARIZER,
-            bool read_only = false);
+    IndexIVF(const std::string& path, const Schema& schema, const Configuration& config);
 
     /**
      * Copy creates a new index at the given path from a trained index. The copy
@@ -101,36 +82,14 @@ struct IndexIVF {
      *
      * @param path the path to initialize the index.
      */
-    IndexIVF(const IndexIVF& other, const std::string path);
+    IndexIVF(const IndexIVF& other, const std::string& path);
 
     /**
      * Train will learn quantization and compression parameters from the given
      * data.
      *
-     * @param n the number of embeddings to train on.
-     * @param embeddings the embeddings to train on.
-     * @param nlist the number of centroids to train. Required if not provided
-     * at initialization.
-     * @param niter the number of iterations to train. Required if not provided
-     * at initialization.
      */
-    void train(
-            size_t n,
-            std::vector<float>& embeddings,
-            size_t nlist = 0,
-            size_t niter = 0);
-    void train(
-            float* embeddings,
-            size_t n,
-            size_t dim,
-            size_t nlist = 0,
-            size_t niter = 0);
-    void train(
-            float* embeddings,
-            int n,
-            int dim,
-            size_t nlist = 0,
-            size_t niter = 0);
+    void train(const std::vector<Document>& docs);
 
     /**
      * set_centroids overwrites the centroids in the encoder.
@@ -160,31 +119,7 @@ struct IndexIVF {
      */
     std::vector<SearchResult> search(
             const uint64_t tenant,
-            const float* data,
-            const int n,
-            const int dim,
-            const size_t k,
-            const SearchOptions& opts = SearchOptions()) const;
-
-    std::vector<SearchResult> search(
-            const uint64_t tenant,
-            const EmbeddingBlock& block,
-            const size_t k,
-            const SearchOptions& opts = SearchOptions()) const;
-
-    std::vector<SearchResult> search(
-            const uint64_t tenant,
-            const float* data,
-            const int n,
-            const int dim,
-            const size_t n_probe,
-            const size_t k,
-            const SearchOptions& opts = SearchOptions()) const;
-
-    std::vector<SearchResult> search(
-            const uint64_t tenant,
-            const EmbeddingBlock& block,
-            const size_t n_probe,
+            const Query& query,
             const size_t k,
             const SearchOptions& opts = SearchOptions()) const;
 
@@ -195,12 +130,12 @@ struct IndexIVF {
      * @param docs a vector of EmbeddingPassages. This includes embeddings and
      * ids.
      */
-    void add(const uint64_t tenant, const std::vector<EmbeddingPassage>& docs);
+    void add(const uint64_t tenant, const std::vector<Document>& docs);
 
     /**
      * Add a single document.
      */
-    void add_single(const uint64_t tenant, const EmbeddingPassage& doc);
+    void add_single(const uint64_t tenant, const Document& doc);
 
     /**
      * Remove deletes documents from the index by id.
@@ -215,7 +150,7 @@ struct IndexIVF {
      */
     void update(
             const uint64_t tenant,
-            const std::vector<EmbeddingPassage>& docs);
+            const std::vector<Document>& docs);
 
     /**
      * Merge will combine the index with another index.
@@ -226,7 +161,7 @@ struct IndexIVF {
      * multiprocess building of indices.
      *
      */
-    void merge(const std::string path);
+    void merge(const std::string& path);
 
     /**
      * Index should be able to resume from a previous state.
@@ -239,8 +174,11 @@ struct IndexIVF {
     void close();
 
     ~IndexIVF() {
-        for (auto cf : column_families) {
-            db->DestroyColumnFamilyHandle(cf);
+        for (auto& cf : column_families) {
+            if(cf) {
+                auto status = db->DestroyColumnFamilyHandle(cf);
+                assert(status.ok());
+            }
         }
     }
 
@@ -249,21 +187,27 @@ struct IndexIVF {
     std::shared_ptr<rocksdb::DB> db;
     std::vector<rocksdb::ColumnFamilyHandle*> column_families;
     Schema schema;
+    std::shared_ptr<FieldMapper> field_mapper;
 
-    std::shared_ptr<Encoder> encoder;
-    std::shared_ptr<Quantizer> quantizer;
+    std::unordered_map<std::string, std::shared_ptr<CoarseQuantizer>> coarse_quantizer_map;
+    std::unordered_map<std::string, std::shared_ptr<Quantizer>> quantizer_map;
     std::unique_ptr<Retriever> retriever;
 
-    // helper to initialize the inverted list.
-    void initialize_inverted_list(Version& version);
-    // helper to initialize the encoder, quantizer, and retrievers. These are
-    // all inter-related.
-    void initialize_retrieval(IndexEncoding quantizer_type);
-    // instead of initializing, load from disk.
-    void load_retrieval(std::string path, const Configuration& config);
-
+    std::shared_ptr<DocumentProcessor> document_processor;
+    // Note: invertedList and ForwardIndex are becoming read-only classes for retrieval.
+    // writing is done through the index writer. Merging/Removing will likely move to the writer as well.
     std::shared_ptr<InvertedList> inverted_list_;
     std::shared_ptr<ForwardIndex> index_;
+
+    // helper to initialize the inverted list.
+    void initialize_inverted_list(const Version& version);
+    // helper to initialize the encoder, quantizer, and retrievers. These are
+    // all inter-related.
+    void initialize_retrieval();
+    // instead of initializing, load from disk.
+    void load_retrieval(const std::string& path, const Configuration& config);
+
+
 
     /**
      * Flush data to disk.
@@ -278,7 +222,7 @@ struct IndexIVF {
      *
      */
     void write_metadata();
-    Configuration read_metadata(std::string path);
+    Configuration read_metadata(const std::string& path);
 };
 
 } // namespace lintdb

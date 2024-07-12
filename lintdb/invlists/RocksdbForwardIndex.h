@@ -14,6 +14,7 @@
 #include "lintdb/invlists/keys.h"
 #include "lintdb/schema/util.h"
 #include "lintdb/version.h"
+#include "lintdb/invlists/ForwardIndexIterator.h"
 
 namespace lintdb {
 
@@ -21,7 +22,7 @@ struct RocksdbForwardIndex : public ForwardIndex {
     RocksdbForwardIndex(
             std::shared_ptr<rocksdb::DB> db,
             std::vector<rocksdb::ColumnFamilyHandle*>& column_families,
-            Version& version);
+            const Version& version);
 
     // store_codes is used to determine whether to store the codes in the
     // forward index. ColBERT uses the forward index for codes, but XTR does
@@ -29,7 +30,7 @@ struct RocksdbForwardIndex : public ForwardIndex {
     void add(
             const uint64_t tenant,
             EncodedDocument* doc,
-            bool store_codes = true) override;
+            bool store_codes = true);
     void remove(const uint64_t tenant, std::vector<idx_t> ids) override;
 
     void merge(rocksdb::DB* db, std::vector<rocksdb::ColumnFamilyHandle*>& cfs)
@@ -44,6 +45,10 @@ struct RocksdbForwardIndex : public ForwardIndex {
     std::vector<std::unique_ptr<DocumentMetadata>> get_metadata(
             const uint64_t tenant,
             const std::vector<idx_t>& ids) const override;
+
+    std::unique_ptr<ForwardIndexIterator> get_iterator(
+            const uint64_t tenant,
+            idx_t column_index) const override;
 
    protected:
     Version version;

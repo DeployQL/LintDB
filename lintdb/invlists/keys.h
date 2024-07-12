@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include "lintdb/api.h"
+#include "lintdb/schema/DataTypes.h"
 
 using namespace std;
 
@@ -30,16 +31,20 @@ struct Key {
 /**
  * TokenKey is an inverted list key that maps to the token of a document.
  *
- * The total key is: tenant::inverted_list_id::doc_id::doc_token_id.
+ * The total key is: tenant::field::inverted_list_id::doc_id::doc_token_id.
  *
  * When searching against this key, exclude_id removes both the doc_id and
  * doc_token_id.
+ *
+ * vector key: tenant::field::field_type::inverted_list::doc_id
+ * text key: tenant::field::field_type::field_size::field_value::doc_id
  */
 struct TokenKey {
     uint64_t tenant;
-    idx_t inverted_list_id;
+    uint8_t field;
+    idx_t inverted_index_list;
     idx_t doc_id;
-    idx_t token_id;
+    idx_t token_id = 0;
     bool exclude_id;
 
     std::string serialize() const;
@@ -59,22 +64,16 @@ struct ForwardIndexKey {
     static ForwardIndexKey from_slice(const rocksdb::Slice& slice);
 };
 
-template <typename T>
-T load_bigendian(void const* bytes) {
-    T num = 0;
-    for (size_t i = 0; i < sizeof(T); ++i) {
-        num |= static_cast<T>(static_cast<const unsigned char*>(bytes)[i])
-                << (8 * (sizeof(T) - i - 1));
-    }
-    return num;
-}
+struct ContextKey {
+    uint64_t tenant;
+    uint8_t field;
+    idx_t id;
+    bool exclude_id;
 
-template <typename T>
-void store_bigendian(T num, std::vector<unsigned char>& bigEndian) {
-    for (int i = sizeof(T) - 1; i >= 0; i--) {
-        bigEndian.push_back((num >> (8 * i)) & 0xff);
-    }
-}
+    std::string serialize() const;
+
+    static ContextKey from_slice(const rocksdb::Slice& slice);
+};
 } // namespace lintdb
 
 #endif

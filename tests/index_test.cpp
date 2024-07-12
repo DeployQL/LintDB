@@ -2,27 +2,111 @@
 // TODO(mbarta): we introspect the invlists during tests. We can fix this with
 // better abstractions.
 #define private public
-#include <faiss/utils/random.h>
-#include <iostream>
-#include <map>
-#include <vector>
-#include "lintdb/EmbeddingBlock.h"
-#include "lintdb/Passages.h"
 #include "lintdb/SearchOptions.h"
 #include "lintdb/index.h"
-#include "lintdb/invlists/RocksdbInvertedList.h"
 #include "lintdb/util.h"
 #include "util.h"
+#include "lintdb/schema/Schema.h"
+#include "lintdb/schema/Document.h"
+#include "lintdb/query/Query.h"
+#include "lintdb/query/QueryNode.h"
 
 using ::testing::TestWithParam;
 using ::testing::Values;
 
-class IndexTest : public TestWithParam<lintdb::IndexEncoding> {
+lintdb::Schema create_colbert_schema(lintdb::QuantizerType type = lintdb::QuantizerType::NONE, size_t num_centroids = 10, std::vector<lintdb::DataType> filter_types = {}){
+    lintdb::Schema schema;
+
+    lintdb::Field colbert;
+    colbert.name = "colbert";
+    colbert.data_type = lintdb::DataType::TENSOR;
+    colbert.field_types = {lintdb::FieldType::Colbert};
+    lintdb::FieldParameters fp;
+    fp.dimensions = 128;
+    fp.num_centroids = num_centroids;
+    fp.num_iterations = 2;
+    fp.quantization = type;
+    fp.nbits = 1;
+    if ( type == lintdb::QuantizerType::PRODUCT_ENCODER) {
+        fp.num_subquantizers = 16;
+    }
+    colbert.parameters = fp;
+
+    schema.add_field(colbert);
+
+    if(!filter_types.empty()) {
+        for(size_t i=0 ; i < filter_types.size(); i++) {
+            lintdb::Field filter;
+            filter.name = "filter" + std::to_string(i);
+            filter.data_type = filter_types[i];
+            filter.field_types = {lintdb::FieldType::Indexed};
+            lintdb::FieldParameters fpp;
+            filter.parameters = fpp;
+
+            schema.add_field(filter);
+        }
+    }
+
+    return schema;
+}
+
+lintdb::Document create_document(size_t num_tokens, size_t dim, const std::vector<std::string> filters = {}, const std::vector<lintdb::FieldValue> filter_values = {}){
+    std::vector<float> vector;
+    for (size_t j = 0; j < num_tokens; j++) {
+        std::vector<float> data(dim, j);
+        vector.insert(vector.end(), data.begin(), data.end());
+    }
+    lintdb::FieldValue fv(vector, num_tokens);
+    lintdb::Document doc;
+    doc.addField("colbert", fv);
+
+    assert(filters.size() == filter_values.size());
+
+    for(int i = 0; i < filters.size(); i++) {
+        doc.addField(filters[i], filter_values[i]);
+    }
+
+    return doc;
+}
+
+std::vector<lintdb::Document> create_colbert_documents(size_t num_docs, size_t num_tokens, size_t dim, std::vector<lintdb::DataType> filter_types = {}){
+    std::vector<lintdb::Document> docs;
+    for (idx_t i = 0; i < num_docs; i++) {
+        std::vector<float> vector;
+        for (size_t j = 0; j < num_tokens; j++) {
+            std::vector<float> data(dim, j);
+            vector.insert(vector.end(), data.begin(), data.end());
+        }
+        lintdb::FieldValue fv(vector, num_tokens);
+        lintdb::Document doc;
+        doc.addField("colbert", fv);
+
+        if (!filter_types.empty()) {
+            for(int i = 0; i < filter_types.size(); i++) {
+                if (filter_types[i] == lintdb::DataType::TEXT) {
+                    lintdb::FieldValue text_value("test");
+                    doc.addField("filter" + std::to_string(i), text_value);
+                } else if (filter_types[i] == lintdb::DataType::INTEGER) {
+                    lintdb::FieldValue int_value(1);
+                    doc.addField("filter" + std::to_string(i), int_value);
+                }
+            }
+        }
+
+        doc.id = i;
+
+        docs.push_back(doc);
+    }
+    return docs;
+}
+
+class IndexTest : public TestWithParam<lintdb::QuantizerType> {
    public:
     ~IndexTest() override {}
     void SetUp() override {
         type = GetParam();
     }
+
     void TearDown() override {
         std::filesystem::remove_all(temp_db);
         if (!temp_db_two.empty()) {
@@ -31,18 +115,19 @@ class IndexTest : public TestWithParam<lintdb::IndexEncoding> {
     }
 
    protected:
-    lintdb::IndexEncoding type;
     std::filesystem::path temp_db;
     std::filesystem::path temp_db_two;
+    lintdb::QuantizerType type;
 };
 
 // Demonstrate some basic assertions.
 TEST_P(IndexTest, InitializesCorrectly) {
     auto temp_db = create_temporary_directory();
 
-    lintdb::IndexIVF index(temp_db.string(), 5, 128, 2, 4, 16, type);
-
-    EXPECT_EQ(index.config.nlist, 5);
+    lintdb::Configuration config;
+    lintdb::Schema schema = create_colbert_schema(type);
+    lintdb::IndexIVF index(
+            temp_db.string(), schema, config);
 
     EXPECT_GE(index.config.lintdb_version.major, 0);
     EXPECT_GE(index.config.lintdb_version.minor, 1);
@@ -51,379 +136,331 @@ TEST_P(IndexTest, InitializesCorrectly) {
     EXPECT_TRUE(index.config.lintdb_version.metadata_enabled);
 }
 
-TEST_P(IndexTest, LegacytrainsCorrectly) {
-    // This method tests the legacy pathway for initializing the encoder and
-    // testing it. nlist and niter are no longer initialized with the encoder,
-    // so we need to ensure it still works.
-    size_t dim = 128;
-    // we'll generate num_docs * num_tokens random vectors for training.
-    // keep in mind this needs to be larger than the number of dimensions.
-    size_t num_docs = 100;
-    size_t num_tokens = 100;
-
-    size_t kclusters = 250; // number of centroids to calculate.
-
-    size_t centroid_bits = 1;
-    temp_db = create_temporary_directory();
-    // buffer for the randomly created vectors.
-    // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
-    std::vector<float> buf(dim * (num_docs * num_tokens));
-
-    faiss::rand_smooth_vectors(num_docs * num_tokens, dim, buf.data(), 1234);
-
-    lintdb::IndexIVF index(
-            temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
-
-    // legacy calling structure. nlist and niter are only passed at
-    // initialization of encoder.
-    index.train(num_docs * num_tokens, buf);
-}
-
 TEST_P(IndexTest, TrainsCorrectly) {
-    size_t dim = 128;
-    // we'll generate num_docs * num_tokens random vectors for training.
-    // keep in mind this needs to be larger than the number of dimensions.
-    size_t num_docs = 100;
-    size_t num_tokens = 100;
-
-    size_t kclusters = 250; // number of centroids to calculate.
-
-    size_t centroid_bits = 1;
     temp_db = create_temporary_directory();
-    // buffer for the randomly created vectors.
-    // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
-    std::vector<float> buf(dim * (num_docs * num_tokens));
 
-    faiss::rand_smooth_vectors(num_docs * num_tokens, dim, buf.data(), 1234);
-
+    lintdb::Configuration config;
+    lintdb::Schema schema = create_colbert_schema(type);
     lintdb::IndexIVF index(
-            temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
+            temp_db.string(), schema, config);
 
-    index.train(num_docs * num_tokens, buf, kclusters, 2);
-    EXPECT_EQ(index.config.nlist, 250);
+    auto docs = create_colbert_documents(10, 10, 128);
 
-    std::vector<float> fake_doc(dim * num_tokens);
-
-    faiss::rand_smooth_vectors(num_tokens, dim, fake_doc.data(), 1234);
-    // this doc is row-major on disk, and we can read memory as (num_tokensxdim)
-    lintdb::EmbeddingBlock block(fake_doc.data(), num_tokens, dim);
-
-    lintdb::EmbeddingPassage doc(fake_doc.data(), num_tokens, dim, 1);
-    std::vector<lintdb::EmbeddingPassage> docs = {doc};
-    index.add(lintdb::kDefaultTenant, docs);
-
-    // without knowing what ivf list we assigned the doc to, make sure one
-    // document is indexed. this amounts to a full scan.
-    for (idx_t i = 0; i < kclusters; i++) {
-        lintdb::Key start{0, i, 0, true};
-        lintdb::Key end{0, i, std::numeric_limits<idx_t>::max(), false};
-
-        auto options = rocksdb::ReadOptions();
-        rocksdb::Slice end_slice(end.serialize());
-        options.iterate_upper_bound = &end_slice;
-        std::string start_string = start.serialize();
-        auto it = std::unique_ptr<rocksdb::Iterator>(index.db->NewIterator(
-                options, index.column_families[lintdb::kIndexColumnIndex]));
-
-        rocksdb::Slice prefix(start_string);
-        it->Seek(prefix);
-        for (; it->Valid(); it->Next()) {
-            auto k = it->key().ToString();
-            auto key = lintdb::Key::from_slice(k);
-
-            auto id = key.id;
-            EXPECT_EQ(id, idx_t(1));
-        }
-    }
-}
-
-TEST_P(IndexTest, TrainsWithCompressionCorrectly) {
-    size_t dim = 128;
-    // we'll generate num_docs * num_tokens random vectors for training.
-    // keep in mind this needs to be larger than the number of dimensions.
-    size_t num_docs = 100;
-    size_t num_tokens = 100;
-
-    size_t kclusters = 250; // number of centroids to calculate.
-
-    size_t centroid_bits = 2;
-    temp_db = create_temporary_directory();
-    // buffer for the randomly created vectors.
-    // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
-    std::vector<float> buf(dim * (num_docs * num_tokens));
-
-    faiss::rand_smooth_vectors(num_docs * num_tokens, dim, buf.data(), 1234);
-
-    lintdb::IndexIVF index(
-            temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
-
-    index.train(num_docs * num_tokens, buf);
-    EXPECT_EQ(index.config.nlist, 250);
-
-    std::vector<float> fake_doc(dim * num_tokens);
-
-    faiss::rand_smooth_vectors(num_tokens, dim, fake_doc.data(), 1234);
-    // this doc is row-major on disk, and we can read memory as (num_tokensxdim)
-    lintdb::EmbeddingBlock block(fake_doc.data(), num_tokens, dim);
-
-    lintdb::EmbeddingPassage doc(fake_doc.data(), num_tokens, dim, 1);
-    std::vector<lintdb::EmbeddingPassage> docs = {doc};
-    index.add(lintdb::kDefaultTenant, docs);
-
-    // without knowing what ivf list we assigned the doc to, make sure one
-    // document is indexed. this amounts to a full scan.
-    int count = 0;
-    for (idx_t i = 0; i < kclusters; i++) {
-        lintdb::Key start{0, i, 0, true};
-        lintdb::Key end{0, i, std::numeric_limits<idx_t>::max(), false};
-        std::string start_string = start.serialize();
-        std::string end_string = end.serialize();
-        lintdb::RocksdbInvertedList casted =
-                static_cast<lintdb::RocksdbInvertedList&>(
-                        reinterpret_cast<lintdb::RocksdbInvertedList&>(
-                                *index.index_));
-        std::unique_ptr<lintdb::Iterator> it = casted.get_iterator(0, i);
-        for (; it->has_next(); it->next()) {
-            lintdb::TokenKey key = it->get_key();
-            auto id = key.doc_id;
-            EXPECT_EQ(id, idx_t(1));
-            count++;
-        }
-    }
-
-    EXPECT_GE(count, 1);
-}
-
-TEST(IndexTest, RawPassagesConstruct) {
-    float data = 1.0;
-    auto block_passage = lintdb::EmbeddingPassage(&data, 1, 1, 1, {});
-
-    auto text_passage = lintdb::TextPassage("test", 1, {});
+    index.train(docs);
+    EXPECT_EQ(index.coarse_quantizer_map.size(), 1);
+    // we only expect a quantizer when the quantizer type isn't NONE
+    EXPECT_EQ(index.quantizer_map.size(),  1);
 }
 
 TEST_P(IndexTest, SearchCorrectly) {
-    size_t dim = 128;
-    // we'll generate num_docs * num_tokens random vectors for training.
-    // keep in mind this needs to be larger than the number of dimensions.
-    size_t num_docs = 100;
-    size_t num_tokens = 100;
-
-    size_t kclusters = 250; // number of centroids to calculate.
-
-    size_t centroid_bits = 2;
     temp_db = create_temporary_directory();
-    // buffer for the randomly created vectors.
-    // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
-    std::vector<float> buf(dim * (num_docs * num_tokens));
-    // fake data where every vector is either all 1s,2s...9s.
-    for (size_t i = 0; i < num_docs * num_tokens; i++) {
-        for (size_t j = 0; j < dim; j++) {
-            buf[i * dim + j] = i % 11 + 1;
-        }
-    }
-    // normalize before training. ColBERT returns normalized embeddings.
-    lintdb::normalize_vector(buf.data(), num_docs * num_tokens, dim);
 
+    lintdb::Configuration config;
+    lintdb::Schema schema = create_colbert_schema(type, 10);
     lintdb::IndexIVF index(
-            temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
+            temp_db.string(), schema, config);
 
-    index.train(num_docs * num_tokens, buf);
+    auto docs = create_colbert_documents(10, 10, 128);
+    index.train(docs);
 
-    EXPECT_EQ(index.config.nlist, 250);
+    index.add(1, docs);
 
-    std::vector<float> fake_doc(dim * num_tokens, 3);
-    lintdb::normalize_vector(fake_doc.data(), num_tokens, dim);
+    lintdb::FieldValue fv(std::vector<float>(1280, 1), 10);
+    std::unique_ptr<lintdb::VectorQueryNode> root = std::make_unique<lintdb::VectorQueryNode>("colbert", fv);
+    lintdb::Query query(std::move(root));
 
-    lintdb::EmbeddingBlock block{fake_doc.data(), num_tokens, dim};
+    lintdb::SearchOptions opt;
+    opt.n_probe = 100;
+    opt.k_top_centroids = 10;
 
-    lintdb::EmbeddingPassage doc(fake_doc.data(), num_tokens, dim, 1);
-    std::vector<lintdb::EmbeddingPassage> docs = {doc};
-    index.add(lintdb::kDefaultTenant, docs);
+    auto results = index.search(1, query, 10, opt);
 
-    auto opts = lintdb::SearchOptions();
-    opts.centroid_score_threshold = 0;
-    opts.k_top_centroids = 250;
-    auto results = index.search(lintdb::kDefaultTenant, block, 250, 5, opts);
+    // create a set of range 0...9
+    std::set<idx_t> expected;
+    for (idx_t i = 0; i < 10; i++) {
+        expected.insert(i);
+    }
 
-    ASSERT_GT(results.size(), 0);
+    EXPECT_EQ(results.size(), 10);
 
-    auto actual = results[0].id;
-    EXPECT_EQ(actual, 1);
+    // check that the results are in the expected set.
+    for (auto& result : results) {
+        EXPECT_TRUE(expected.find(result.id) != expected.end()) << "id: " << result.id;
+        // remove the result from the set.
+        expected.erase(result.id);
+    }
+
+}
+
+TEST_P(IndexTest, SearchCorrectlyWithFilter) {
+    temp_db = create_temporary_directory();
+
+    lintdb::Configuration config;
+    lintdb::Schema schema = create_colbert_schema(type, 10, {lintdb::DataType::TEXT, lintdb::DataType::INTEGER});
+    lintdb::IndexIVF index(
+            temp_db.string(), schema, config);
+
+    auto docs = create_colbert_documents(10, 10, 128, {lintdb::DataType::TEXT, lintdb::DataType::INTEGER});
+    index.train(docs);
+
+    index.add(1, docs);
+    lintdb::FieldValue fv(std::vector<float>(1280, 1), 10);
+    std::unique_ptr<lintdb::VectorQueryNode> vector_node = std::make_unique<lintdb::VectorQueryNode>("colbert", fv);
+    lintdb::FieldValue text_value("test");
+    std::unique_ptr<lintdb::QueryNode> text_node = std::make_unique<lintdb::TermQueryNode>("filter0", text_value);
+    lintdb::FieldValue int_value(1);
+    std::unique_ptr<lintdb::QueryNode> int_node = std::make_unique<lintdb::TermQueryNode>("filter1", int_value);
+
+    std::vector<std::unique_ptr<lintdb::QueryNode>> children;
+    children.push_back(std::move(vector_node));
+    children.push_back(std::move(text_node));
+    children.push_back(std::move(int_node));
+    std::unique_ptr<lintdb::QueryNode> root = std::make_unique<lintdb::AndQueryNode>(std::move(children));
+
+    lintdb::Query query(std::move(root));
+
+    lintdb::SearchOptions opt;
+    opt.n_probe = 100;
+    opt.k_top_centroids = 10;
+
+    auto results = index.search(1, query, 50, opt);
+    // create a set of range 0...9
+    std::set<idx_t> expected;
+    for (idx_t i = 0; i < 10; i++) {
+        expected.insert(i);
+    }
+
+    EXPECT_EQ(results.size(), 10);
+
+    // check that the results are in the expected set.
+    for (auto& result : results) {
+        EXPECT_TRUE(expected.find(result.id) != expected.end()) << "id: " << result.id;
+        // remove the result from the set.
+        expected.erase(result.id);
+    }
+
+    // add docs with only a text filter.
+    auto text_docs = create_colbert_documents(10, 10, 128, {lintdb::DataType::TEXT});
+    // fudge the doc id to be different.
+    for (auto& doc : text_docs) {
+        doc.id += 10;
+    }
+
+    index.add(1, text_docs);
+
+    // when we search with the integer filter, we should get back the same ten results.
+    lintdb::FieldValue int_query_value(1);
+    std::unique_ptr<lintdb::QueryNode> int_query_node = std::make_unique<lintdb::TermQueryNode>("filter1", int_query_value);
+    std::unique_ptr<lintdb::VectorQueryNode> int_vector_node = std::make_unique<lintdb::VectorQueryNode>("colbert", fv);
+    std::vector<std::unique_ptr<lintdb::QueryNode>> int_children;
+    int_children.push_back(std::move(int_vector_node));
+    int_children.push_back(std::move(int_query_node));
+    std::unique_ptr<lintdb::QueryNode> int_root = std::make_unique<lintdb::AndQueryNode>(std::move(int_children));
+    lintdb::Query int_query(std::move(int_root));
+
+    auto int_results = index.search(1, int_query, 50, opt);
+    EXPECT_EQ(int_results.size(), 10);
+
+    std::set<idx_t> int_expected;
+    for (idx_t i = 0; i < 10; i++) {
+        int_expected.insert(i);
+    }
+
+    // check that the results are in the expected set.
+    for (auto& result : int_results) {
+        EXPECT_TRUE(int_expected.find(result.id) != int_expected.end()) << "id: " << result.id;
+        // remove the result from the set.
+        int_expected.erase(result.id);
+    }
+
+    // when we search with the text filter, we should get back 20 results.
+    lintdb::FieldValue text_query_value("test");
+    std::unique_ptr<lintdb::QueryNode> text_query_node = std::make_unique<lintdb::TermQueryNode>("filter0", text_query_value);
+    std::vector<std::unique_ptr<lintdb::QueryNode>> text_children;
+
+    std::unique_ptr<lintdb::VectorQueryNode> text_vector_node = std::make_unique<lintdb::VectorQueryNode>("colbert", fv);
+    text_children.push_back(std::move(text_vector_node));
+    text_children.push_back(std::move(text_query_node));
+    std::unique_ptr<lintdb::QueryNode> text_root = std::make_unique<lintdb::AndQueryNode>(std::move(text_children));
+    lintdb::Query text_query(std::move(text_root));
+
+    auto text_results = index.search(1, text_query, 50, opt);
+    EXPECT_EQ(text_results.size(), 20) << "expected the original 10 and the 10 with only text filter";
+
+    std::set<idx_t> text_expected;
+    for (idx_t i = 0; i < 20; i++) {
+        text_expected.insert(i);
+    }
+
+    // check that the results are in the expected set.
+    for (auto& result : text_results) {
+        EXPECT_TRUE(text_expected.find(result.id) != text_expected.end()) << "id: " << result.id;
+        // remove the result from the set.
+        text_expected.erase(result.id);
+    }
+
+    // now let's search for a document with a text filter that doesn't exist.
+    lintdb::FieldValue text_value_two("test2");
+    std::unique_ptr<lintdb::QueryNode> text_node_two = std::make_unique<lintdb::TermQueryNode>("filter0", text_value_two);
+
+    auto text_children_two = std::vector<std::unique_ptr<lintdb::QueryNode>>();
+    std::unique_ptr<lintdb::VectorQueryNode> text_two_vector_node = std::make_unique<lintdb::VectorQueryNode>("colbert", fv);
+    text_children_two.push_back(std::move(text_two_vector_node));
+    text_children_two.push_back(std::move(text_node_two));
+    std::unique_ptr<lintdb::QueryNode> text_root_two = std::make_unique<lintdb::AndQueryNode>(std::move(text_children_two));
+
+    lintdb::Query text_query_two(std::move(text_root_two));
+
+    auto text_results_two = index.search(1, text_query_two, 50, opt);
+    EXPECT_EQ(text_results_two.size(), 0) << "should not find any results for a non-existent text filter";
 }
 
 TEST_P(IndexTest, LoadsCorrectly) {
-    size_t dim = 128;
-    // we'll generate num_docs * num_tokens random vectors for training.
-    // keep in mind this needs to be larger than the number of dimensions.
-    size_t num_docs = 100;
-    size_t num_tokens = 100;
-
-    size_t kclusters = 250; // number of centroids to calculate.
-
-    size_t centroid_bits = 1;
     temp_db = create_temporary_directory();
-    // buffer for the randomly created vectors.
-    // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
-    std::vector<float> buf(dim * (num_docs * num_tokens));
-    // fake data where every vector is either all 1s,2s...9s.
-    for (size_t i = 0; i < num_docs * num_tokens; i++) {
-        for (size_t j = 0; j < dim; j++) {
-            buf[i * dim + j] = i % 11 + 1;
-        }
-    }
 
-    lintdb::IndexIVF* index = new lintdb::IndexIVF(
-            temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
-    std::cout << temp_db.string() << std::endl;
-    index->train(num_docs * num_tokens, buf);
+    lintdb::Configuration config;
+    lintdb::Schema schema = create_colbert_schema(type);
+    lintdb::IndexIVF index(
+            temp_db.string(), schema, config);
 
+    auto docs = create_colbert_documents(10, 10, 128);
+
+    index.train(docs);
+
+    std::cout << "HERE" << std::endl;
+    index.add(1, docs);
+    std::cout << "HERE" << std::endl;
     auto loaded_index = lintdb::IndexIVF(temp_db.string(), true);
 
-    std::vector<float> query(dim * num_tokens, 1);
-    loaded_index.search(
-            lintdb::kDefaultTenant, query.data(), num_tokens, dim, 10, 5);
+    lintdb::FieldValue fv(std::vector<float>(1280, 1), 10);
+    std::unique_ptr<lintdb::VectorQueryNode> root = std::make_unique<lintdb::VectorQueryNode>("colbert", fv);
+    lintdb::Query query(std::move(root));
+    std::cout << "HERE" << std::endl;
+    auto one_results = index.search(
+            1, query, 10);
+    std::cout << "HERE" << std::endl;
+    lintdb::SearchOptions opt;
+    opt.n_probe = 100;
+    opt.k_top_centroids = 10;
+    auto results = loaded_index.search(
+            1, query, 10, opt);
+    std::cout << "HERE" << std::endl;
+    EXPECT_EQ(results.size(), one_results.size());
+
+    index.close();
+    loaded_index.close();
 }
 
 TEST_P(IndexTest, MergeCorrectly) {
-    size_t dim = 128;
-    // we'll generate num_docs * num_tokens random vectors for training.
-    // keep in mind this needs to be larger than the number of dimensions.
-    size_t num_docs = 100;
-    size_t num_tokens = 100;
-
-    size_t kclusters = 2; // number of centroids to calculate.
-
-    size_t centroid_bits = 2;
-    std::filesystem::path path = std::filesystem::temp_directory_path();
     temp_db = create_temporary_directory();
-    // buffer for the randomly created vectors.
-    // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
-    std::vector<float> buf(dim * (num_docs * num_tokens));
-    // fake data where every vector is either all 1s,2s...9s.
-    for (size_t i = 0; i < num_docs * num_tokens; i++) {
-        for (size_t j = 0; j < dim; j++) {
-            buf[i * dim + j] = i % 11 + 1;
-        }
-    }
-    // normalize before training. ColBERT returns normalized embeddings.
-    lintdb::normalize_vector(buf.data(), num_docs * num_tokens, dim);
 
+    lintdb::Configuration config;
+    lintdb::Schema schema = create_colbert_schema(type);
     lintdb::IndexIVF index(
-            temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
+            temp_db.string(), schema, config);
 
-    index.train(num_docs * num_tokens, buf, kclusters, 2);
+    auto docs = create_colbert_documents(10, 10, 128);
 
-    EXPECT_EQ(index.config.nlist, 2);
+    index.train(docs);
 
-    std::vector<float> fake_doc(dim * num_tokens, 3);
-    lintdb::normalize_vector(fake_doc.data(), num_tokens, dim);
+    index.add(1, {docs[0]});
 
-    lintdb::EmbeddingBlock block{fake_doc.data(), num_tokens, dim};
-
-    lintdb::EmbeddingPassage doc(fake_doc.data(), num_tokens, dim, 1);
-    std::vector<lintdb::EmbeddingPassage> docs = {doc};
-    index.add(lintdb::kDefaultTenant, docs);
-
-    // create a second db.
-    std::filesystem::path path_two = std::filesystem::temp_directory_path();
+    index.save();
+    std::cout << "first file path: " << temp_db.string() << std::endl;
     temp_db_two = create_temporary_directory();
+    std::cout << "second file path: " << temp_db_two.string() << std::endl;
+//
+//    // create a second db.
+    std::filesystem::path path_two = std::filesystem::temp_directory_path();
     // copy the first index to create the second db.
-    auto index_two = lintdb::IndexIVF(index, temp_db_two.string());
-    lintdb::EmbeddingPassage doc_two(fake_doc.data(), num_tokens, dim, 2);
-    std::vector<lintdb::EmbeddingPassage> docs_two = {doc_two};
-    index_two.add(lintdb::kDefaultTenant, docs_two);
+    // this makes it simpler to add a document, since we don't need to retrain.
+    lintdb::IndexIVF index_two(
+            index, temp_db_two.string());
+
+    index_two.add(1, {docs[1]});
 
     // merge the two indices.
     index.merge(temp_db_two.string());
-    std::cout << "merged indices" << std::endl;
 
     index.flush();
 
     auto opts = lintdb::SearchOptions();
-    opts.centroid_score_threshold = 0;
-    opts.nearest_tokens_to_fetch = 1000;
+    opts.n_probe = 100;
+    opts.k_top_centroids = 10;
 
-    std::vector<float> buf_two(dim * num_tokens, 0);
-    for (size_t i = 0; i < num_tokens; i++) {
-        for (size_t j = 0; j < dim; j++) {
-            buf_two[i * dim + j] = i % 11 + 1;
-        }
-    }
-    lintdb::normalize_vector(buf_two.data(), num_tokens, dim);
+    lintdb::FieldValue fv(std::vector<float>(1280, 1), 10);
+    std::unique_ptr<lintdb::VectorQueryNode> root = std::make_unique<lintdb::VectorQueryNode>("colbert", fv);
+    lintdb::Query query(std::move(root));
 
-    // faiss::rand_smooth_vectors(num_tokens, dim, buf_two.data(), 1234);
-    lintdb::EmbeddingBlock block_two{buf_two.data(), num_tokens, dim};
-    auto results =
-            index.search(lintdb::kDefaultTenant, block_two, 200, 5, opts);
+
+    auto results = index.search(1, query, 5, opts);
     EXPECT_EQ(results.size(), 2);
 }
 
-TEST_P(IndexTest, SearchWithMetadataCorrectly) {
-    size_t dim = 128;
-    // we'll generate num_docs * num_tokens random vectors for training.
-    // keep in mind this needs to be larger than the number of dimensions.
-    size_t num_docs = 100;
-    size_t num_tokens = 100;
-
-    size_t kclusters = 250; // number of centroids to calculate.
-
-    size_t centroid_bits = 2;
-    temp_db = create_temporary_directory();
-    // buffer for the randomly created vectors.
-    // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
-    std::vector<float> buf(dim * (num_docs * num_tokens));
-    // fake data where every vector is either all 1s,2s...9s.
-    for (size_t i = 0; i < num_docs * num_tokens; i++) {
-        for (size_t j = 0; j < dim; j++) {
-            buf[i * dim + j] = i % 11 + 1;
-        }
-    }
-    // normalize before training. ColBERT returns normalized embeddings.
-    lintdb::normalize_vector(buf.data(), num_docs * num_tokens, dim);
-
-    lintdb::IndexIVF index(
-            temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
-
-    index.train(num_docs * num_tokens, buf, kclusters, 2);
-
-    EXPECT_EQ(index.config.nlist, 250);
-
-    std::vector<float> fake_doc(dim * num_tokens, 3);
-    lintdb::normalize_vector(fake_doc.data(), num_tokens, dim);
-
-    lintdb::EmbeddingBlock block{fake_doc.data(), num_tokens, dim};
-
-    lintdb::EmbeddingPassage doc(
-            fake_doc.data(),
-            num_tokens,
-            dim,
-            1,
-            std::map<std::string, std::string>{{"title", "test"}});
-    std::vector<lintdb::EmbeddingPassage> docs = {doc};
-    index.add(lintdb::kDefaultTenant, docs);
-
-    auto opts = lintdb::SearchOptions();
-    opts.centroid_score_threshold = 0;
-    opts.k_top_centroids = 250;
-    auto results = index.search(lintdb::kDefaultTenant, block, 250, 5, opts);
-
-    ASSERT_GT(results.size(), 0);
-
-    auto actual = results[0].id;
-    EXPECT_EQ(actual, 1);
-    EXPECT_EQ(results[0].metadata.at("title"), "test");
-}
+//TEST_P(IndexTest, SearchWithMetadataCorrectly) {
+//    size_t dim = 128;
+//    // we'll generate num_docs * num_tokens random vectors for training.
+//    // keep in mind this needs to be larger than the number of dimensions.
+//    size_t num_docs = 100;
+//    size_t num_tokens = 100;
+//
+//    size_t kclusters = 250; // number of centroids to calculate.
+//
+//    size_t centroid_bits = 2;
+//    temp_db = create_temporary_directory();
+//    // buffer for the randomly created vectors.
+//    // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
+//    std::vector<float> buf(dim * (num_docs * num_tokens));
+//    // fake data where every vector is either all 1s,2s...9s.
+//    for (size_t i = 0; i < num_docs * num_tokens; i++) {
+//        for (size_t j = 0; j < dim; j++) {
+//            buf[i * dim + j] = i % 11 + 1;
+//        }
+//    }
+//    // normalize before training. ColBERT returns normalized embeddings.
+//    lintdb::normalize_vector(buf.data(), num_docs * num_tokens, dim);
+//
+//    lintdb::IndexIVF index(
+//            temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
+//
+//    index.train(num_docs * num_tokens, buf, kclusters, 2);
+//
+//
+//    std::vector<float> fake_doc(dim * num_tokens, 3);
+//    lintdb::normalize_vector(fake_doc.data(), num_tokens, dim);
+//
+//    lintdb::EmbeddingBlock block{fake_doc.data(), num_tokens, dim};
+//
+//    lintdb::EmbeddingPassage doc(
+//            fake_doc.data(),
+//            num_tokens,
+//            dim,
+//            1,
+//            std::map<std::string, std::string>{{"title", "test"}});
+//    std::vector<lintdb::EmbeddingPassage> docs = {doc};
+//    index.add(lintdb::kDefaultTenant, docs);
+//
+//    auto opts = lintdb::SearchOptions();
+//    opts.centroid_score_threshold = 0;
+//    opts.k_top_centroids = 250;
+//    auto results = index.search(lintdb::kDefaultTenant, block, 250, 5, opts);
+//
+//    ASSERT_GT(results.size(), 0);
+//
+//    auto actual = results[0].id;
+//    EXPECT_EQ(actual, 1);
+//    EXPECT_EQ(results[0].metadata.at("title"), "test");
+//}
 
 INSTANTIATE_TEST_SUITE_P(
         IndexTest,
         IndexTest,
-        Values(lintdb::IndexEncoding::NONE,
-               lintdb::IndexEncoding::BINARIZER,
-               lintdb::IndexEncoding::PRODUCT_QUANTIZER,
-               lintdb::IndexEncoding::XTR),
+        Values(lintdb::QuantizerType::NONE,
+               lintdb::QuantizerType::BINARIZER,
+               lintdb::QuantizerType::PRODUCT_ENCODER
+               ),
         [](const testing::TestParamInfo<IndexTest::ParamType>& info) {
-            auto serialized = lintdb::serialize_encoding(info.param);
-            return serialized;
+            return std::to_string(static_cast<int>(info.param));
         });
 
 int main(int argc, char** argv) {
