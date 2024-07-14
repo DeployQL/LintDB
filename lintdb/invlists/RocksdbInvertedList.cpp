@@ -12,6 +12,7 @@
 #include "lintdb/invlists/ContextIterator.h"
 #include "InvertedIterator.h"
 
+
 namespace lintdb {
 
     RocksdbInvertedList::RocksdbInvertedList(
@@ -22,20 +23,65 @@ namespace lintdb {
 
 void RocksdbInvertedList::remove(
         const uint64_t tenant,
-        std::vector<idx_t> ids) {
-    for (idx_t id : ids) {
-        auto id_map = this->get_mapping(tenant, id);
-        // delete from the inverse index.
-        rocksdb::ReadOptions ro;
-        for (auto idx : id_map) {
-            Key key = Key{tenant, idx, id};
-            std::string k_string = key.serialize();
-            rocksdb::WriteOptions wo;
-            rocksdb::Status status = db_->Delete(
-                    wo,
-                    column_families[kIndexColumnIndex],
-                    rocksdb::Slice(k_string));
-            assert(status.ok());
+        std::vector<idx_t> ids,
+        const uint8_t field,
+        const DataType data_type,
+        const std::vector<FieldType> field_types) {
+    for (auto field_type: field_types) {
+        switch (field_type) {
+            case FieldType::Indexed: {
+                for (idx_t id: ids) {
+                    auto id_map = this->get_mapping(tenant, id);
+                    // delete from the inverse index.
+                    rocksdb::ReadOptions ro;
+                    for (auto idx: id_map) {
+                        std::string key = create_index_id(tenant, field, data_type, idx, id);
+                        rocksdb::WriteOptions wo;
+                        rocksdb::Status status = db_->Delete(
+                                wo,
+                                column_families[kIndexColumnIndex],
+                                rocksdb::Slice(key));
+                        assert(status.ok());
+                    }
+                }
+                break;
+            }
+            case FieldType::Context: {
+                for (idx_t id: ids) {
+                    std::string key = create_context_id(tenant, field, id);
+                    rocksdb::WriteOptions wo;
+                    rocksdb::Status status = db_->Delete(
+                            wo,
+                            column_families[kCodesColumnIndex],
+                            rocksdb::Slice(key));
+                    assert(status.ok());
+                }
+                break;
+            }
+            case FieldType::Colbert: {
+                for (idx_t id: ids) {
+                    auto id_map = this->get_mapping(tenant, id);
+                    // delete from the inverse index.
+                    rocksdb::ReadOptions ro;
+                    for (auto idx: id_map) {
+                        std::string key = create_index_id(tenant, field, data_type, idx, id);
+                        rocksdb::WriteOptions wo;
+                        rocksdb::Status status = db_->Delete(
+                                wo,
+                                column_families[kIndexColumnIndex],
+                                rocksdb::Slice(key));
+                        assert(status.ok());
+                    }
+
+                    std::string key = create_context_id(tenant, field, id);
+                    rocksdb::WriteOptions wo;
+                    rocksdb::Status status = db_->Delete(
+                            wo,
+                            column_families[kCodesColumnIndex],
+                            rocksdb::Slice(key));
+                    assert(status.ok());
+                }
+            }
         }
     }
 }
@@ -43,8 +89,9 @@ void RocksdbInvertedList::remove(
 std::vector<idx_t> RocksdbInvertedList::get_mapping(
         const uint64_t tenant,
         idx_t id) const {
-    auto key = ForwardIndexKey{tenant, id};
-    auto serialized_key = key.serialize();
+    KeyBuilder kb;
+    std::string serialized_key = kb.add(tenant).add(id).build();
+
     rocksdb::ReadOptions ro;
     std::string value;
     rocksdb::Status status = db_->Get(
@@ -100,12 +147,9 @@ void RocksdbInvertedList::merge(
     }
 }
 
-std::unique_ptr<Iterator> RocksdbInvertedList::get_iterator(
-        const uint64_t tenant,
-        const uint8_t field,
-        const idx_t inverted_list) const {
+    std::unique_ptr<Iterator> RocksdbInvertedList::get_iterator(const std::string &prefix) const {
     return std::make_unique<RocksDBIterator>(
-            db_, column_families[kIndexColumnIndex], tenant, field, inverted_list);
+            db_, column_families[kIndexColumnIndex], prefix);
 }
 
 std::unique_ptr<ContextIterator> RocksdbInvertedList::get_context_iterator(

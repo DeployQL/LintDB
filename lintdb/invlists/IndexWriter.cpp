@@ -5,7 +5,6 @@
 #include <rocksdb/slice.h>
 #include "lintdb/invlists/PostingData.h"
 #include "lintdb/assert.h"
-#include "lintdb/invlists/keys.h"
 #include <glog/logging.h>
 
 namespace lintdb {

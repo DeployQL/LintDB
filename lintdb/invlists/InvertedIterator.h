@@ -11,7 +11,7 @@
 #include "lintdb/exception.h"
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/invlists/Iterator.h"
-#include "lintdb/invlists/keys.h"
+#include "lintdb/invlists/KeyBuilder.h"
 #include "lintdb/schema/util.h"
 #include "lintdb/version.h"
 #include "lintdb/invlists/ContextIterator.h"
@@ -20,11 +20,9 @@ namespace lintdb {
 
     struct RocksDBIterator : public lintdb::Iterator {
         RocksDBIterator(
-                shared_ptr<rocksdb::DB> db,
+                std::shared_ptr<rocksdb::DB> db,
                 rocksdb::ColumnFamilyHandle *column_family,
-                const uint64_t tenant,
-                const uint8_t field,
-                const idx_t inverted_list);
+                const std::string& prefix);
 
         bool is_valid() override {
             if (!has_read_key) {
@@ -33,11 +31,12 @@ namespace lintdb {
                     return false;
                 }
 
-                this->current_key = lintdb::TokenKey::from_slice(it->key());
-                if (current_key.tenant != tenant ||
-                    current_key.inverted_list_id != inverted_index) {
+                auto key = it->key().ToString();
+                if (key.compare(0, prefix.size(), prefix) != 0) {
                     return false;
                 }
+
+                current_key = InvertedIndexKey(key);
             }
 
             has_read_key = true;
@@ -49,7 +48,7 @@ namespace lintdb {
             has_read_key = false;
         }
 
-        lintdb::TokenKey get_key() const override {
+        InvertedIndexKey get_key() const override {
             return current_key;
         }
 
@@ -57,19 +56,16 @@ namespace lintdb {
             return it->value().ToString();
         }
 
-        unique_ptr<rocksdb::Iterator> it;
+        std::unique_ptr<rocksdb::Iterator> it;
 
     protected:
         lintdb::column_index_t cf;
         string prefix;
         string end_key;
         rocksdb::Slice prefix_slice;
-        lintdb::TokenKey current_key;
+        InvertedIndexKey current_key;
 
         bool has_read_key;
-        const idx_t tenant;
-        const uint8_t field;
-        const idx_t inverted_index;
     };
 
 }

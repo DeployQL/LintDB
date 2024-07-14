@@ -12,7 +12,6 @@
 #include "lintdb/exception.h"
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/invlists/Iterator.h"
-#include "lintdb/invlists/keys.h"
 #include "lintdb/schema/util.h"
 #include "lintdb/version.h"
 #include "lintdb/invlists/ContextIterator.h"
@@ -32,7 +31,11 @@ struct RocksdbInvertedList : public InvertedList {
             std::vector<rocksdb::ColumnFamilyHandle*>& column_families,
             const Version& version);
 
-    void remove(uint64_t tenant, std::vector<idx_t> ids) override;
+    void remove(const uint64_t tenant,
+                std::vector<idx_t> ids,
+                const uint8_t field,
+                const DataType data_type,
+                const std::vector<FieldType> field_types) override;
     void merge(rocksdb::DB* db, std::vector<rocksdb::ColumnFamilyHandle*>& cfs)
             override;
 
@@ -40,8 +43,7 @@ struct RocksdbInvertedList : public InvertedList {
             const override;
 
     [[nodiscard]]
-    unique_ptr<Iterator> get_iterator(const uint64_t tenant, const uint8_t field_id, const idx_t inverted_list)
-            const override;
+    std::unique_ptr<Iterator> get_iterator(const std::string &prefix) const override;
 
     std::unique_ptr<ContextIterator> get_context_iterator(
             const uint64_t tenant,

@@ -17,7 +17,7 @@ TEST_F(KeySerializationTests, SerializeAndDeserializeInvertedIndexKey_IntegerTyp
             .add(static_cast<idx_t>(4)) // doc_id
             .build();
     lintdb::InvertedIndexKey key(expectedKey);
-    ASSERT_EQ(s, lintdb::DataType::INTEGER);
+    ASSERT_EQ(key.field(), uint8_t(2));
     ASSERT_EQ(key.doc_id(), 4);
 }
 

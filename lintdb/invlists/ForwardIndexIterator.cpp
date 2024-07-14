@@ -1,13 +1,16 @@
 #include "ForwardIndexIterator.h"
+#include <memory>
 
 namespace lintdb {
 ForwardIndexIterator::ForwardIndexIterator(
-        shared_ptr<rocksdb::DB> db,
+        std::shared_ptr<rocksdb::DB> db,
         rocksdb::ColumnFamilyHandle* column_family,
         const uint64_t tenant)
         : tenant(tenant) {
     cf = column_family->GetID();
-    prefix = lintdb::ForwardIndexKey{tenant, 0}.serialize();
+    KeyBuilder kb;
+
+    prefix = kb.add(tenant).build();
 
     prefix_slice = rocksdb::Slice(this->prefix);
     auto options = rocksdb::ReadOptions();
@@ -22,9 +25,10 @@ ForwardIndexIterator::ForwardIndexIterator(
         if (!is_valid) {
             return false;
         }
-        this->current_key = ForwardIndexKey::from_slice(it->key());
+        auto key = it->key().ToString();
+        this->current_key = ForwardIndexKey(key);
 
-        if (current_key.tenant != tenant) {
+        if (current_key.tenant() != tenant) {
             return false;
         }
 

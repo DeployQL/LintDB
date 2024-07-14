@@ -2,7 +2,6 @@
 
 #include "lintdb/schema/DataTypes.h"
 #include "lintdb/schema/ProcessedData.h"
-#include "lintdb/invlists/keys.h"
 #include "lintdb/invlists/PostingData.h"
 #include <map>
 #include <string>

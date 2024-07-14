@@ -13,7 +13,8 @@
 #include <memory>
 #include <cstdint>
 
-#include "lintdb/Collection.h"
+#include "lintdb/Collection.h"const std::string &
+        const std::string &
 #include "lintdb/EmbeddingBlock.h"
 #include "lintdb/Passages.h"
 #include "lintdb/SearchOptions.h"

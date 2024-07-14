@@ -1,6 +1,7 @@
 #ifndef LINTDB_SCHEMA_UTIL_H
 #define LINTDB_SCHEMA_UTIL_H
 
+#include <utility>
 #include "lintdb/EmbeddingBlock.h"
 #include "lintdb/api.h"
 #include "lintdb/schema/forward_index_generated.h"

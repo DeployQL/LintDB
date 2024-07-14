@@ -196,7 +196,7 @@ namespace lintdb {
     std::vector<PostingData> DocEncoder::encode_inverted_mapping_data(const ProcessedData& data) {
         std::vector<PostingData> results;
 
-        std::string key = ForwardIndexKey{data.tenant, data.doc_id}.serialize();
+        std::string key = create_forward_index_id(data.tenant, data.doc_id);
 
         using Buffer = std::vector<uint8_t>;
         using OutputAdapter = bitsery::OutputBufferAdapter<Buffer>;
@@ -215,7 +215,7 @@ namespace lintdb {
         if (data.size() == 0) {
             return {};
         }
-        std::string key = ForwardIndexKey{data[0].tenant, data[0].doc_id}.serialize();
+        std::string key = create_forward_index_id(data[0].tenant, data[0].doc_id);
 
         using Buffer = std::vector<uint8_t>;
         using OutputAdapter = bitsery::OutputBufferAdapter<Buffer>;
@@ -235,7 +235,7 @@ namespace lintdb {
 
     // Encode the data for the context index. There's one key-value pair per context feature.
     PostingData DocEncoder::encode_context_data(const ProcessedData& data) {
-        std::string key = ContextKey{data.tenant, data.field, data.doc_id}.serialize();
+        std::string key = create_context_id(data.tenant, data.field, data.doc_id);
 
         using Buffer = std::vector<uint8_t>;
         using OutputAdapter = bitsery::OutputBufferAdapter<Buffer>;

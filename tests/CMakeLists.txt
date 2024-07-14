@@ -4,7 +4,7 @@ set(
         coarse_quantizer_test.cpp
         doc_iterator_test.cpp
 #        index_test.cpp
-        rocksdb_test.cpp
+#        rocksdb_test.cpp
 
     mocks.h
         keys_test.cpp

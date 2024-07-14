@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <memory>
 #include "lintdb/schema/DataTypes.h"
 #include "lintdb/api.h"
 #include "lintdb/invlists/Iterator.h"

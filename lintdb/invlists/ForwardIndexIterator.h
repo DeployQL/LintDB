@@ -1,6 +1,6 @@
 #pragma once
 
-#include "lintdb/invlists/keys.h"
+#include "lintdb/invlists/KeyBuilder.h"
 #include "lintdb/constants.h"
 #include "rocksdb/db.h"
 #include <memory>
@@ -16,7 +16,7 @@ namespace lintdb {
  */
 struct ForwardIndexIterator {
     ForwardIndexIterator(
-            shared_ptr<rocksdb::DB> db,
+            std::shared_ptr<rocksdb::DB> db,
             rocksdb::ColumnFamilyHandle* column_family,
             const uint64_t tenant);
 

@@ -38,7 +38,7 @@ const char* PROCESSING_THREADS = "LINTDB_NUM_THREADS";
 IndexIVF::IndexIVF(const std::string& path, bool read_only)
         : read_only(read_only), path(path) {
     // check that path exists as a directory
-    if (!filesystem::is_directory(path)) {
+    if (!std::filesystem::is_directory(path)) {
         throw LintDBException("Path does not exist: " + path);
     }
 
@@ -328,8 +328,11 @@ void IndexIVF::add_single(const uint64_t tenant, const Document& doc) {
 }
 
 void IndexIVF::remove(const uint64_t tenant, const std::vector<idx_t>& ids) {
-    inverted_list_->remove(tenant, ids);
-    index_->remove(tenant, ids);
+    for( const auto& field: schema.fields) {
+        uint8_t field_id = field_mapper->getFieldID(field.name);
+        inverted_list_->remove(tenant, ids, field_id, field.data_type, field.field_types);
+        index_->remove(tenant, ids);
+    }
 }
 
 void IndexIVF::update(

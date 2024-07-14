@@ -16,12 +16,12 @@ namespace lintdb {
     }
 
     idx_t TermIterator::doc_id() const {
-        return it_->get_key().doc_id;
+        return it_->get_key().doc_id();
     }
     std::vector<DocValue> TermIterator::fields() const {
         std::string value = it_->get_value();
         DocValue doc_val;
-        doc_val.field_id = it_->get_key().field;
+        doc_val.field_id = it_->get_key().field();
         SupportedTypes st = DocEncoder::decode_supported_types(value);
         doc_val.value = st;
 

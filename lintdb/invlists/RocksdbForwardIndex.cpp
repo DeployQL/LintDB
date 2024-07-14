@@ -11,6 +11,7 @@
 #include "lintdb/schema/forward_index_generated.h"
 #include "lintdb/schema/util.h"
 #include "lintdb/invlists/ForwardIndexIterator.h"
+#include "lintdb/invlists/KeyBuilder.h"
 
 namespace lintdb {
 
@@ -20,9 +21,8 @@ RocksdbForwardIndex::RocksdbForwardIndex(
         const Version& version)
         : version(version), db_(db), column_families(column_families) {}
 
-void RocksdbForwardIndex::remove(
-        const uint64_t tenant,
-        std::vector<idx_t> ids) {
+    void RocksdbForwardIndex::remove(const uint64_t tenant,
+                std::vector<idx_t> ids) {
     for (idx_t id : ids) {
         // it's easier to skip the inverted index column families.
         if (id == kIndexColumnIndex || id == kMappingColumnIndex) {
@@ -31,8 +31,8 @@ void RocksdbForwardIndex::remove(
         // delete from all of the forward indices.
         for (size_t i = 1; i < column_families.size(); i++) {
             // ignore the default cf at position 0 since we don't use it.
-            ForwardIndexKey key = ForwardIndexKey{tenant, id};
-            auto serialized_key = key.serialize();
+            KeyBuilder kb;
+            std::string serialized_key = kb.add(tenant).add(id).build();
             rocksdb::WriteOptions wo;
             std::string value;
             rocksdb::Status status = db_->Delete(
@@ -48,7 +48,8 @@ std::vector<std::unique_ptr<DocumentResiduals>> RocksdbForwardIndex::
     std::vector<rocksdb::Slice> keys;
     for (idx_t i = 0; i < ids.size(); i++) {
         auto id = ids[i];
-        key_strings.push_back(ForwardIndexKey{tenant, id}.serialize());
+        std::string key = create_forward_index_id(tenant, id);
+        key_strings.push_back(key);
         keys.push_back(rocksdb::Slice(key_strings[i]));
     }
 
@@ -108,7 +109,9 @@ std::vector<std::unique_ptr<DocumentCodes>> RocksdbForwardIndex::get_codes(
     // keep the strings around.
     for (idx_t i = 0; i < ids.size(); i++) {
         auto id = ids[i];
-        key_strings.push_back(ForwardIndexKey{tenant, id}.serialize());
+        KeyBuilder kb;
+        std::string serialized_key = kb.add(tenant).add(id).build();
+        key_strings.push_back(serialized_key);
         keys.push_back(rocksdb::Slice(key_strings[i]));
     }
 
@@ -172,7 +175,8 @@ std::vector<std::unique_ptr<DocumentMetadata>> RocksdbForwardIndex::
     // keep the strings around.
     for (idx_t i = 0; i < ids.size(); i++) {
         auto id = ids[i];
-        key_strings.push_back(ForwardIndexKey{tenant, id}.serialize());
+        std::string key = create_forward_index_id(tenant, id);
+        key_strings.push_back(key);
         keys.push_back(rocksdb::Slice(key_strings[i]));
     }
 

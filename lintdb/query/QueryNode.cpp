@@ -8,11 +8,13 @@
 #include "lintdb/quantizers/CoarseQuantizer.h"
 #include "lintdb/query/KnnNearestCentroids.h"
 #include "lintdb/schema/DataTypes.h"
+#include "lintdb/invlists/KeyBuilder.h"
 
 namespace lintdb {
     std::unique_ptr<DocIterator> TermQueryNode::process(QueryContext& context, const SearchOptions& opts) {
         uint8_t field_id = context.getFieldMapper()->getFieldID(this->field);
-        std::unique_ptr<Iterator> it = context.getIndex()->get_iterator(context.getTenant(), field_id, 0);
+        std::string prefix = create_index_prefix(context.getTenant(), field_id, this->value.data_type, this->value.value);
+        std::unique_ptr<Iterator> it = context.getIndex()->get_iterator(prefix);
         return std::make_unique<TermIterator>(std::move(it));
     }
 
@@ -37,7 +39,9 @@ namespace lintdb {
         std::vector<std::unique_ptr<DocIterator>> iterators;
 
         for(const auto& centroid : top_centroids) {
-            std::unique_ptr<Iterator> it = context.getIndex()->get_iterator(context.getTenant(), field_id, centroid.second);
+            KeyBuilder kb;
+            std::string prefix = kb.add(context.getTenant()).add(field_id).add(centroid.second).build();
+            std::unique_ptr<Iterator> it = context.getIndex()->get_iterator(prefix);
             if(!it->is_valid()) {
                 LOG(WARNING) << "iterator is not valid for field: " << this->field << " and centroid: " << centroid.second;
                 continue;

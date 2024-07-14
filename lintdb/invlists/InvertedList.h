@@ -10,6 +10,7 @@
 #include "lintdb/invlists/Iterator.h"
 #include "lintdb/invlists/ForwardIndexIterator.h"
 #include "lintdb/invlists/ContextIterator.h"
+#include "lintdb/schema/Schema.h"
 
 namespace lintdb {
 /**
@@ -22,15 +23,16 @@ namespace lintdb {
  * deletion.
  */
 struct InvertedList {
-    virtual void remove(const uint64_t tenant, std::vector<idx_t> ids) = 0;
+    virtual void remove(const uint64_t tenant,
+                        std::vector<idx_t> ids,
+                        const uint8_t field,
+                        const DataType data_type,
+                        const std::vector<FieldType> field_types) = 0;
     virtual void merge(
             rocksdb::DB* db,
             std::vector<rocksdb::ColumnFamilyHandle*>& cfs) = 0;
 
-    virtual std::unique_ptr<Iterator> get_iterator(
-            const uint64_t tenant,
-            const uint8_t field_id,
-            const idx_t inverted_list) const = 0;
+    virtual std::unique_ptr<Iterator> get_iterator(const std::string &prefix) const = 0;
 
     virtual std::unique_ptr<ContextIterator> get_context_iterator(
             const uint64_t tenant,
@@ -62,7 +64,8 @@ struct ForwardIndex {
             const uint64_t tenant,
             const std::vector<idx_t>& ids) const = 0;
 
-    virtual void remove(const uint64_t tenant, std::vector<idx_t> ids) = 0;
+    virtual void remove(const uint64_t tenant,
+                        std::vector<idx_t> ids) = 0;
 
     virtual void merge(
             rocksdb::DB* db,

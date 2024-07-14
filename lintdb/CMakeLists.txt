@@ -9,7 +9,6 @@ set(
     index_builder/EmbeddingModel.cpp
     index_builder/Tokenizer.cpp
     invlists/RocksdbForwardIndex.cpp
-    invlists/keys.cpp
     invlists/EncodedDocument.cpp
         invlists/IndexWriter.cpp
 #    retrievers/PlaidRetriever.cpp
@@ -81,7 +80,6 @@ set(
         invlists/RocksdbInvertedList.h
 
 #    retrievers/XTRRetriever.h
-    invlists/keys.h
         invlists/ForwardIndexIterator.h
         invlists/IndexWriter.h
         invlists/PostingData.h

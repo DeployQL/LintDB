@@ -3,7 +3,6 @@
 #include <memory>
 #include "lintdb/query/DocIterator.h"
 #include "lintdb/invlists/Iterator.h"
-#include "lintdb/invlists/keys.h"
 #include "lintdb/schema/DocEncoder.h"
 #include "lintdb/schema/DocProcessor.h"
 
@@ -21,8 +20,10 @@ public:
         pos++;
     }
 
-    TokenKey get_key() const override {
-        return TokenKey{0, 0, 0, its[pos] };
+    InvertedIndexKey get_key() const override {
+        SupportedTypes v = 0;
+        return InvertedIndexKey(0, uint8_t(0), DataType::INTEGER, v, its[pos]);
+
     }
 
     std::string get_value() const override {
@@ -44,7 +45,7 @@ class MockIterator : public Iterator {
 public:
     MOCK_METHOD(bool, is_valid, (), (override));
     MOCK_METHOD(void, next, (), (override));
-    MOCK_METHOD(TokenKey, get_key, (), (const, override));
+    MOCK_METHOD(InvertedIndexKey, get_key, (), (const, override));
     MOCK_METHOD(std::string, get_value, (), (const, override));
 };
 

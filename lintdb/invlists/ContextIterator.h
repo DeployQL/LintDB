@@ -3,7 +3,7 @@
 #include <string>
 #include <rocksdb/slice.h>
 #include <rocksdb/db.h>
-#include "lintdb/invlists/keys.h"
+#include "lintdb/invlists/KeyBuilder.h"
 #include "lintdb/invlists/Iterator.h"
 #include "lintdb/constants.h"
 
@@ -20,7 +20,8 @@ public:
             throw std::runtime_error("Column family not found");
         }
         cf = column_family->GetID();
-        prefix = lintdb::ContextKey{tenant, field, 0, true}.serialize();
+        KeyBuilder kb;
+        prefix = kb.add(tenant).add(field).build();
 
         prefix_slice = rocksdb::Slice(this->prefix);
         auto options = rocksdb::ReadOptions();
@@ -37,8 +38,9 @@ public:
                 return false;
             }
 
-            this->current_key = lintdb::ContextKey::from_slice(it->key());
-            if (current_key.tenant != tenant || current_key.field != field) {
+            auto key = it->key().ToString();
+            this->current_key = lintdb::ContextKey(key);
+            if (current_key.tenant() != tenant || current_key.field() != field) {
                 return false;
             }
         }
@@ -48,7 +50,9 @@ public:
     }
 
     void advance(const idx_t doc_id) {
-        std::string expected_key = ContextKey{tenant, field, doc_id}.serialize();
+        KeyBuilder kb;
+
+        std::string expected_key = kb.add(tenant).add(field).add(doc_id).build();
         it->Seek(rocksdb::Slice(expected_key));
         has_read_key = false;
     }
@@ -66,7 +70,7 @@ public:
         return it->value().ToString();
     }
 
-    unique_ptr<rocksdb::Iterator> it;
+    std::unique_ptr<rocksdb::Iterator> it;
 
     protected:
     lintdb::column_index_t cf;

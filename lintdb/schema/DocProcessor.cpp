@@ -4,7 +4,6 @@
 #include <string>
 #include <map>
 #include <bitsery/adapter/buffer.h>
-#include "lintdb/invlists/keys.h"
 #include "lintdb/schema/Schema.h"
 #include "lintdb/quantizers/CoarseQuantizer.h"
 #include "lintdb/quantizers/Quantizer.h"
