@@ -31,12 +31,13 @@ namespace lintdb {
                     return false;
                 }
 
-                auto key = it->key().ToString();
-                if (key.compare(0, prefix.size(), prefix) != 0) {
+                auto key = it->key();
+                std::string key_str = key.ToString();
+                if (key_str.compare(0, prefix.size(), prefix) != 0) {
                     return false;
                 }
 
-                current_key = InvertedIndexKey(key);
+                current_key = InvertedIndexKey(key_str);
             }
 
             has_read_key = true;

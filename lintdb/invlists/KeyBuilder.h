@@ -5,7 +5,8 @@
 #include <vector>
 #include "lintdb/schema/DataTypes.h"
 #include "lintdb/utils/endian.h"
-
+#include <glog/logging.h>
+#include <chrono>
 
 namespace lintdb {
     /**
@@ -17,35 +18,13 @@ namespace lintdb {
         std::vector<unsigned char> data_;
 
     public:
-        KeyBuilder &add(idx_t data) {
-            store_bigendian(data, data_);
+        KeyBuilder &add(DateTime data) {
+            auto dv_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(data);
+            auto epoch = dv_ms.time_since_epoch();
 
-            return *this;
-        }
+            int64_t epoch_ms = epoch.count();
 
-        KeyBuilder &add(uint32_t data) {
-            store_bigendian(data, data_);
-
-            return *this;
-        }
-
-        KeyBuilder &add(uint64_t data) {
-            store_bigendian(data, data_);
-
-            return *this;
-        }
-
-        KeyBuilder &add(uint8_t data) {
-            store_bigendian(data, data_);
-
-            return *this;
-        }
-
-        KeyBuilder &add(float data) {
-            uint32_t fbits = 0;
-            memcpy(&fbits, &data, sizeof fbits);
-            store_bigendian(fbits, data_);
-
+            store_bigendian(epoch_ms, data_);
             return *this;
         }
 
@@ -54,13 +33,17 @@ namespace lintdb {
             return *this;
         }
 
-        KeyBuilder &add(DateTime data) {
-            auto dv_ms = std::chrono::time_point_cast<std::chrono::milliseconds>(data);
-            auto epoch = dv_ms.time_since_epoch();
+        template<typename T, std::enable_if_t<std::is_integral<T>::value, bool> = true>
+        KeyBuilder& add(T data) {
+            store_bigendian(data, data_);
+            return *this;
+        }
 
-            int64_t epoch_ms = epoch.count();
+        KeyBuilder &add(float data) {
+            uint32_t fbits = 0;
+            memcpy(&fbits, &data, sizeof fbits);
+            store_bigendian(fbits, data_);
 
-            store_bigendian(epoch_ms, data_);
             return *this;
         }
 
@@ -98,31 +81,40 @@ namespace lintdb {
                 : tenant_(tenant), field_(field), doc_id_(doc_id), field_value_(value) {
         }
 
-        InvertedIndexKey(std::string &slice) {
+        explicit InvertedIndexKey(std::string &slice) {
             auto ptr = slice.data();
             tenant_ = load_bigendian<uint64_t>(ptr);
             field_ = load_bigendian<uint8_t>(ptr + sizeof(tenant_));
             auto field_type = load_bigendian<uint8_t>(ptr + sizeof(tenant_) + sizeof(field_));
             auto type = DataType(field_type);
 
-            idx_t doc;
             switch (type) {
-                // these types expect idx_t in the key.
+                // these types expect an 8 byte value.
+                case DataType::DATETIME: {
+                    auto val = load_bigendian<uint64_t>(ptr + sizeof(tenant_) + sizeof(field_) + sizeof(field_type));
+                    auto dur = DateTime(Duration(val));
+
+                    field_value_ = dur;
+                    doc_id_ = load_bigendian<idx_t>(
+                            ptr + sizeof(tenant_) + sizeof(field_) + sizeof(field_type) + sizeof(val));
+                    break;
+                }
                 case DataType::INTEGER:
-                case DataType::DATETIME:
-                case DataType::QUANTIZED_TENSOR:
-                case DataType::TENSOR:
+                case DataType::QUANTIZED_TENSOR: /// stores the inverted list idx of the tensor.
+                case DataType::TENSOR: /// stores the inverted list idx of the tensor.
                 case DataType::FLOAT: {
+                    // note that we aren't taking size of field_value_ since we're using std::variant.
                     field_value_ = load_bigendian<idx_t>(ptr + sizeof(tenant_) + sizeof(field_) + sizeof(field_type));
                     doc_id_ = load_bigendian<idx_t>(
-                            ptr + sizeof(tenant_) + sizeof(field_) + sizeof(field_type) + sizeof(field_value_));
+                            ptr + sizeof(tenant_) + sizeof(field_) + sizeof(field_type) + sizeof(idx_t));
+                    break;
                 }
                     // Text keys encode the length and the string into the key.
                 case DataType::TEXT: {
-                    auto ptr_to_size = ptr + sizeof(tenant_) + sizeof(field_) + sizeof(field_type);
-                    auto field_size = load_bigendian<uint32_t>(ptr_to_size);
-                    field_value_ = std::string(ptr_to_size + sizeof(field_size), field_size);
-                    doc_id_ = load_bigendian<idx_t>(ptr_to_size + sizeof(field_size) + field_size);
+                    auto field_size = load_bigendian<uint32_t>(ptr + sizeof(tenant_) + sizeof(field_) + sizeof(field_type));
+                    field_value_ = std::string(ptr + sizeof(tenant_) + sizeof(field_) + sizeof(field_type) + sizeof(field_size), field_size);
+                    doc_id_ = load_bigendian<idx_t>(ptr + sizeof(tenant_) + sizeof(field_) + sizeof(field_type) + sizeof(field_size) + field_size);
+                    break;
                 }
             }
         }
@@ -224,7 +216,8 @@ namespace lintdb {
                 break;
             }
             case DataType::DATETIME: {
-                kb.add(std::get<DateTime>(value));
+                DateTime  dt = std::get<DateTime>(value);
+                kb.add(dt);
                 break;
             }
             case DataType::FLOAT:
@@ -232,10 +225,12 @@ namespace lintdb {
                 break;
             case DataType::QUANTIZED_TENSOR:
             case DataType::TENSOR:
-                throw std::runtime_error("Not implemented");
+                // tensors store the inverted index list, so we should expect an idx_t.
+                kb.add(std::get<idx_t>(value));
+                break;
             case DataType::TEXT:
                 std::string v = std::get<std::string>(value);
-                kb.add(uint8_t(v.size())).add(v);
+                kb.add(uint32_t(v.size())).add(v);
                 break;
         }
 
@@ -262,10 +257,12 @@ namespace lintdb {
                 break;
             case DataType::QUANTIZED_TENSOR:
             case DataType::TENSOR:
-                throw std::runtime_error("Not implemented");
+                // tensors store the inverted index list, so we should expect an idx_t.
+                kb.add(std::get<idx_t>(value));
+                break;
             case DataType::TEXT:
                 std::string v = std::get<std::string>(value);
-                kb.add(uint8_t(v.size())).add(v);
+                kb.add(uint32_t(v.size())).add(v);
                 break;
         }
 

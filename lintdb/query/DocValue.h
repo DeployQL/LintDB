@@ -17,6 +17,15 @@ namespace lintdb {
         lintdb::SupportedTypes value;
         uint8_t field_id;
         DataType type;
+        bool unread_value = false; /// ColBERT fields do not have their values decoded from the index. We check this flag so that
+        /// we can throw an exception if the user tries to access the value.
+
+        SupportedTypes get_value() const {
+            if (unread_value) {
+                throw LintDBException("Document's value was not decoded from the index. This is likely because a ColBERT field was read");
+            }
+            return value;
+        }
     };
 
 }

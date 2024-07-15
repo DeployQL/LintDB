@@ -32,7 +32,7 @@ public:
         fv.num_tensors = 0;
         fv.value = 111111;
         ProcessedData pd = ProcessedData{0, 1, {2}, its[pos], fv};
-        std::vector<PostingData> encoded_value = DocEncoder::encode_inverted_data(pd, 0);
+        std::vector<PostingData> encoded_value = DocEncoder::encode_inverted_data(pd, 0, false);
         return encoded_value[0].value;
     }
 
@@ -100,6 +100,36 @@ TEST_F(ANNIteratorTest, CorrectAggregation) {
     EXPECT_EQ(ann.doc_id(), 6);
     ann.advance();
     EXPECT_FALSE(ann.is_valid());
+}
+
+TEST_F(ANNIteratorTest, NoDuplicateDocumentIds) {
+    std::vector<std::unique_ptr<DocIterator>> iterators;
+    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{1, 2, 3})));
+    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{2, 3, 4})));
+
+    ANNIterator ann_iter(std::move(iterators));
+
+    std::unordered_set<idx_t> seen_ids;
+    while (ann_iter.is_valid()) {
+        auto id = ann_iter.doc_id();
+        ASSERT_TRUE(seen_ids.find(id) == seen_ids.end()) << "Duplicate ID returned: " << id;
+        seen_ids.insert(id);
+        ann_iter.advance();
+    }
+}
+
+TEST_F(ANNIteratorTest, AggregatesFieldsFromMultipleIterators) {
+    std::vector<std::unique_ptr<DocIterator>> iterators;
+    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{1, 2, 3})));
+    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{1, 2, 3})));
+
+    ANNIterator ann_iter(std::move(iterators));
+
+    while (ann_iter.is_valid()) {
+        auto fields = ann_iter.fields();
+        ASSERT_EQ(fields.size(), 2);
+        ann_iter.advance();
+    }
 }
 
 TEST_F(AndIteratorTest, SynchronizedAdvancement) {

@@ -11,7 +11,7 @@ namespace lintdb {
 
     class DocEncoder {
     public:
-        static std::vector<PostingData> encode_inverted_data(const ProcessedData& data, size_t code_size);
+        static std::vector<PostingData> encode_inverted_data(const ProcessedData& data, size_t code_size, bool skip_value=false);
 
         static PostingData encode_forward_data(const std::vector<ProcessedData>& data);
 

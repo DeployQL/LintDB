@@ -14,20 +14,18 @@ namespace lintdb {
     public:
         FieldMapper() = default;
         //copy constructor
-        FieldMapper(const FieldMapper &other) {
+        FieldMapper(const FieldMapper& other) {
             nameToID = other.nameToID;
-            idToName = other.idToName;
-            idToDataType = other.idToDataType;
             fieldID = other.fieldID;
+            idToField = other.idToField;
         }
 
         // copy assignment operator
         // using copy and swap idiom.
         FieldMapper &operator=(FieldMapper other) {
             std::swap(nameToID, other.nameToID);
-            std::swap(idToName, other.idToName);
-            std::swap(idToDataType, other.idToDataType);
             std::swap(fieldID, other.fieldID);
+            std::swap(idToField, other.idToField);
             return *this;
         }
 
@@ -38,7 +36,11 @@ namespace lintdb {
         }
 
         inline DataType getDataType(const uint8_t field_id) const {
-            return idToDataType.at(field_id);
+            return idToField.at(field_id).data_type;
+        }
+
+        inline std::vector<FieldType> getFieldTypes(const uint8_t field_id) const {
+            return idToField.at(field_id).field_types;
         }
 
         inline int getFieldID(const std::string &fieldName) const {
@@ -50,9 +52,9 @@ namespace lintdb {
         }
 
         inline std::string getFieldName(int fieldID) const {
-            auto it = idToName.find(fieldID);
-            if (it != idToName.end()) {
-                return it->second;
+            auto it = idToField.find(fieldID);
+            if (it != idToField.end()) {
+                return it->second.name;
             }
             throw std::runtime_error("Field ID not found");
         }
@@ -62,11 +64,8 @@ namespace lintdb {
             for (const auto &pair: nameToID) {
                 json["nameToID"][pair.first] = pair.second;
             }
-            for (const auto &pair: idToName) {
-                json["idToName"][std::to_string(pair.first)] = pair.second;
-            }
-            for (const auto &pair: idToDataType) {
-                json["idToDataType"][std::to_string(pair.first)] = DataTypeToInt.at(pair.second);
+            for(const auto &pair: idToField) {
+                json["idToField"][pair.first] = pair.second.toJson();
             }
             return json;
         }
@@ -74,9 +73,8 @@ namespace lintdb {
         static std::shared_ptr<FieldMapper> fromJson(const Json::Value &json);
 
     private:
+        std::unordered_map<int, Field> idToField;
         std::unordered_map<std::string, int> nameToID;
-        std::unordered_map<int, std::string> idToName;
-        std::unordered_map<int, DataType> idToDataType;
         int fieldID = 0;
 
         inline void addMapping(const Field& field) {
@@ -84,8 +82,7 @@ namespace lintdb {
                 throw std::runtime_error("Field name already exists: " + field.name);
             }
             nameToID[field.name] = fieldID;
-            idToName[fieldID] = field.name;
-            idToDataType[fieldID] = field.data_type;
+            idToField[fieldID] = field;
 
             fieldID++;
         }

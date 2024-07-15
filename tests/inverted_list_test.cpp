@@ -11,6 +11,7 @@
 #include "lintdb/index.h"
 #include "lintdb/version.h"
 #include "util.h"
+#include "lintdb/invlists/KeyBuilder.h"
 
 using ::testing::TestWithParam;
 using ::testing::Values;
@@ -52,42 +53,52 @@ TEST_F(InvertedListTest, StoresCodesCorrectly) {
     lintdb::RocksdbInvertedList invlist(db, column_families, version);
 
 
-    lintdb::TokenKey one{0, 1, 1, 0, 0};
-    lintdb::TokenKey two{0, 1, 2, 0, 0};
-    lintdb::TokenKey three{0, 1, 3, 0, 0};
+    auto one = lintdb::create_index_id(0, 1, lintdb::DataType::QUANTIZED_TENSOR, 1, 555);
+    auto two = lintdb::create_index_id(0, 1, lintdb::DataType::QUANTIZED_TENSOR, 1, 556);
+    auto three = lintdb::create_index_id(0, 1, lintdb::DataType::QUANTIZED_TENSOR, 3, 555);
     rocksdb::WriteOptions wo;
-    this->db->Put(wo, column_families[lintdb::kCodesColumnIndex], one.serialize(), "value");
-    this->db->Put(wo, column_families[lintdb::kCodesColumnIndex], two.serialize(), "value");
-    this->db->Put(wo, column_families[lintdb::kCodesColumnIndex], three.serialize(), "value");
+    this->db->Put(wo, column_families[lintdb::kIndexColumnIndex], one, "value");
+    this->db->Put(wo, column_families[lintdb::kIndexColumnIndex], two, "value");
+    this->db->Put(wo, column_families[lintdb::kIndexColumnIndex], three, "value");
+
+    std::string prefix = lintdb::create_index_prefix(0, 1, lintdb::DataType::QUANTIZED_TENSOR, 1);
+    auto it1 = invlist.get_iterator(prefix);
+
+    // inverted list should have 2 entries
+    EXPECT_TRUE(it1->is_valid());
+    auto key = it1->get_key();
+    ASSERT_EQ(key.doc_id(), 555);
+
+    std::string val = it1->get_value();
+    ASSERT_EQ(val, "value");
+
+    it1->next();
+
+    EXPECT_TRUE(it1->is_valid());
+    key = it1->get_key();
+    ASSERT_EQ(key.doc_id(), 556);
+
+    val = it1->get_value();
+    ASSERT_EQ(val, "value");
+
+    // only two documents.
+    it1->next();
+    EXPECT_FALSE(it1->is_valid());
 
 
-    auto it1 = invlist.get_iterator(0, 1, 1);
-    for (; it1->has_next(); it1->next()) {
-        auto key = it1->get_key();
-        ASSERT_EQ(key.doc_id, 555);
-        ASSERT_EQ(key.token_id, 0);
+    std::string prefix_three = lintdb::create_index_prefix(0, 1, lintdb::DataType::QUANTIZED_TENSOR, 3);
+    auto it3 = invlist.get_iterator(prefix_three);
 
-        std::string val = it1->get_value();
-        ASSERT_EQ(val, "value");
-    }
+    EXPECT_TRUE(it3->is_valid());
 
-    auto it2 = invlist.get_iterator(0, 1, 2);
-    for (; it2->has_next(); it2->next()) {
-        auto key = it2->get_key();
-        ASSERT_EQ(key.doc_id, 555);
-        ASSERT_EQ(key.token_id, 1);
+    auto key_three = it3->get_key();
+    ASSERT_EQ(key_three.doc_id(), 555);
 
-        std::string val = it1->get_value();
-        ASSERT_EQ(val, "value");
-    }
+    std::string val_three = it3->get_value();
+    ASSERT_EQ(val_three, "value");
 
-    auto it3 = invlist.get_iterator(0, 1, 3);
-    for (; it3->has_next(); it3->next()) {
-        auto key = it3->get_key();
-        ASSERT_EQ(key.doc_id, 555);
-        ASSERT_EQ(key.token_id, 2);
+    // only one document.
+    it3->next();
+    EXPECT_FALSE(it3->is_valid());
 
-        std::string val = it1->get_value();
-        ASSERT_EQ(val, "value");
-    }
 }

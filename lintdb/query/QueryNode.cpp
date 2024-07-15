@@ -20,6 +20,7 @@ namespace lintdb {
 
     std::unique_ptr<DocIterator> VectorQueryNode::process(QueryContext& context, const SearchOptions& opts) {
         uint8_t field_id = context.getFieldMapper()->getFieldID(this->field);
+        DataType field_type = context.getFieldMapper()->getDataType(field_id);
 
         std::shared_ptr<KnnNearestCentroids> nearest_centroids = context.getOrCreateNearestCentroids(this->field);
         if (!nearest_centroids->is_valid()) {
@@ -39,15 +40,23 @@ namespace lintdb {
         std::vector<std::unique_ptr<DocIterator>> iterators;
 
         for(const auto& centroid : top_centroids) {
-            KeyBuilder kb;
-            std::string prefix = kb.add(context.getTenant()).add(field_id).add(centroid.second).build();
+            std::string prefix = create_index_prefix(context.getTenant(), field_id, DataType::QUANTIZED_TENSOR, centroid.second);
             std::unique_ptr<Iterator> it = context.getIndex()->get_iterator(prefix);
             if(!it->is_valid()) {
                 LOG(WARNING) << "iterator is not valid for field: " << this->field << " and centroid: " << centroid.second;
                 continue;
             }
 
-            auto doc_it = std::make_unique<TermIterator>(std::move(it));
+            auto field_types = context.getFieldMapper()->getFieldTypes(field_id);
+            bool ignore_value;
+            // if field types contains COLBERT, ignore value
+            if (std::find(field_types.begin(), field_types.end(), FieldType::Colbert) != field_types.end()) {
+                ignore_value = true;
+            } else {
+                ignore_value = false;
+            }
+
+            auto doc_it = std::make_unique<TermIterator>(std::move(it), true);
             iterators.push_back(std::move(doc_it));
         }
         return std::make_unique<ANNIterator>(std::move(iterators));

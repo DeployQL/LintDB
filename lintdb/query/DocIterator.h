@@ -30,12 +30,14 @@ namespace lintdb {
 
     public:
         TermIterator() = default;
-        explicit TermIterator(std::unique_ptr<Iterator> it);
+        explicit TermIterator(std::unique_ptr<Iterator> it, bool ignore_value=false);
         void advance() override;
         bool is_valid() override;
 
         idx_t doc_id() const override;
         std::vector<DocValue> fields() const override;
+    private:
+        bool ignore_value;
     };
 
     class ANNIterator : public DocIterator {
@@ -50,6 +52,7 @@ namespace lintdb {
     private:
         std::vector<DocValue> fields_;
         std::vector<std::unique_ptr<DocIterator>> its_;
+        idx_t last_doc_id_;
         void heapify(size_t idx);
     };
 

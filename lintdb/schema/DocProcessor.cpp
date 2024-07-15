@@ -79,17 +79,12 @@ void DocumentProcessor::processDocument(const uint64_t tenant, const Document& d
 
         // quantizers must exist for colbert data. either an identity quantizer or otherwise.
         size_t code_size = quantizer_map.at(field_mapper->getFieldName(data.field))->code_size();
-        // for colbert fields, don't store data into the inverted index itself. we'll strip that out.
-        data.value = FieldValue("");
 
-        std::vector<PostingData> encoded_data = DocEncoder::encode_inverted_data(data, code_size);
-        // for colbert data types, we strip the value out of the inverted index data.
+        // for colbert fields, don't store data into the inverted index itself. we'll strip that out.
+        std::vector<PostingData> encoded_data = DocEncoder::encode_inverted_data(data, code_size, true);
 
         posting_data.inverted.reserve(posting_data.inverted.size() + encoded_data.size());
         posting_data.inverted.insert(posting_data.inverted.end(), encoded_data.begin(), encoded_data.end());
-
-        // now, we store all of the values together in the context field.
-
     }
 
     // inverted data produces multiple posting data elements -- one for each centroid assigned to the vectors.
@@ -155,7 +150,9 @@ FieldValue DocumentProcessor::quantizeField(const Field& field, const FieldValue
         Tensor tensor = std::get<Tensor>(value.value);
         std::vector<residual_t > codes(value.num_tensors * quantizer->code_size());
         quantizer->sa_encode(value.num_tensors, tensor.data(), codes.data());
-        return {codes, value.num_tensors};
+//        FieldValue result = FieldValue(codes, value.num_tensors);
+//        result.data_type = field.data_type; /// ensure that the data type is set correctly.
+        return {codes, value.num_tensors };
     } else {
         return value; // No quantization needed for other data types
     }

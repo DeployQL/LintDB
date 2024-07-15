@@ -11,13 +11,11 @@ namespace lintdb {
                 highest_id = mapper->nameToID[member];
             }
         }
-        for (const auto &member: json["idToName"].getMemberNames()) {
-            mapper->idToName[std::stoi(member)] = json["idToName"][member].asString();
+
+        for(const auto &field: json["idToField"]) {
+            mapper->idToField[field["id"].asInt()] = Field::fromJson(field);
         }
-        for (const auto &member: json["idToType"].getMemberNames()) {
-            // map the int key to the enum type
-            mapper->idToDataType[std::stoi(member)] = IntToDataType.at(json["idToType"][member].asInt());
-        }
+
         mapper->fieldID = highest_id + 1;
         return mapper;
     }

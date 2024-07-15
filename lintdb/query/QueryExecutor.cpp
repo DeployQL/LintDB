@@ -21,7 +21,6 @@ namespace lintdb {
 
         std::priority_queue<SearchResult, std::vector<SearchResult>, std::greater<>> results;
         for(;doc_it->is_valid(); doc_it->advance()) {
-            LOG(INFO) << "doc id: " << doc_it->doc_id();
             SearchResult result;
             result.id = doc_it->doc_id();
 

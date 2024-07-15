@@ -3,19 +3,16 @@ set(
     util.h
         coarse_quantizer_test.cpp
         doc_iterator_test.cpp
-#        index_test.cpp
-#        rocksdb_test.cpp
-
-    mocks.h
+        index_test.cpp
+        mocks.h
         keys_test.cpp
         #    xtr_test.cpp
-#    encoded_doc_test.cpp
 #    colbert_test.cpp
         #    plaid_test.cpp
 
-#        binarizer_test.cpp
+        binarizer_test.cpp
 #        index_builder_test.cpp
-#        inverted_list_test.cpp
+        inverted_list_test.cpp
 #        product_quantizer_test.cpp
 #        kmeans_test.cpp
 )

@@ -4,8 +4,7 @@
 #include <glog/logging.h>
 
 namespace lintdb {
-    TermIterator::TermIterator(std::unique_ptr<Iterator> it): it_(std::move(it)) {
-    }
+    TermIterator::TermIterator(std::unique_ptr<Iterator> it, bool ignore_value): it_(std::move(it)), ignore_value(ignore_value) {}
 
     void TermIterator::advance() {
         it_->next();
@@ -19,19 +18,27 @@ namespace lintdb {
         return it_->get_key().doc_id();
     }
     std::vector<DocValue> TermIterator::fields() const {
+
         std::string value = it_->get_value();
         DocValue doc_val;
         doc_val.field_id = it_->get_key().field();
-        SupportedTypes st = DocEncoder::decode_supported_types(value);
-        doc_val.value = st;
+
+        if (!ignore_value) {
+            SupportedTypes st = DocEncoder::decode_supported_types(value);
+            doc_val.value = st;
+        } else {
+            doc_val.unread_value = true;
+        }
 
         return {doc_val};
     }
 
     ANNIterator::ANNIterator(std::vector <std::unique_ptr<DocIterator>> its): its_(std::move(its)) {
-        for (int i = (its_.size() / 2) - 1; i >= 0; --i) {
+        for (int i = (its_.size()) - 1; i >= 0; --i) {
             heapify(i);
         }
+
+        last_doc_id_ = (its_.empty() || !its_[0]->is_valid()) ? -1 : its_[0]->doc_id();
     }
 
     void ANNIterator::advance() {
@@ -39,12 +46,18 @@ namespace lintdb {
             return;
         }
 
-        its_[0]->advance();
-        heapify(0);
-        if (!its_[0]->is_valid()) {
-            std::swap(its_[0], its_.back());
-            its_.pop_back();
+        do {
+            its_[0]->advance();
             heapify(0);
+            if (!its_[0]->is_valid()) {
+                std::swap(its_[0], its_.back());
+                its_.pop_back();
+                heapify(0);
+            }
+        } while (!its_.empty() && its_[0]->is_valid() && its_[0]->doc_id() == last_doc_id_);
+
+        if (!its_.empty() && its_[0]->is_valid()) {
+            last_doc_id_ = its_[0]->doc_id();
         }
     }
 
@@ -57,7 +70,16 @@ namespace lintdb {
     }
 
     std::vector<DocValue> ANNIterator::fields() const {
-        return its_[0]->fields();
+        std::vector<DocValue> combined_fields;
+        idx_t current_doc_id = doc_id();
+        for (const auto& it : its_) {
+
+            if (it->is_valid() && it->doc_id() == current_doc_id) {
+                auto doc_fields = it->fields();
+                combined_fields.insert(combined_fields.end(), doc_fields.begin(), doc_fields.end());
+            }
+        }
+        return combined_fields;
     }
 
     void ANNIterator::heapify(size_t idx) {

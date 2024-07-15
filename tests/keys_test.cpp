@@ -18,7 +18,40 @@ TEST_F(KeySerializationTests, SerializeAndDeserializeInvertedIndexKey_IntegerTyp
             .build();
     lintdb::InvertedIndexKey key(expectedKey);
     ASSERT_EQ(key.field(), uint8_t(2));
+    idx_t actual = std::get<idx_t>(key.field_value());
+    ASSERT_EQ(actual, 3);
     ASSERT_EQ(key.doc_id(), 4);
+}
+
+TEST_F(KeySerializationTests, SerializeAndDeserializeInvertedIndexKey_StringType) {
+    std::string expectedKey = lintdb::create_index_id(1, 2, lintdb::DataType::TEXT, "some value", 123);
+    lintdb::InvertedIndexKey key(expectedKey);
+    ASSERT_EQ(key.field(), uint8_t(2));
+    auto actual = std::get<std::string>(key.field_value());
+    ASSERT_EQ(actual, "some value");
+    ASSERT_EQ(key.doc_id(), 123);
+}
+
+TEST_F(KeySerializationTests, SerializeAndDeserializeInvertedIndexKey_DateType) {
+    lintdb::DateTime now = std::chrono::time_point_cast<lintdb::Duration>(std::chrono::system_clock::now());
+    std::string expectedKey = lintdb::create_index_id(1, 2, lintdb::DataType::DATETIME, lintdb::DateTime(now), 123);
+    lintdb::InvertedIndexKey key(expectedKey);
+    ASSERT_EQ(key.field(), uint8_t(2));
+
+    std::visit([](auto&& arg) {
+        using T = std::decay_t<decltype(arg)>;
+        if constexpr (std::is_same_v<T, lintdb::DateTime>) {
+            // Handle DateTime
+            std::cout << "DateTime with ms: " << arg.time_since_epoch().count() << std::endl;
+        } else {
+            // Handle other types
+            std::cout << "Not a DateTime" << std::endl;
+        }
+    }, key.field_value());
+
+    auto actual = std::get<lintdb::DateTime>(key.field_value());
+    ASSERT_EQ(actual, now);
+    ASSERT_EQ(key.doc_id(), 123);
 }
 
 TEST_F(KeySerializationTests, SerializeAndDeserializeContextKey) {

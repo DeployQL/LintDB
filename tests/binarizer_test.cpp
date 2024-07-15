@@ -3,8 +3,8 @@
 #include <vector>
 #define private public
 #include <cmath>
-#include "lintdb/invlists/keys.h"
 #include "lintdb/quantizers/Binarizer.h"
+#include "lintdb/utils/endian.h"
 
 TEST(BinarizerTests, QuantilesTest) {
     // Example test data

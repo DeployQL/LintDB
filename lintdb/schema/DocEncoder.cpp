@@ -10,7 +10,7 @@
 
 
 namespace lintdb {
-    std::vector<PostingData> DocEncoder::encode_inverted_data(const ProcessedData& data, size_t code_size) {
+    std::vector<PostingData> DocEncoder::encode_inverted_data(const ProcessedData& data, size_t code_size, bool skip_value) {
         std::vector<std::string> keys;
 
         using Buffer = std::vector<uint8_t>;
@@ -33,30 +33,28 @@ namespace lintdb {
                 Tensor tensor_arr = std::get<Tensor>(data.value.value);
 
                 for(const auto& [centroid_id, token_ids] : centroid_to_tokens) {
-                    KeyBuilder kb;
-                    kb.add(data.tenant);
-                    kb.add(data.field);
-                    kb.add(data.value.data_type);
-                    kb.add(centroid_id);
-                    kb.add(data.doc_id);
+                    std::string key = create_index_id(data.tenant, data.field, DataType::TENSOR, centroid_id,
+                                                      data.doc_id);
 
-                    keys.push_back(kb.build());
+                    keys.push_back(key);
 
-                    Tensor centroid_data;
-                    for (size_t i = 0; i < token_ids.size(); i++) {
-                        idx_t token_id = token_ids[i];
+                    if (!skip_value) {
+                        Tensor centroid_data;
+                        for (size_t i = 0; i < token_ids.size(); i++) {
+                            idx_t token_id = token_ids[i];
 
-                        centroid_data.insert(
-                                centroid_data.end(),
-                                tensor_arr.data() + token_id * code_size,
-                                tensor_arr.data() + (token_id + 1) * code_size);
+                            centroid_data.insert(
+                                    centroid_data.end(),
+                                    tensor_arr.data() + token_id * code_size,
+                                    tensor_arr.data() + (token_id + 1) * code_size);
 
+                        }
+                        Buffer buf;
+                        SupportedTypes tt = tensor_arr;
+                        auto written = bitsery::quickSerialization(OutputAdapter{buf}, tt);
+                        auto st = std::string(buf.begin(), buf.begin() + written);
+                        values.push_back(st);
                     }
-                    Buffer buf;
-                    SupportedTypes tt = tensor_arr;
-                    auto written = bitsery::quickSerialization(OutputAdapter{buf}, tt);
-                    auto st = std::string(buf.begin(), buf.begin() + written);
-                    values.push_back(st);
                 }
                 break;
             }
@@ -72,30 +70,27 @@ namespace lintdb {
                 QuantizedTensor tensor_arr = std::get<QuantizedTensor>(data.value.value);
 
                 for(const auto& [centroid_id, token_ids] : centroid_to_tokens) {
-                    KeyBuilder kb;
-                    kb.add(data.tenant);
-                    kb.add(data.field);
-                    kb.add(data.value.data_type);
-                    kb.add(centroid_id);
-                    kb.add(data.doc_id);
+                    std::string key = create_index_id(data.tenant, data.field, DataType::QUANTIZED_TENSOR, centroid_id, data.doc_id);
 
-                    keys.push_back(kb.build());
+                    keys.push_back(key);
 
-                    QuantizedTensor centroid_data;
-                    for (size_t i = 0; i < token_ids.size(); i++) {
-                        idx_t token_id = token_ids[i];
+                    if (!skip_value) {
+                        QuantizedTensor centroid_data;
+                        for (size_t i = 0; i < token_ids.size(); i++) {
+                            idx_t token_id = token_ids[i];
 
-                        centroid_data.insert(
-                                centroid_data.end(),
-                                tensor_arr.data() + token_id * code_size,
-                                tensor_arr.data() + (token_id + 1) * code_size);
+                            centroid_data.insert(
+                                    centroid_data.end(),
+                                    tensor_arr.data() + token_id * code_size,
+                                    tensor_arr.data() + (token_id + 1) * code_size);
 
+                        }
+                        Buffer buf;
+                        SupportedTypes tt = tensor_arr;
+                        auto written = bitsery::quickSerialization(OutputAdapter{buf}, tt);
+                        auto st = std::string(buf.begin(), buf.begin() + written);
+                        values.push_back(st);
                     }
-                    Buffer buf;
-                    SupportedTypes tt = tensor_arr;
-                    auto written = bitsery::quickSerialization(OutputAdapter{buf}, tt);
-                    auto st = std::string(buf.begin(), buf.begin() + written);
-                    values.push_back(st);
                 }
                 break;
             }
@@ -103,92 +98,71 @@ namespace lintdb {
 
                 DateTime dv = std::get<DateTime>(data.value.value);
 
-                KeyBuilder kb;
-                kb.add(data.tenant);
-                kb.add(data.field);
-                kb.add(data.value.data_type);
-                kb.add(dv);
-                kb.add(data.doc_id);
+                std::string key = create_index_id(data.tenant, data.field, DataType::DATETIME, dv, data.doc_id);
 
-                keys.push_back(kb.build());
+                keys.push_back(key);
 
-                Buffer buf;
-                size_t written = bitsery::quickSerialization(OutputAdapter{buf}, data.value.value);
+                if (!skip_value) {
+                    Buffer buf;
+                    size_t written = bitsery::quickSerialization(OutputAdapter{buf}, data.value.value);
 
-                auto st = std::string(buf.begin(), buf.begin() + written);
-                values.push_back(st);
+                    auto st = std::string(buf.begin(), buf.begin() + written);
+                    values.push_back(st);
+                }
 
                 break;
             }
             case DataType::FLOAT: {
+                std::string key = create_index_id(data.tenant, data.field, DataType::FLOAT, data.value.value, data.doc_id);
 
-                float dv = std::get<float>(data.value.value);
+                keys.push_back(key);
 
-                KeyBuilder kb;
-                kb.add(data.tenant);
-                kb.add(data.field);
-                kb.add(data.value.data_type);
-                kb.add(dv);
-                kb.add(data.doc_id);
+                if (!skip_value) {
+                    Buffer buf;
+                    size_t written = bitsery::quickSerialization(OutputAdapter{buf}, data.value.value);
 
-                keys.push_back(kb.build());
-
-                Buffer buf;
-                size_t written = bitsery::quickSerialization(OutputAdapter{buf}, data.value.value);
-
-                auto st = std::string(buf.begin(), buf.begin() + written);
-                values.push_back(st);
+                    auto st = std::string(buf.begin(), buf.begin() + written);
+                    values.push_back(st);
+                }
 
                 break;
             }
             case DataType::INTEGER: {
+                std::string key = create_index_id(data.tenant, data.field, DataType::INTEGER, data.value.value, data.doc_id);
 
-                idx_t dv = std::get<idx_t>(data.value.value);
+                keys.push_back(key);
 
-                KeyBuilder kb;
-                kb.add(data.tenant);
-                kb.add(data.field);
-                kb.add(data.value.data_type);
-                kb.add(dv);
-                kb.add(data.doc_id);
+                if (!skip_value) {
+                    Buffer buf;
+                    size_t written = bitsery::quickSerialization(OutputAdapter{buf}, data.value.value);
 
-                keys.push_back(kb.build());
-
-                Buffer buf;
-                size_t written = bitsery::quickSerialization(OutputAdapter{buf}, data.value.value);
-
-                auto st = std::string(buf.begin(), buf.begin() + written);
-                values.push_back(st);
+                    auto st = std::string(buf.begin(), buf.begin() + written);
+                    values.push_back(st);
+                }
 
                 break;
             }
             case DataType::TEXT: {
-                std::string dv = std::get<std::string>(data.value.value);
+                std::string key = create_index_id(data.tenant, data.field, DataType::TEXT, data.value.value, data.doc_id);
 
-                KeyBuilder kb;
-                kb.add(data.tenant);
-                kb.add(data.field);
-                kb.add(data.value.data_type);
-                kb.add(uint32_t(dv.size()));
-                kb.add(dv);
-                kb.add(data.doc_id);
+                keys.push_back(key);
 
-                keys.push_back(kb.build());
+                if (!skip_value) {
+                    Buffer buf;
+                    size_t written = bitsery::quickSerialization(OutputAdapter{buf}, data.value.value);
 
-                Buffer buf;
-                size_t written = bitsery::quickSerialization(OutputAdapter{buf}, data.value.value);
-
-                auto st = std::string(buf.begin(), buf.begin() + written);
-                values.push_back(st);
+                    auto st = std::string(buf.begin(), buf.begin() + written);
+                    values.push_back(st);
+                }
                 break;
             }
         };
 
-        assert(keys.size() == values.size());
+        assert(skip_value || keys.size() == values.size());
 
         std::vector<PostingData> results;
         for(size_t i = 0; i < keys.size(); i++) {
-            results.push_back({keys[i], values[i]});
+            results.push_back({keys[i], skip_value ? "" : values[i]});
         }
         return results;
     }
