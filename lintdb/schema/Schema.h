@@ -10,7 +10,7 @@
 
 namespace lintdb {
 
-enum FieldType {
+enum class FieldType {
     Indexed,
     Context,
     Stored,
@@ -36,8 +36,36 @@ struct Field {
     std::vector<FieldType> field_types; /// the field types. e.g. indexed or stored in the database.
     FieldParameters parameters; /// parameters for the field.
 
+    Field() = default;
+    Field(const std::string& name, const idx_t data_type, std::vector<FieldType> field_types, const FieldParameters& parameters)
+        : name(name), data_type(DataType(data_type)), field_types(field_types), parameters(parameters) {}
+
     Json::Value toJson() const;
     static Field fromJson(const Json::Value& json);
+
+    void add_field_type(FieldType field_type) {
+        field_types.push_back(field_type);
+    }
+};
+
+struct IndexedField : public Field {
+    IndexedField(const std::string& name, const idx_t data_type, const FieldParameters& parameters)
+        : Field(name, data_type, {FieldType::Indexed}, parameters) {}
+};
+
+struct ContextField : public Field {
+    ContextField(const std::string& name, const idx_t data_type, const FieldParameters& parameters)
+        : Field(name, data_type, {FieldType::Context}, parameters) {}
+};
+
+struct StoredField : public Field {
+    StoredField(const std::string& name, const idx_t data_type, const FieldParameters& parameters)
+        : Field(name, data_type, {FieldType::Stored}, parameters) {}
+};
+
+struct ColbertField : public Field {
+    ColbertField(const std::string& name, const idx_t data_type, const FieldParameters& parameters)
+        : Field(name, data_type, {FieldType::Colbert}, parameters) {}
 };
 
 /**

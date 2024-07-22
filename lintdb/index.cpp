@@ -186,7 +186,7 @@ void IndexIVF::train(const std::vector<Document>& docs) {
             LINTDB_THROW_IF_NOT(field.parameters.num_centroids != 0);
 
             // we've already initialized untrained quantizers in the constructor.
-            std::shared_ptr<CoarseQuantizer> cq = this->coarse_quantizer_map[field.name];
+            std::shared_ptr<ICoarseQuantizer> cq = this->coarse_quantizer_map[field.name];
 
             // pull out the embeddings from the documents.
             std::vector<float> embeddings;
@@ -296,22 +296,31 @@ std::vector<SearchResult> IndexIVF::search(
     uint8_t colbert_field_id = this->field_mapper->getFieldID(opts.colbert_field);
     size_t colbert_code_size = this->quantizer_map.at(opts.colbert_field)->code_size();
 
-    ColBERTScorer scorer(this->inverted_list_, tenant, colbert_field_id, colbert_code_size);
-    QueryExecutor executor(scorer);
     auto fm = field_mapper;
-    QueryContext context(tenant, this->inverted_list_, fm, coarse_quantizer_map, quantizer_map);
-    auto results = executor.execute(context, query, k, opts);
+    QueryContext context(tenant, opts.colbert_field, this->inverted_list_, fm, coarse_quantizer_map, quantizer_map);
+    PlaidScorer scorer(context);
+    ColBERTScorer ranker(context);
+    QueryExecutor executor(scorer, ranker);
 
-    return results;
+    std::vector<ScoredDocument> results = executor.execute(context, query, k, opts);
+
+    std::vector<SearchResult> search_results;
+    for (const auto& result : results) {
+        SearchResult sr;
+        sr.id = result.doc_id;
+        sr.score = result.score;
+        search_results.push_back(sr);
+    }
+
+    return search_results;
 }
 
-void IndexIVF::set_centroids(float* data, int n, int dim) {
+void IndexIVF::set_quantizer(const std::string& field, const std::shared_ptr<Quantizer> quantizer) {
+    this->quantizer_map.insert({field, std::move(quantizer)});
 }
 
-void IndexIVF::set_weights(
-        const std::vector<float> weights,
-        const std::vector<float> cutoffs,
-        const float avg_residual) {
+void IndexIVF::set_coarse_quantizer(const std::string& field, const std::shared_ptr<CoarseQuantizer> quantizer) {
+    this->coarse_quantizer_map.insert({field, std::move(quantizer)});
 }
 
 void IndexIVF::add(

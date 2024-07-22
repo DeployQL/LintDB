@@ -30,7 +30,7 @@ namespace lintdb {
 
     public:
         TermIterator() = default;
-        explicit TermIterator(std::unique_ptr<Iterator> it, bool ignore_value=false);
+        explicit TermIterator(std::unique_ptr<Iterator> it,  DataType type, bool ignore_value=false);
         void advance() override;
         bool is_valid() override;
 
@@ -38,6 +38,7 @@ namespace lintdb {
         std::vector<DocValue> fields() const override;
     private:
         bool ignore_value;
+        DataType type;
     };
 
     class ANNIterator : public DocIterator {

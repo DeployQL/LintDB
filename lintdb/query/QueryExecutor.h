@@ -7,6 +7,7 @@
 #include "lintdb/SearchResult.h"
 #include "lintdb/scoring/Scorer.h"
 #include "lintdb/SearchOptions.h"
+#include "lintdb/query/DocValue.h"
 
 namespace lintdb {
     /**
@@ -21,16 +22,17 @@ namespace lintdb {
      */
     class QueryExecutor {
     public:
-        QueryExecutor(Scorer& scorer);
+        QueryExecutor(Scorer& retriever, Scorer& ranker);
 
-        std::vector<SearchResult> execute(
+        std::vector<ScoredDocument> execute(
                 QueryContext &context,
                 const Query &query,
                 const size_t num_results,
                 const SearchOptions& opts);
 
     private:
-        Scorer& scorer;
+        Scorer& retriever;
+        Scorer& ranker;
     };
 
 } // lintdb

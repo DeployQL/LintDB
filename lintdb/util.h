@@ -59,8 +59,6 @@ std::vector<T> product(
     return result;
 }
 
-std::string serialize_encoding(IndexEncoding type);
-IndexEncoding deserialize_encoding(const std::string& str);
 
 Json::Value loadJson(const std::string& path);
 

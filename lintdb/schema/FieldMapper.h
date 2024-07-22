@@ -59,6 +59,10 @@ namespace lintdb {
             throw std::runtime_error("Field ID not found");
         }
 
+        inline size_t getFieldDimensions(int field_id) const {
+            return idToField.at(field_id).parameters.dimensions;
+        }
+
         inline Json::Value toJson() const {
             Json::Value json;
             for (const auto &pair: nameToID) {

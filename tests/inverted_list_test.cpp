@@ -13,10 +13,10 @@
 #include "util.h"
 #include "lintdb/invlists/KeyBuilder.h"
 
-using ::testing::TestWithParam;
+using ::testing::Test;
 using ::testing::Values;
 
-class InvertedListTest : public TestWithParam<lintdb::IndexEncoding> {
+class InvertedListTest : public Test {
    public:
     ~InvertedListTest() override {}
     void SetUp() override {

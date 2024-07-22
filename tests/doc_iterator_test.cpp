@@ -32,7 +32,7 @@ public:
         fv.num_tensors = 0;
         fv.value = 111111;
         ProcessedData pd = ProcessedData{0, 1, {2}, its[pos], fv};
-        std::vector<PostingData> encoded_value = DocEncoder::encode_inverted_data(pd, 0, false);
+        std::vector<PostingData> encoded_value = DocEncoder::encode_inverted_data(pd, 0);
         return encoded_value[0].value;
     }
 
@@ -68,7 +68,7 @@ TEST(DocIteratorTest, AdvanceAndHasNext) {
     EXPECT_CALL(*mock_it, is_valid()).WillOnce(testing::Return(true)).WillOnce(testing::Return(false));
     EXPECT_CALL(*mock_it, next()).Times(1);
 
-    TermIterator di(std::move(mock_it));
+    TermIterator di(std::move(mock_it), lintdb::DataType::INTEGER);
     EXPECT_TRUE(di.is_valid());
     di.advance();
     EXPECT_FALSE(di.is_valid());
@@ -79,8 +79,8 @@ TEST_F(ANNIteratorTest, CorrectAggregation) {
     std::unique_ptr<VectorIterator> it1 = std::make_unique<VectorIterator>(std::vector<idx_t>({3, 4, 5}));
     std::unique_ptr<VectorIterator> it2 = std::make_unique<VectorIterator>(std::vector<idx_t>({1, 2, 6}));
 
-    auto dit1 = std::make_unique<TermIterator>(std::move(it1));
-    auto dit2 = std::make_unique<TermIterator>(std::move(it2));
+    auto dit1 = std::make_unique<TermIterator>(std::move(it1), lintdb::DataType::INTEGER);
+    auto dit2 = std::make_unique<TermIterator>(std::move(it2), lintdb::DataType::INTEGER);
     std::vector<std::unique_ptr<DocIterator>> iterators;
     iterators.push_back(std::move(dit1));
     iterators.push_back(std::move(dit2));
@@ -104,8 +104,8 @@ TEST_F(ANNIteratorTest, CorrectAggregation) {
 
 TEST_F(ANNIteratorTest, NoDuplicateDocumentIds) {
     std::vector<std::unique_ptr<DocIterator>> iterators;
-    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{1, 2, 3})));
-    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{2, 3, 4})));
+    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{1, 2, 3}), lintdb::DataType::TENSOR));
+    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{2, 3, 4}), lintdb::DataType::TENSOR));
 
     ANNIterator ann_iter(std::move(iterators));
 
@@ -120,15 +120,20 @@ TEST_F(ANNIteratorTest, NoDuplicateDocumentIds) {
 
 TEST_F(ANNIteratorTest, AggregatesFieldsFromMultipleIterators) {
     std::vector<std::unique_ptr<DocIterator>> iterators;
-    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{1, 2, 3})));
-    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{1, 2, 3})));
+    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{1, 2, 3}), lintdb::DataType::TENSOR));
+    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{1, 2, 3}), lintdb::DataType::TENSOR));
 
     ANNIterator ann_iter(std::move(iterators));
 
+    size_t count = 0;
     while (ann_iter.is_valid()) {
+        if (count > 2) {
+            EXPECT_TRUE(false) << "Too many iterations";
+        }
         auto fields = ann_iter.fields();
         ASSERT_EQ(fields.size(), 2);
         ann_iter.advance();
+        count++;
     }
 }
 
@@ -136,8 +141,8 @@ TEST_F(AndIteratorTest, SynchronizedAdvancement) {
     std::unique_ptr<VectorIterator> it1 = std::make_unique<VectorIterator>(std::vector<idx_t>({3, 4, 5}));
     std::unique_ptr<VectorIterator> it2 = std::make_unique<VectorIterator>(std::vector<idx_t>({2, 3, 4}));
 
-    auto dit1 = std::make_unique<TermIterator>(std::move(it1));
-    auto dit2 = std::make_unique<TermIterator>(std::move(it2));
+    auto dit1 = std::make_unique<TermIterator>(std::move(it1), lintdb::DataType::INTEGER);
+    auto dit2 = std::make_unique<TermIterator>(std::move(it2), lintdb::DataType::INTEGER);
     std::vector<std::unique_ptr<DocIterator>> iterators;
     iterators.push_back(std::move(dit1));
     iterators.push_back(std::move(dit2));
@@ -155,8 +160,8 @@ TEST_F(AndIteratorTest, SynchronizedAdvancement2) {
     std::unique_ptr<VectorIterator> it1 = std::make_unique<VectorIterator>(std::vector<idx_t>({1, 2, 3, 4}));
     std::unique_ptr<VectorIterator> it2 = std::make_unique<VectorIterator>(std::vector<idx_t>({5, 6, 7 ,8}));
 
-    auto dit1 = std::make_unique<TermIterator>(std::move(it1));
-    auto dit2 = std::make_unique<TermIterator>(std::move(it2));
+    auto dit1 = std::make_unique<TermIterator>(std::move(it1), lintdb::DataType::INTEGER);
+    auto dit2 = std::make_unique<TermIterator>(std::move(it2), lintdb::DataType::INTEGER);
     std::vector<std::unique_ptr<DocIterator>> iterators;
     iterators.push_back(std::move(dit1));
     iterators.push_back(std::move(dit2));
@@ -166,7 +171,7 @@ TEST_F(AndIteratorTest, SynchronizedAdvancement2) {
     std::unique_ptr<VectorIterator> it3 = std::make_unique<VectorIterator>(std::vector<idx_t>({1, 3, 5, 7}));
     std::vector<std::unique_ptr<DocIterator>> iterators2;
     iterators2.push_back(std::make_unique<ANNIterator>(std::move(annIt)));
-    iterators2.push_back(std::make_unique<TermIterator>(std::move(it3)));
+    iterators2.push_back(std::make_unique<TermIterator>(std::move(it3), lintdb::DataType::INTEGER));
     AndIterator andIt(std::move(iterators2));
 
     EXPECT_EQ(andIt.doc_id(), 1);

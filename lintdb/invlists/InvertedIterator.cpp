@@ -1,6 +1,5 @@
 #include "InvertedIterator.h"
 #include "lintdb/invlists/ContextIterator.h"
-#include "lintdb/schema/forward_index_generated.h"
 #include "lintdb/constants.h"
 #include <rocksdb/utilities/transaction.h>
 #include <rocksdb/slice.h>

@@ -7,12 +7,6 @@
 #include "lintdb/api.h"
 
 namespace lintdb {
-enum class IndexEncoding {
-    NONE,
-    BINARIZER,
-    PRODUCT_QUANTIZER,
-    XTR,
-};
 
 /**
  * SearchOptions enables custom searching behavior.

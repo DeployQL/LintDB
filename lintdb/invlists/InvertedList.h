@@ -50,17 +50,7 @@ struct InvertedList {
  * ForwardIndex helps retrieve document data from the index.
  */
 struct ForwardIndex {
-    /**
-     * get retrieves from the forward index. This could be any data that is
-     * mapped by a document id.
-     */
-    virtual std::vector<std::unique_ptr<DocumentCodes>> get_codes(
-            const uint64_t tenant,
-            const std::vector<idx_t>& ids) const = 0;
-    virtual std::vector<std::unique_ptr<DocumentResiduals>> get_residuals(
-            const uint64_t tenant,
-            const std::vector<idx_t>& ids) const = 0;
-    virtual std::vector<std::unique_ptr<DocumentMetadata>> get_metadata(
+    virtual std::vector<std::map<uint8_t, SupportedTypes>> get_metadata(
             const uint64_t tenant,
             const std::vector<idx_t>& ids) const = 0;
 

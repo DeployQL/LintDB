@@ -14,8 +14,7 @@ set(
 #    retrievers/PlaidRetriever.cpp
 #    retrievers/plaid.cpp
 #    retrievers/EMVBRetriever.cpp
-    schema/util.cpp
-    invlists/RocksdbInvertedList.cpp
+        invlists/RocksdbInvertedList.cpp
         invlists/ForwardIndexIterator.cpp
         invlists/IndexWriter.cpp
         invlists/InvertedIterator.cpp
@@ -31,14 +30,14 @@ set(
         schema/DocEncoder.cpp
     schema/DocProcessor.cpp
     schema/Schema.cpp
-    schema/util.cpp
         schema/FieldMapper.cpp
         query/QueryExecutor.cpp
         scoring/Scorer.cpp
         query/KnnNearestCentroids.cpp
         quantizers/IdentityQuantizer.cpp
-        invlists/KeyBuilder.h
-        utils/endian.h
+
+        scoring/plaid.cpp
+        query/decode.cpp
 )
 
 set(
@@ -49,10 +48,8 @@ set(
     exception.h
     constants.h
     cf.h
-    EmbeddingBlock.h
-    env.h
-    Passages.h
-    quantizers/Binarizer.h
+        env.h
+        quantizers/Binarizer.h
     quantizers/Quantizer.h
     quantizers/ProductEncoder.h
     quantizers/io.h
@@ -92,10 +89,7 @@ set(
 #    retrievers/emvb.h
 #    retrievers/emvb_generic.h
 #    retrievers/emvb_avx.h
-    schema/forward_index_generated.h
-    schema/inverted_index_generated.h
-    schema/mapping_generated.h
-      schema/Schema.h
+        schema/Schema.h
         schema/DocEncoder.h
       schema/DocProcessor.h
       schema/Document.h
@@ -105,10 +99,14 @@ set(
         query/QueryContext.h
         query/QueryExecutor.h
         scoring/Scorer.h
+        scoring/plaid.h
       query/KnnNearestCentroids.h
-        schema/util.h
+        invlists/KeyBuilder.h
+        utils/endian.h
+        query/decode.h
     utils/progress_bar.h
     version.h
+
 )
 
 set(LINT_DB_HEADERS ${LINT_DB_HEADERS} PARENT_SCOPE)

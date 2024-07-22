@@ -12,14 +12,17 @@ namespace lintdb {
 
     class QueryContext {
     public:
+        const std::string colbert_context;
+
         explicit QueryContext(
                 const uint64_t tenant,
+                const std::string colbert_field,
                 const std::shared_ptr<InvertedList> invertedList,
                 const std::shared_ptr<FieldMapper> fieldMapper,
-                const std::unordered_map<std::string, std::shared_ptr<CoarseQuantizer>>& coarse_quantizer_map,
+                const std::unordered_map<std::string, std::shared_ptr<ICoarseQuantizer>>& coarse_quantizer_map,
                 const std::unordered_map<std::string, std::shared_ptr<Quantizer>>& quantizer_map
                 )
-            : tenant(tenant), db_(invertedList), fieldMapper_(fieldMapper), coarse_quantizer_map(coarse_quantizer_map), quantizer_map(quantizer_map) {
+            : colbert_context(colbert_field), tenant(tenant), db_(invertedList), fieldMapper_(fieldMapper), coarse_quantizer_map(coarse_quantizer_map), quantizer_map(quantizer_map) {
         }
 
         inline std::shared_ptr<FieldMapper> getFieldMapper() const {
@@ -34,7 +37,7 @@ namespace lintdb {
             return tenant;
         }
 
-        inline std::shared_ptr<CoarseQuantizer> getCoarseQuantizer(const std::string& field) const {
+        inline std::shared_ptr<ICoarseQuantizer> getCoarseQuantizer(const std::string& field) const {
             return coarse_quantizer_map.at(field);
         }
 
@@ -58,7 +61,7 @@ namespace lintdb {
         const uint64_t tenant;
         const std::shared_ptr<InvertedList> db_;
         const std::shared_ptr<FieldMapper> fieldMapper_;
-        const std::unordered_map<std::string, std::shared_ptr<CoarseQuantizer>>& coarse_quantizer_map;
+        const std::unordered_map<std::string, std::shared_ptr<ICoarseQuantizer>>& coarse_quantizer_map;
         const std::unordered_map<std::string, std::shared_ptr<Quantizer>>& quantizer_map;
         std::unordered_map<std::string, std::shared_ptr<KnnNearestCentroids>> knnNearestCentroidsMap;
     };

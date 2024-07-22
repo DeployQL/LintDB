@@ -4,14 +4,18 @@
 
 namespace lintdb {
     void KnnNearestCentroids::calculate(
-            const std::vector<float>& query,
+            std::vector<float>& query,
             const size_t num_query_tokens,
-            const std::shared_ptr<CoarseQuantizer> quantizer,
-            const size_t total_centroids_to_calculate) {
+            const std::shared_ptr<ICoarseQuantizer> quantizer,
+            const size_t num_calculated_centroids) {
         this->num_centroids = quantizer->num_centroids();
+        this->total_centroids_to_calculate = num_calculated_centroids;
+        this->query = query;
+        this->num_query_tokens = num_query_tokens;
 
-        distances.resize(num_centroids * total_centroids_to_calculate);
-        coarse_idx.resize(num_centroids * total_centroids_to_calculate);
+        distances.resize(num_query_tokens * total_centroids_to_calculate);
+        coarse_idx.resize(num_query_tokens * total_centroids_to_calculate);
+        reordered_distances.resize(num_query_tokens * total_centroids_to_calculate);
 
         quantizer->search(
                 num_query_tokens,
@@ -21,17 +25,17 @@ namespace lintdb {
                 coarse_idx.data()
         );
 
-        // we might want to reorder distances so that it aligns with centroid id.
-//        for (int i = 0; i < n; i++) {
-//            for (int j = 0; j < opts.total_centroids_to_calculate; j++) {
-//                auto current_code =
-//                        coarse_idx[i * opts.total_centroids_to_calculate + j];
-//                float dis = distances[i * opts.total_centroids_to_calculate + j];
-//                reordered_distances
-//                [i * opts.total_centroids_to_calculate + current_code] =
-//                        dis;
-//            }
-//        }
+        // We use this for ColBERT scoring.
+        for (int i = 0; i <  num_centroids; i++) {
+            for (int j = 0; j < total_centroids_to_calculate; j++) {
+                auto current_code =
+                        coarse_idx[i * total_centroids_to_calculate + j];
+                float dis = distances[i * total_centroids_to_calculate + j];
+                reordered_distances
+                [i * total_centroids_to_calculate + current_code] =
+                        dis;
+            }
+        }
 
     }
 

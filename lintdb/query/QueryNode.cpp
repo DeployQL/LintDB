@@ -15,7 +15,7 @@ namespace lintdb {
         uint8_t field_id = context.getFieldMapper()->getFieldID(this->field);
         std::string prefix = create_index_prefix(context.getTenant(), field_id, this->value.data_type, this->value.value);
         std::unique_ptr<Iterator> it = context.getIndex()->get_iterator(prefix);
-        return std::make_unique<TermIterator>(std::move(it));
+        return std::make_unique<TermIterator>(std::move(it), this->value.data_type);
     }
 
     std::unique_ptr<DocIterator> VectorQueryNode::process(QueryContext& context, const SearchOptions& opts) {
@@ -48,15 +48,8 @@ namespace lintdb {
             }
 
             auto field_types = context.getFieldMapper()->getFieldTypes(field_id);
-            bool ignore_value;
-            // if field types contains COLBERT, ignore value
-            if (std::find(field_types.begin(), field_types.end(), FieldType::Colbert) != field_types.end()) {
-                ignore_value = true;
-            } else {
-                ignore_value = false;
-            }
 
-            auto doc_it = std::make_unique<TermIterator>(std::move(it), true);
+            auto doc_it = std::make_unique<TermIterator>(std::move(it), DataType::QUANTIZED_TENSOR, true);
             iterators.push_back(std::move(doc_it));
         }
         return std::make_unique<ANNIterator>(std::move(iterators));

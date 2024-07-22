@@ -12,7 +12,6 @@
 #include "lintdb/exception.h"
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/invlists/Iterator.h"
-#include "lintdb/schema/util.h"
 #include "lintdb/version.h"
 #include "lintdb/invlists/ContextIterator.h"
 

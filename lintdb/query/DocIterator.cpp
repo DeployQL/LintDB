@@ -4,7 +4,7 @@
 #include <glog/logging.h>
 
 namespace lintdb {
-    TermIterator::TermIterator(std::unique_ptr<Iterator> it, bool ignore_value): it_(std::move(it)), ignore_value(ignore_value) {}
+    TermIterator::TermIterator(std::unique_ptr<Iterator> it, DataType type, bool ignore_value): it_(std::move(it)), ignore_value(ignore_value), type(type) {}
 
     void TermIterator::advance() {
         it_->next();
@@ -20,17 +20,17 @@ namespace lintdb {
     std::vector<DocValue> TermIterator::fields() const {
 
         std::string value = it_->get_value();
-        DocValue doc_val;
-        doc_val.field_id = it_->get_key().field();
+        auto field_id= it_->get_key().field();
 
+        SupportedTypes doc_value;
         if (!ignore_value) {
-            SupportedTypes st = DocEncoder::decode_supported_types(value);
-            doc_val.value = st;
-        } else {
-            doc_val.unread_value = true;
+            doc_value = DocEncoder::decode_supported_types(value);
         }
 
-        return {doc_val};
+        DocValue result = DocValue(doc_value, field_id, type);
+        result.unread_value = ignore_value;
+
+        return {result};
     }
 
     ANNIterator::ANNIterator(std::vector <std::unique_ptr<DocIterator>> its): its_(std::move(its)) {

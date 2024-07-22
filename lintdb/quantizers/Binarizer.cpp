@@ -23,6 +23,16 @@ Binarizer::Binarizer(size_t nbits, size_t dim)
             dim);
 }
 
+Binarizer::Binarizer(const Binarizer &other) {
+    this->nbits = other.nbits;
+    this->dim = other.dim;
+    this->bucket_cutoffs = other.bucket_cutoffs;
+    this->bucket_weights = other.bucket_weights;
+    this->avg_residual = other.avg_residual;
+    this->reverse_bitmap = other.reverse_bitmap;
+    this->decompression_lut = other.decompression_lut;
+}
+
 void Binarizer::train(size_t n, const float* x, size_t dim) {
     LOG(INFO) << "Training binarizer with " << n << " vectors of dimension "
               << dim << " and " << nbits << " bits.";
@@ -364,4 +374,6 @@ void Binarizer::sa_decode(size_t n, const residual_t* residuals, float* x) {
 size_t Binarizer::code_size() {
     return dim / 8 * nbits;
 }
+
+
 } // namespace lintdb

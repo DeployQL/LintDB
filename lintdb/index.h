@@ -8,15 +8,11 @@
 #include <vector>
 
 #include <unordered_set>
-#include "lintdb/EmbeddingBlock.h"
-#include "lintdb/Encoder.h"
-#include "lintdb/Passages.h"
 #include "lintdb/SearchOptions.h"
 #include "lintdb/SearchResult.h"
 #include "lintdb/api.h"
 #include "lintdb/exception.h"
 #include "lintdb/invlists/InvertedList.h"
-#include "lintdb/retrievers/PlaidRetriever.h"
 #include "lintdb/retrievers/Retriever.h"
 #include "lintdb/version.h"
 #include "lintdb/schema/Schema.h"
@@ -91,22 +87,8 @@ struct IndexIVF {
      */
     void train(const std::vector<Document>& docs);
 
-    /**
-     * set_centroids overwrites the centroids in the encoder.
-     *
-     * This is useful if you want to parallelize index writing and merge indices
-     * later.
-     */
-    void set_centroids(float* data, int n, int dim);
-
-    /**
-     * set_weights overwrites the compression weights in the encoder, if using
-     * compression.
-     */
-    void set_weights(
-            const std::vector<float> weights,
-            const std::vector<float> cutoffs,
-            const float avg_residual);
+    void set_quantizer(const std::string& field, std::shared_ptr<Quantizer> quantizer);
+    void set_coarse_quantizer(const std::string& field, std::shared_ptr<CoarseQuantizer> quantizer);
 
     /**
      * search will find the nearest neighbors for a vector block.
@@ -189,7 +171,7 @@ struct IndexIVF {
     Schema schema;
     std::shared_ptr<FieldMapper> field_mapper;
 
-    std::unordered_map<std::string, std::shared_ptr<CoarseQuantizer>> coarse_quantizer_map;
+    std::unordered_map<std::string, std::shared_ptr<ICoarseQuantizer>> coarse_quantizer_map;
     std::unordered_map<std::string, std::shared_ptr<Quantizer>> quantizer_map;
     std::unique_ptr<Retriever> retriever;
 

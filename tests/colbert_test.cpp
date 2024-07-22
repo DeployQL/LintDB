@@ -5,7 +5,7 @@
 #include <vector>
 #include "lintdb/EmbeddingBlock.h"
 #include "lintdb/index.h"
-#include "lintdb/retrievers/plaid.h"
+#include "lintdb/scoring/plaid.h"
 #include "lintdb/util.h"
 #include "lintdb/Collection.h"
 #include <string>

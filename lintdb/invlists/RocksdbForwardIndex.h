@@ -11,7 +11,6 @@
 #include "lintdb/constants.h"
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/invlists/Iterator.h"
-#include "lintdb/schema/util.h"
 #include "lintdb/version.h"
 #include "lintdb/invlists/ForwardIndexIterator.h"
 
@@ -29,13 +28,7 @@ struct RocksdbForwardIndex : public ForwardIndex {
     void merge(rocksdb::DB* db, std::vector<rocksdb::ColumnFamilyHandle*>& cfs)
             override;
 
-    std::vector<std::unique_ptr<DocumentCodes>> get_codes(
-            const uint64_t tenant,
-            const std::vector<idx_t>& ids) const override;
-    std::vector<std::unique_ptr<DocumentResiduals>> get_residuals(
-            const uint64_t tenant,
-            const std::vector<idx_t>& ids) const override;
-    std::vector<std::unique_ptr<DocumentMetadata>> get_metadata(
+    std::vector<std::map<uint8_t, SupportedTypes >> get_metadata(
             const uint64_t tenant,
             const std::vector<idx_t>& ids) const override;
 

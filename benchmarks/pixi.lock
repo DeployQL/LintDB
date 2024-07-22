@@ -1175,7 +1175,7 @@ packages:
   name: lintdb
   version: 0.2.0
   path: ../builds/python/lintdb/python
-  sha256: f9e6f8dd910f230dd346b4790173fd1b3e733a4e0cb83267ad1c69aeb6e69398
+  sha256: 7d44ac7907b48c7c078c360e8304a0e2a4789ec5d46b37571267b0f5160a06d3
   requires_dist:
   - numpy
   - packaging

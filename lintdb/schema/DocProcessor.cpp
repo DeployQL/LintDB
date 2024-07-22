@@ -17,9 +17,9 @@ namespace lintdb {
 DocumentProcessor::DocumentProcessor(
         const Schema& schema,
         const std::unordered_map<std::string, std::shared_ptr<Quantizer>>& quantizer_map,
-        const std::unordered_map<std::string, std::shared_ptr<CoarseQuantizer>>& coarse_quantizer_map,
+        const std::unordered_map<std::string, std::shared_ptr<ICoarseQuantizer>>& coarse_quantizer_map,
         const std::shared_ptr<FieldMapper> field_mapper,
-        std::unique_ptr<IndexWriter> index_writer
+        std::unique_ptr<IIndexWriter> index_writer
     ) : schema(schema), field_mapper(field_mapper), quantizer_map(quantizer_map), coarse_quantizer_map(coarse_quantizer_map), index_writer(std::move(index_writer)) {
     for (const auto& field : schema.fields) {
         field_map[field.name] = field;
@@ -54,9 +54,21 @@ void DocumentProcessor::processDocument(const uint64_t tenant, const Document& d
 
         for(const FieldType type : field.field_types) {
             switch(type) {
-                case FieldType::Colbert:
+                case FieldType::Colbert: {
+                    // colbert requires some extra work. We need to store the token codes in the context index in addition to the residuals.
+                    // the FieldValue we store changes from a quantized tensor to a ColBERTContextData.
+                    ColBERTContextData cd;
+                    cd.doc_codes = processed_data.centroid_ids;
+                    assert(processed_data.value.data_type == DataType::QUANTIZED_TENSOR);
+
+                    QuantizedTensor residuals = std::get<QuantizedTensor>(processed_data.value.value);
+                    cd.doc_residuals = residuals;
+
+                    size_t num_tokens = processed_data.value.num_tensors;
+                    processed_data.value = FieldValue(cd, num_tokens);
                     colbert_data.push_back(processed_data);
                     break;
+                }
                 case FieldType::Indexed:
                     inverted_data.push_back(processed_data);
                     break;
@@ -74,6 +86,8 @@ void DocumentProcessor::processDocument(const uint64_t tenant, const Document& d
     //process colbert data.
     for(ProcessedData& data: colbert_data) {
         // store all of the token codes in the context index.
+        assert(data.value.data_type == DataType::COLBERT);
+
         auto cd = DocEncoder::encode_context_data(data);
         posting_data.context.push_back(cd);
 
@@ -81,7 +95,7 @@ void DocumentProcessor::processDocument(const uint64_t tenant, const Document& d
         size_t code_size = quantizer_map.at(field_mapper->getFieldName(data.field))->code_size();
 
         // for colbert fields, don't store data into the inverted index itself. we'll strip that out.
-        std::vector<PostingData> encoded_data = DocEncoder::encode_inverted_data(data, code_size, true);
+        std::vector<PostingData> encoded_data = DocEncoder::encode_inverted_data(data, code_size);
 
         posting_data.inverted.reserve(posting_data.inverted.size() + encoded_data.size());
         posting_data.inverted.insert(posting_data.inverted.end(), encoded_data.begin(), encoded_data.end());
@@ -119,8 +133,8 @@ void DocumentProcessor::processDocument(const uint64_t tenant, const Document& d
 
 std::vector<idx_t> DocumentProcessor::assignIVFCentroids(const Field& field, const FieldValue& value) {
     if (field.data_type == DataType::TENSOR || field.data_type == DataType::QUANTIZED_TENSOR) {
-        std::shared_ptr<CoarseQuantizer> encoder = coarse_quantizer_map.at(field.name);
-        assert(encoder->is_trained);
+        std::shared_ptr<ICoarseQuantizer> encoder = coarse_quantizer_map.at(field.name);
+        assert(encoder->is_trained());
 
         Tensor tensor = std::get<Tensor>(value.value);
         std::vector<idx_t> centroids(value.num_tensors);

@@ -7,8 +7,7 @@
 #include "lintdb/constants.h"
 #include "lintdb/exception.h"
 #include "lintdb/invlists/RocksdbForwardIndex.h"
-#include "lintdb/schema/forward_index_generated.h"
-#include "lintdb/schema/util.h"
+#include "lintdb/schema/DocEncoder.h"
 #include "lintdb/invlists/ContextIterator.h"
 #include "InvertedIterator.h"
 
@@ -101,12 +100,7 @@ std::vector<idx_t> RocksdbInvertedList::get_mapping(
             &value);
 
     if (status.ok()) {
-        auto mapping = GetDocumentClusterMapping(value.data());
-        std::vector<idx_t> idxs;
-        for (size_t i = 0; i < mapping->centroids()->size(); i++) {
-            idxs.push_back(mapping->centroids()->Get(i));
-        }
-        return idxs;
+        return DocEncoder::decode_inverted_mapping_data(value);
     } else {
         LOG(WARNING) << "Could not find mapping for doc id: " << id;
         return {};

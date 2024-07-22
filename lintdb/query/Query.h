@@ -4,7 +4,6 @@
 
 
 namespace lintdb {
-
     struct Query {
     public:
         Query(std::unique_ptr<QueryNode> root);

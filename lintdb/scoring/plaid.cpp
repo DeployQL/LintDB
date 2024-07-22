@@ -1,4 +1,4 @@
-#include "lintdb/retrievers/plaid.h"
+#include "lintdb/scoring/plaid.h"
 #include <faiss/utils/hamming.h>
 #include <glog/logging.h>
 #include <algorithm>

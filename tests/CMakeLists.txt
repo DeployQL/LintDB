@@ -13,7 +13,8 @@ set(
         binarizer_test.cpp
 #        index_builder_test.cpp
         inverted_list_test.cpp
-#        product_quantizer_test.cpp
+        doc_processor_test.cpp
+        #        product_quantizer_test.cpp
 #        kmeans_test.cpp
 )
 

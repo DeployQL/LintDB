@@ -8,7 +8,14 @@
 
 namespace lintdb {
 
-    class IndexWriter {
+    class IIndexWriter {
+    public:
+        virtual void write(const BatchPostingData& batch_posting_data) = 0;
+
+        virtual ~IIndexWriter() = default;
+    };
+
+    class IndexWriter: public IIndexWriter {
     private:
         std::shared_ptr<rocksdb::DB> db;
         std::vector<rocksdb::ColumnFamilyHandle*>& column_families;
@@ -20,7 +27,7 @@ namespace lintdb {
                     const Version& version
         );
 
-        void write(const BatchPostingData& batch_posting_data);
+        void write(const BatchPostingData& batch_posting_data) override;
     };
 
 } // lintdb

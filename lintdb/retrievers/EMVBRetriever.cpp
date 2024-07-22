@@ -13,7 +13,7 @@
 #include "lintdb/retrievers/Retriever.h"
 #include "lintdb/retrievers/emvb.h"
 #include "lintdb/retrievers/emvb_util.h"
-#include "lintdb/retrievers/plaid.h"
+#include "lintdb/scoring/plaid.h"
 
 namespace lintdb {
 extern "C" {

@@ -19,9 +19,9 @@ class DocumentProcessor {
     DocumentProcessor(
         const Schema& schema,
         const std::unordered_map<std::string, std::shared_ptr<Quantizer>>& quantizer_map,
-        const std::unordered_map<std::string, std::shared_ptr<CoarseQuantizer>>& coarse_quantizer_map,
+        const std::unordered_map<std::string, std::shared_ptr<ICoarseQuantizer>>& coarse_quantizer_map,
         const std::shared_ptr<FieldMapper> field_mapper,
-        std::unique_ptr<IndexWriter> index_writer
+        std::unique_ptr<IIndexWriter> index_writer
     );
     void processDocument(const uint64_t tenant, const Document& document);
 
@@ -35,9 +35,9 @@ class DocumentProcessor {
     const std::shared_ptr<FieldMapper> field_mapper;
     // each tensor/tensor_array field has a quantizer
     const std::unordered_map<std::string, std::shared_ptr<Quantizer>>& quantizer_map;
-    const std::unordered_map<std::string, std::shared_ptr<CoarseQuantizer>>& coarse_quantizer_map;
+    const std::unordered_map<std::string, std::shared_ptr<ICoarseQuantizer>>& coarse_quantizer_map;
 
-    std::unique_ptr<IndexWriter> index_writer;
+    std::unique_ptr<IIndexWriter> index_writer;
 };
 
 } // namespace lintdb

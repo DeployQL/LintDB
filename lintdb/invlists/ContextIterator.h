@@ -31,18 +31,19 @@ public:
         it->Seek(this->prefix);
     }
 
-    bool has_next() {
+    bool is_valid() {
         if (!has_read_key) {
             bool is_valid = it->Valid();
             if (!is_valid) {
                 return false;
             }
 
-            auto key = it->key().ToString();
-            this->current_key = lintdb::ContextKey(key);
-            if (current_key.tenant() != tenant || current_key.field() != field) {
+            auto key = it->key();
+            std::string key_str = key.ToString();
+            if (key_str.compare(0, prefix.size(), prefix) != 0) {
                 return false;
             }
+            this->current_key = ContextKey(key_str);
         }
 
         has_read_key = true;

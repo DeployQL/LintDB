@@ -28,8 +28,13 @@ prefix = "Release/" * (platform.system() == 'Windows')
 
 pylintdb_lib = f"{prefix}_pylintdb{ext}"
 
+"""
+I don't know we need to copy file like this.
+"""
 print(f"Copying {pylintdb_lib}")
 shutil.copyfile("lintdb.py", "lintdb/lintdb.py")
+shutil.copyfile("document.py", "lintdb/document.py")
+shutil.copyfile("schema.py", "lintdb/schema.py")
 try:
     shutil.copyfile(pylintdb_lib, f"lintdb/_pylintdb{ext}") # we use pylintdb as cmake's python target.
 except:
@@ -49,7 +54,6 @@ setup(
     author_email='matt@deployql.com',
     license='MIT',
     keywords='search nearest neighbors colbert',
-
     install_requires=['numpy', 'packaging'],
     packages=['lintdb'],
     package_data={

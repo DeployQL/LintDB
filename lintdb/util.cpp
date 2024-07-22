@@ -42,39 +42,6 @@ void normalize_vector(
     }
 }
 
-std::string serialize_encoding(IndexEncoding type) {
-    static const std::unordered_map<IndexEncoding, std::string> typeToString{
-            {IndexEncoding::NONE, "NONE"},
-            {IndexEncoding::BINARIZER, "BINARIZER"},
-            {IndexEncoding::PRODUCT_QUANTIZER, "PRODUCT_QUANTIZER"},
-            {IndexEncoding::XTR, "XTR"},
-    };
-
-    auto it = typeToString.find(type);
-    if (it != typeToString.end()) {
-        return it->second;
-    } else {
-        // Handle error: Unknown enum value
-        return "UNKNOWN";
-    }
-}
-
-IndexEncoding deserialize_encoding(const std::string& str) {
-    static const std::unordered_map<std::string, IndexEncoding> stringToType{
-            {"NONE", IndexEncoding::NONE},
-            {"BINARIZER", IndexEncoding::BINARIZER},
-            {"PRODUCT_QUANTIZER", IndexEncoding::PRODUCT_QUANTIZER},
-            {"XTR", IndexEncoding::XTR},
-    };
-
-    auto it = stringToType.find(str);
-    if (it != stringToType.end()) {
-        return it->second;
-    } else {
-        throw LintDBException("Unknown string: " + str);
-    }
-}
-
 Json::Value loadJson(const std::string& path) {
     Json::Value root;
     std::ifstream in(path);

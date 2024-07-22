@@ -7,7 +7,7 @@
 #include "lintdb/SearchOptions.h"
 #include "lintdb/invlists/EncodedDocument.h"
 #include "lintdb/retrievers/Retriever.h"
-#include "lintdb/retrievers/plaid.h"
+#include "lintdb/scoring/plaid.h"
 
 #ifndef LINTDB_CHUNK_SIZE
 #define LINTDB_CHUNK_SIZE 1000

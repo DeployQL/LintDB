@@ -34,34 +34,38 @@ enum DataType {
     FLOAT,
     TEXT,
     DATETIME,
+    COLBERT
 };
 
-    const std::unordered_map<int, DataType> IntToDataType = {
-            {0, DataType::TENSOR},
-            {1, DataType::QUANTIZED_TENSOR},
-            {2, DataType::INTEGER},
-            {3, DataType::FLOAT},
-            {4, DataType::TEXT},
-            {5, DataType::DATETIME}
-    };
+const std::unordered_map<int, DataType> IntToDataType = {
+        {0, DataType::TENSOR},
+        {1, DataType::QUANTIZED_TENSOR},
+        {2, DataType::INTEGER},
+        {3, DataType::FLOAT},
+        {4, DataType::TEXT},
+        {5, DataType::DATETIME}
+};
 
-    const std::unordered_map<DataType, int> DataTypeToInt = {
-            {DataType::TENSOR, 0},
-            {DataType::QUANTIZED_TENSOR, 1},
-            {DataType::INTEGER, 2},
-            {DataType::FLOAT, 3},
-            {DataType::TEXT, 4},
-            {DataType::DATETIME, 5}
-    };
+const std::unordered_map<DataType, int> DataTypeToInt = {
+        {DataType::TENSOR, 0},
+        {DataType::QUANTIZED_TENSOR, 1},
+        {DataType::INTEGER, 2},
+        {DataType::FLOAT, 3},
+        {DataType::TEXT, 4},
+        {DataType::DATETIME, 5}
+};
 
 using Tensor = std::vector< float>;
-using TensorArray = std::vector< float>;
 using QuantizedTensor = std::vector<uint8_t>;
-using QuantizedTensorArray = std::vector<uint8_t>;
 using Duration = std::chrono::duration<int64_t, std::milli>;
 using DateTime = std::chrono::time_point<std::chrono::system_clock, Duration>;
 
-using SupportedTypes = std::variant<idx_t, float, lintdb::DateTime, lintdb::Tensor, lintdb::QuantizedTensor, std::string>;
+struct ColBERTContextData {
+    std::vector<idx_t> doc_codes;
+    std::vector<uint8_t>  doc_residuals;
+};
+
+using SupportedTypes = std::variant<idx_t, float, lintdb::DateTime, lintdb::Tensor, lintdb::QuantizedTensor, std::string, ColBERTContextData>;
 
 struct FieldValue {
     lintdb::DataType data_type;
@@ -76,15 +80,13 @@ struct FieldValue {
     FieldValue(DateTime v) : data_type(DataType::DATETIME), value(v) {}
     FieldValue(Tensor v) : data_type(DataType::TENSOR), num_tensors(1), value(v) {}
     FieldValue(Tensor v, size_t num_tensors) : data_type(DataType::TENSOR), num_tensors(num_tensors), value(v) {}
-    FieldValue(QuantizedTensor v) : data_type(DataType::QUANTIZED_TENSOR), num_tensors(1), value(v) {}
-    FieldValue(QuantizedTensorArray v, size_t num_tensors) : data_type(DataType::QUANTIZED_TENSOR), num_tensors(num_tensors), value(v) {}
+    FieldValue(QuantizedTensor v, size_t num_tensors) : data_type(DataType::QUANTIZED_TENSOR), num_tensors(num_tensors), value(v) {}
+    FieldValue(ColBERTContextData v, size_t num_tensors) : data_type(DataType::COLBERT), num_tensors(num_tensors), value(v) {}
 };
 
 }
 
 namespace bitsery {
-
-
     template<typename S>
     void serialize(S& s, lintdb::SupportedTypes& fv) {
         s.ext(fv, bitsery::ext::StdVariant{
@@ -105,6 +107,10 @@ namespace bitsery {
                 },
                 [](S& p, lintdb::DateTime& o) {
                     p.ext8b(o, bitsery::ext::StdTimePoint{});
+                },
+                [](S& p, lintdb::ColBERTContextData& o) {
+                    p.container8b(o.doc_codes, MAX_CENTROIDS_TO_STORE);
+                    p.container1b(o.doc_residuals, MAX_CENTROIDS_TO_STORE);
                 }
         });
     }
@@ -133,7 +139,11 @@ namespace bitsery {
                           },
                           [](S& p, lintdb::DateTime& o) {
                               p.ext8b(o, bitsery::ext::StdTimePoint{});
-                          }
+                          },
+                            [](S& p, lintdb::ColBERTContextData& o) {
+                                p.container8b(o.doc_codes, MAX_CENTROIDS_TO_STORE);
+                                p.container1b(o.doc_residuals, MAX_CENTROIDS_TO_STORE);
+                            }
                   });
               });
     }
@@ -156,6 +166,12 @@ namespace bitsery {
     template<typename S>
     void serialize(S& s, lintdb::DateTime& dt) {
         s.ext8b(dt, bitsery::ext::StdTimePoint{});
+    }
+
+    template<typename S>
+    void serialize(S& s, lintdb::ColBERTContextData data) {
+        s.container8b(data.doc_codes, MAX_CENTROIDS_TO_STORE);
+        s.container1b(data.doc_residuals, MAX_CENTROIDS_TO_STORE);
     }
 }
 

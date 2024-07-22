@@ -10,7 +10,7 @@
 
 
 namespace lintdb {
-    std::vector<PostingData> DocEncoder::encode_inverted_data(const ProcessedData& data, size_t code_size, bool skip_value) {
+    std::vector<PostingData> DocEncoder::encode_inverted_data(const ProcessedData &data, size_t code_size) {
         std::vector<std::string> keys;
 
         using Buffer = std::vector<uint8_t>;
@@ -38,23 +38,22 @@ namespace lintdb {
 
                     keys.push_back(key);
 
-                    if (!skip_value) {
-                        Tensor centroid_data;
-                        for (size_t i = 0; i < token_ids.size(); i++) {
-                            idx_t token_id = token_ids[i];
+                    Tensor centroid_data;
+                    for (size_t i = 0; i < token_ids.size(); i++) {
+                        idx_t token_id = token_ids[i];
 
-                            centroid_data.insert(
-                                    centroid_data.end(),
-                                    tensor_arr.data() + token_id * code_size,
-                                    tensor_arr.data() + (token_id + 1) * code_size);
+                        centroid_data.insert(
+                                centroid_data.end(),
+                                tensor_arr.data() + token_id * code_size,
+                                tensor_arr.data() + (token_id + 1) * code_size);
 
-                        }
-                        Buffer buf;
-                        SupportedTypes tt = tensor_arr;
-                        auto written = bitsery::quickSerialization(OutputAdapter{buf}, tt);
-                        auto st = std::string(buf.begin(), buf.begin() + written);
-                        values.push_back(st);
                     }
+                    Buffer buf;
+                    SupportedTypes tt = tensor_arr;
+                    auto written = bitsery::quickSerialization(OutputAdapter{buf}, tt);
+                    auto st = std::string(buf.begin(), buf.begin() + written);
+                    values.push_back(st);
+
                 }
                 break;
             }
@@ -74,23 +73,41 @@ namespace lintdb {
 
                     keys.push_back(key);
 
-                    if (!skip_value) {
-                        QuantizedTensor centroid_data;
-                        for (size_t i = 0; i < token_ids.size(); i++) {
-                            idx_t token_id = token_ids[i];
+                    QuantizedTensor centroid_data;
+                    for (size_t i = 0; i < token_ids.size(); i++) {
+                        idx_t token_id = token_ids[i];
 
-                            centroid_data.insert(
-                                    centroid_data.end(),
-                                    tensor_arr.data() + token_id * code_size,
-                                    tensor_arr.data() + (token_id + 1) * code_size);
+                        centroid_data.insert(
+                                centroid_data.end(),
+                                tensor_arr.data() + token_id * code_size,
+                                tensor_arr.data() + (token_id + 1) * code_size);
 
-                        }
-                        Buffer buf;
-                        SupportedTypes tt = tensor_arr;
-                        auto written = bitsery::quickSerialization(OutputAdapter{buf}, tt);
-                        auto st = std::string(buf.begin(), buf.begin() + written);
-                        values.push_back(st);
                     }
+                    Buffer buf;
+                    SupportedTypes tt = tensor_arr;
+                    auto written = bitsery::quickSerialization(OutputAdapter{buf}, tt);
+                    auto st = std::string(buf.begin(), buf.begin() + written);
+                    values.push_back(st);
+
+                }
+                break;
+            }
+            case DataType::COLBERT: {
+                assert(data.value.num_tensors == data.centroid_ids.size());
+
+                std::map<idx_t, std::vector<idx_t>> centroid_to_tokens;
+                for(idx_t i = 0; i < data.centroid_ids.size(); i++) {
+                    centroid_to_tokens[data.centroid_ids[i]].push_back(i);
+                }
+
+                for(const auto& [centroid_id, token_ids] : centroid_to_tokens) {
+                    std::string key = create_index_id(data.tenant, data.field, DataType::QUANTIZED_TENSOR, centroid_id, data.doc_id);
+
+                    keys.push_back(key);
+
+                    // ColBERT implicitly skips values. This is because the value isn't stored in the inverted index, but we need
+                    // to build a posting list for it.
+                    values.emplace_back("");
                 }
                 break;
             }
@@ -102,13 +119,11 @@ namespace lintdb {
 
                 keys.push_back(key);
 
-                if (!skip_value) {
-                    Buffer buf;
-                    size_t written = bitsery::quickSerialization(OutputAdapter{buf}, data.value.value);
+                Buffer buf;
+                size_t written = bitsery::quickSerialization(OutputAdapter{buf}, data.value.value);
 
-                    auto st = std::string(buf.begin(), buf.begin() + written);
-                    values.push_back(st);
-                }
+                auto st = std::string(buf.begin(), buf.begin() + written);
+                values.push_back(st);
 
                 break;
             }
@@ -117,13 +132,11 @@ namespace lintdb {
 
                 keys.push_back(key);
 
-                if (!skip_value) {
-                    Buffer buf;
-                    size_t written = bitsery::quickSerialization(OutputAdapter{buf}, data.value.value);
+                Buffer buf;
+                size_t written = bitsery::quickSerialization(OutputAdapter{buf}, data.value.value);
 
-                    auto st = std::string(buf.begin(), buf.begin() + written);
-                    values.push_back(st);
-                }
+                auto st = std::string(buf.begin(), buf.begin() + written);
+                values.push_back(st);
 
                 break;
             }
@@ -132,13 +145,11 @@ namespace lintdb {
 
                 keys.push_back(key);
 
-                if (!skip_value) {
-                    Buffer buf;
-                    size_t written = bitsery::quickSerialization(OutputAdapter{buf}, data.value.value);
+                Buffer buf;
+                size_t written = bitsery::quickSerialization(OutputAdapter{buf}, data.value.value);
 
-                    auto st = std::string(buf.begin(), buf.begin() + written);
-                    values.push_back(st);
-                }
+                auto st = std::string(buf.begin(), buf.begin() + written);
+                values.push_back(st);
 
                 break;
             }
@@ -147,22 +158,20 @@ namespace lintdb {
 
                 keys.push_back(key);
 
-                if (!skip_value) {
-                    Buffer buf;
-                    size_t written = bitsery::quickSerialization(OutputAdapter{buf}, data.value.value);
+                Buffer buf;
+                size_t written = bitsery::quickSerialization(OutputAdapter{buf}, data.value.value);
 
-                    auto st = std::string(buf.begin(), buf.begin() + written);
-                    values.push_back(st);
-                }
+                auto st = std::string(buf.begin(), buf.begin() + written);
+                values.push_back(st);
                 break;
             }
         };
 
-        assert(skip_value || keys.size() == values.size());
+        assert(keys.size() == values.size());
 
         std::vector<PostingData> results;
         for(size_t i = 0; i < keys.size(); i++) {
-            results.push_back({keys[i], skip_value ? "" : values[i]});
+            results.push_back({keys[i], values[i]});
         }
         return results;
     }
@@ -254,4 +263,5 @@ namespace lintdb {
 
         return res;
     }
+
 } // lintdb

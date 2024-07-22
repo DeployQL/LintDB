@@ -116,6 +116,8 @@ namespace lintdb {
                     doc_id_ = load_bigendian<idx_t>(ptr + sizeof(tenant_) + sizeof(field_) + sizeof(field_type) + sizeof(field_size) + field_size);
                     break;
                 }
+                default:
+                    throw LintDBException("type not regonized in inverted index");
             }
         }
 
@@ -228,10 +230,13 @@ namespace lintdb {
                 // tensors store the inverted index list, so we should expect an idx_t.
                 kb.add(std::get<idx_t>(value));
                 break;
-            case DataType::TEXT:
+            case DataType::TEXT: {
                 std::string v = std::get<std::string>(value);
                 kb.add(uint32_t(v.size())).add(v);
                 break;
+            }
+            default:
+                throw LintDBException("type not recognized");
         }
 
         kb.add(doc_id);
@@ -260,10 +265,13 @@ namespace lintdb {
                 // tensors store the inverted index list, so we should expect an idx_t.
                 kb.add(std::get<idx_t>(value));
                 break;
-            case DataType::TEXT:
+            case DataType::TEXT: {
                 std::string v = std::get<std::string>(value);
                 kb.add(uint32_t(v.size())).add(v);
                 break;
+            }
+            default:
+                throw LintDBException("type not recognized");
         }
 
         return kb.build();
