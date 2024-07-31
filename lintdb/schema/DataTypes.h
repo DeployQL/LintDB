@@ -68,20 +68,21 @@ struct ColBERTContextData {
 using SupportedTypes = std::variant<idx_t, float, lintdb::DateTime, lintdb::Tensor, lintdb::QuantizedTensor, std::string, ColBERTContextData>;
 
 struct FieldValue {
+    std::string name;
     lintdb::DataType data_type;
     size_t num_tensors = 0;
     SupportedTypes value;
 
     FieldValue() = default;
 
-    FieldValue(int v) : data_type(DataType::INTEGER), value(v) {}
-    FieldValue(float v) : data_type(DataType::FLOAT), value(v) {}
-    FieldValue(std::string v) : data_type(DataType::TEXT), value(v) {}
-    FieldValue(DateTime v) : data_type(DataType::DATETIME), value(v) {}
-    FieldValue(Tensor v) : data_type(DataType::TENSOR), num_tensors(1), value(v) {}
-    FieldValue(Tensor v, size_t num_tensors) : data_type(DataType::TENSOR), num_tensors(num_tensors), value(v) {}
-    FieldValue(QuantizedTensor v, size_t num_tensors) : data_type(DataType::QUANTIZED_TENSOR), num_tensors(num_tensors), value(v) {}
-    FieldValue(ColBERTContextData v, size_t num_tensors) : data_type(DataType::COLBERT), num_tensors(num_tensors), value(v) {}
+    FieldValue(std::string name, int v) : name(name), data_type(DataType::INTEGER), value(v) {}
+    FieldValue(std::string name, float v) : name(name),  data_type(DataType::FLOAT), value(v) {}
+    FieldValue(std::string name, std::string v) : name(name),  data_type(DataType::TEXT), value(v) {}
+    FieldValue(std::string name, DateTime v) : name(name), data_type(DataType::DATETIME), value(v) {}
+    FieldValue(std::string name, Tensor v) : name(name), data_type(DataType::TENSOR), num_tensors(1), value(v) {}
+    FieldValue(std::string name, Tensor v, size_t num_tensors) : name(name), data_type(DataType::TENSOR), num_tensors(num_tensors), value(v) {}
+    FieldValue(std::string name, QuantizedTensor v, size_t num_tensors) : name(name), data_type(DataType::QUANTIZED_TENSOR), num_tensors(num_tensors), value(v) {}
+    FieldValue(std::string name, ColBERTContextData v, size_t num_tensors) : name(name), data_type(DataType::COLBERT), num_tensors(num_tensors), value(v) {}
 };
 
 }

@@ -27,10 +27,11 @@ Schema createSampleSchema() {
 
 // Helper function to create a sample document
 Document createSampleDocument() {
-    Document document;
-    document.fields["intField"] = FieldValue(42);
-    document.fields["floatField"] = FieldValue(3.14f);
-    document.fields["tensorField"] = FieldValue(Tensor{0.1f, 0.2f});
+    Document document(1, {
+            FieldValue("intField", 42),
+            FieldValue("floatField", 3.14f),
+            FieldValue("tensorField", Tensor{0.1f, 0.2f})
+    });
     return document;
 }
 
@@ -50,8 +51,7 @@ TEST(DocumentProcessor, ProcessDocumentWithValidFields) {
 
     lintdb::DocumentProcessor processor(schema, quantizerMap, coarseQuantizerMap, fieldMapper, std::move(mockIndexWriter));
 
-    lintdb::Document document;
-    document.fields = {{"field1", lintdb::FieldValue(10)}};
+    lintdb::Document document(1, {{lintdb::FieldValue("field1", 10)}});
 
     // quantizer does not get called for non-tensor fields
     EXPECT_CALL(*mockQuantizer, sa_encode(_, _, _)).Times(0);
@@ -69,8 +69,7 @@ TEST(DocumentProcessor, ProcessDocumentWithInvalidField) {
 
     lintdb::DocumentProcessor processor(schema, quantizerMap, coarseQuantizerMap, fieldMapper, std::move(mockIndexWriter));
 
-    lintdb::Document document;
-    document.fields = {{"invalid_field", lintdb::FieldValue(10)}};
+    lintdb::Document document(1, {{lintdb::FieldValue("invalid_field", 10)}});
 
     EXPECT_CALL(*mockQuantizer, sa_encode(_, _, _)).Times(0);
 
@@ -94,8 +93,7 @@ TEST(DocumentProcessor, ProcessDocumentWithTensorField) {
 
     lintdb::DocumentProcessor processor(schema, quantizerMap, coarseQuantizerMap, fieldMapper, std::move(mockIndexWriter));
 
-    lintdb::Document document;
-    document.fields = {{"field1", lintdb::FieldValue(lintdb::Tensor{1.0f, 2.0f, 3.0f})}};
+    lintdb::Document document(0, {{lintdb::FieldValue("field1", lintdb::Tensor{1.0f, 2.0f, 3.0f})}});
 
     EXPECT_CALL(*mockQuantizer, code_size()).WillRepeatedly(Return(3));
     EXPECT_CALL(*mockCoarseQuantizer, is_trained()).WillRepeatedly(Return(true));

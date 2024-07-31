@@ -25,14 +25,13 @@ namespace lintdb {
     public:
         QueryNode() = delete;
         explicit QueryNode(QueryNodeType op): operator_(op) {};
-        explicit QueryNode(QueryNodeType op, std::string& field, FieldValue& value): operator_(op), field(field), value(value) {};
+        explicit QueryNode(QueryNodeType op, FieldValue& value): operator_(op), value(value) {};
         virtual std::unique_ptr<DocIterator> process(QueryContext& context, const SearchOptions& opts) = 0;
 
         virtual ~QueryNode() = default;
 
     protected:
         QueryNodeType operator_;
-        std::string field;
         FieldValue value;
     };
 
@@ -40,7 +39,7 @@ namespace lintdb {
     public:
         TermQueryNode() = delete;
 
-        TermQueryNode(std::string field, FieldValue& value): QueryNode(QueryNodeType::TERM, field, value){};
+        TermQueryNode(FieldValue& value): QueryNode(QueryNodeType::TERM, value){};
 
         std::unique_ptr<DocIterator> process(QueryContext& context, const SearchOptions& opts) override;
     };
@@ -53,7 +52,7 @@ namespace lintdb {
             children_.push_back(std::move(child));
         }
     protected:
-        std::vector<std::unique_ptr<QueryNode>> children_;
+        std::vector<std::unique_ptr<QueryNode>> children_ = {};
 
     };
 
@@ -66,18 +65,22 @@ namespace lintdb {
     class VectorQueryNode : public QueryNode {
     public:
         VectorQueryNode() = delete;
-        VectorQueryNode(std::string field_id, FieldValue& value): QueryNode(QueryNodeType::VECTOR, field_id, value){};
+        VectorQueryNode(FieldValue& value): QueryNode(QueryNodeType::VECTOR, value){};
         std::unique_ptr<DocIterator> process(QueryContext& context, const SearchOptions& opts) override;
     };
 
     class AndQueryNode : public MultiQueryNode {
     public:
         AndQueryNode() = delete;
-        explicit AndQueryNode(std::vector<std::unique_ptr<QueryNode>> its): MultiQueryNode(QueryNodeType::AND), children_(std::move(its)) {};
+        explicit AndQueryNode(std::vector<std::unique_ptr<QueryNode>> its): MultiQueryNode(QueryNodeType::AND) {
+            for(auto& child : its) {
+                children_.push_back(std::move(child));
+            }
+        };
         std::unique_ptr<DocIterator> process(QueryContext& context, const SearchOptions& opts) override;
 
     protected:
-        std::vector<std::unique_ptr<QueryNode>> children_;
+        std::vector<std::unique_ptr<QueryNode>> children_ = {};
     };
 
 }

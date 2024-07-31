@@ -15,6 +15,7 @@
 #include <gsl/span>
 #include <memory>
 #include "lintdb/version.h"
+#include <faiss/IndexFlat.h>
 
 namespace lintdb {
 
@@ -45,7 +46,6 @@ namespace lintdb {
 
     };
 
-
 /**
  * @class CoarseQuantizer
  * @brief This class is used for IVF of vectors.
@@ -56,6 +56,8 @@ class CoarseQuantizer: public ICoarseQuantizer {
     bool is_trained_ = false; // Is the quantizer trained
 
     explicit CoarseQuantizer(size_t d);
+    CoarseQuantizer(size_t d, const std::vector<float>& centroids, size_t k);
+
     void train(const size_t n, const float* x, size_t k, size_t num_iter=10) override;
     void save(const std::string& path) override;
     void assign(size_t n, const float* x, idx_t* codes) override;

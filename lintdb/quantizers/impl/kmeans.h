@@ -66,7 +66,7 @@ inline float inner_product(std::vector<float>& a, std::vector<float>& b) {
 }
 
 // K-means clustering for a single sub-vector
-std::vector<float> kmeans(const std::vector<float>& data, size_t n, size_t dim, size_t k, Metric metric, int iterations = 100);
+std::vector<float> kmeans(const float* data, size_t n, size_t dim, size_t k, Metric metric, int iterations = 100);
 
 }
 

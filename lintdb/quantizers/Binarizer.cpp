@@ -23,6 +23,26 @@ Binarizer::Binarizer(size_t nbits, size_t dim)
             dim);
 }
 
+    Binarizer::Binarizer(
+            const std::vector<float>& bucket_cutoffs,
+            const std::vector<float>& bucket_weights,
+            const float avg_residual,
+            const size_t nbits,
+            const size_t dim
+            ): Quantizer(), bucket_cutoffs(bucket_cutoffs), bucket_weights(bucket_weights), avg_residual(avg_residual), nbits(nbits), dim(dim){
+        LINTDB_THROW_IF_NOT_FMT(
+                dim % 8 == 0, "Dimension must be a multiple of 8, got %d", dim);
+        LINTDB_THROW_IF_NOT_FMT(
+                dim % (nbits * 8) == 0,
+                "Dimension must be a multiple of %d, got %d",
+                nbits * 8,
+                dim);
+
+        reverse_bitmap = create_reverse_bitmap();
+        decompression_lut = create_decompression_lut();
+
+}
+
 Binarizer::Binarizer(const Binarizer &other) {
     this->nbits = other.nbits;
     this->dim = other.dim;
@@ -58,19 +78,6 @@ void Binarizer::train(size_t n, const float* x, size_t dim) {
 
     reverse_bitmap = create_reverse_bitmap();
     decompression_lut = create_decompression_lut();
-}
-
-void Binarizer::set_weights(
-        const std::vector<float>& weights,
-        const std::vector<float>& cutoffs,
-        const float avg_residual) {
-    LINTDB_THROW_IF_NOT(weights.size() == 1 << nbits);
-
-    this->bucket_weights = weights;
-    this->bucket_cutoffs = cutoffs;
-    this->avg_residual = avg_residual;
-    this->reverse_bitmap = create_reverse_bitmap();
-    this->decompression_lut = create_decompression_lut();
 }
 
 QuantizerType Binarizer::get_type() {

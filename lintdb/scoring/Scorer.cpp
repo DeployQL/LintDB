@@ -16,7 +16,11 @@ namespace lintdb {
                 break;
             }
         }
-        LINTDB_THROW_IF_NOT_MSG(colbert_data_idx != -1, "ColBERT data not found in DocValues");
+
+        if(colbert_data_idx == -1) {
+            LOG(WARNING) << "colbert context field not found for doc_id: " << doc_id;
+            return {0.0, doc_id, dvs};
+        }
 
         uint8_t colbert_field_id = context.getFieldMapper()->getFieldID(context.colbert_context);
         size_t dim = context.getFieldMapper()->getFieldDimensions(colbert_field_id);
@@ -57,7 +61,7 @@ namespace lintdb {
     ScoredDocument PlaidScorer::score(QueryContext &context, idx_t doc_id, std::vector<DocValue> &fvs) const {
         colbert_it->advance(doc_id);
         if (!colbert_it->is_valid() || colbert_it->get_key().doc_id() != doc_id) {
-            LOG(WARNING) << "colbert context field not found for doc_id: " << doc_id;
+            LOG(WARNING) << "plaid context field not found for doc_id: " << doc_id;
             return {0.0, doc_id, fvs};
         }
 

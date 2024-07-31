@@ -56,15 +56,16 @@ lintdb::Document create_document(size_t num_tokens, size_t dim, const std::vecto
         std::vector<float> data(dim, j);
         vector.insert(vector.end(), data.begin(), data.end());
     }
-    lintdb::FieldValue fv(vector, num_tokens);
-    lintdb::Document doc;
-    doc.addField("colbert", fv);
+    lintdb::FieldValue fv("colbert", vector, num_tokens);
+    std::vector<lintdb::FieldValue> fields = {fv};
+    for(int i = 0; i < filters.size(); i++) {
+        fields.push_back(filter_values[i]);
+    }
+    lintdb::Document doc(0, fields );
 
     assert(filters.size() == filter_values.size());
 
-    for(int i = 0; i < filters.size(); i++) {
-        doc.addField(filters[i], filter_values[i]);
-    }
+
 
     return doc;
 }
@@ -77,23 +78,22 @@ std::vector<lintdb::Document> create_colbert_documents(size_t num_docs, size_t n
             std::vector<float> data(dim, j);
             vector.insert(vector.end(), data.begin(), data.end());
         }
-        lintdb::FieldValue fv(vector, num_tokens);
-        lintdb::Document doc;
-        doc.addField("colbert", fv);
+        lintdb::FieldValue fv("colbert", vector, num_tokens);
 
+        std::vector<lintdb::FieldValue> filter_values({fv});
         if (!filter_types.empty()) {
             for(int i = 0; i < filter_types.size(); i++) {
                 if (filter_types[i] == lintdb::DataType::TEXT) {
-                    lintdb::FieldValue text_value("test");
-                    doc.addField("filter" + std::to_string(i), text_value);
+                    lintdb::FieldValue text_value("filter" + std::to_string(i), "test");
+                    filter_values.push_back(text_value);
                 } else if (filter_types[i] == lintdb::DataType::INTEGER) {
-                    lintdb::FieldValue int_value(1);
-                    doc.addField("filter" + std::to_string(i), int_value);
+                    lintdb::FieldValue int_value("filter" + std::to_string(i), 1);
+                    filter_values.push_back(int_value);
                 }
             }
         }
 
-        doc.id = i;
+        lintdb::Document doc(i, filter_values);
 
         docs.push_back(doc);
     }
@@ -144,7 +144,7 @@ TEST_P(IndexTest, TrainsCorrectly) {
     lintdb::IndexIVF index(
             temp_db.string(), schema, config);
 
-    auto docs = create_colbert_documents(10, 10, 128);
+    auto docs = create_colbert_documents(20, 10, 128);
 
     index.train(docs);
     EXPECT_EQ(index.coarse_quantizer_map.size(), 1);
@@ -165,8 +165,8 @@ TEST_P(IndexTest, SearchCorrectly) {
 
     index.add(1, docs);
 
-    lintdb::FieldValue fv(std::vector<float>(1280, 1), 10);
-    std::unique_ptr<lintdb::VectorQueryNode> root = std::make_unique<lintdb::VectorQueryNode>("colbert", fv);
+    lintdb::FieldValue fv("colbert", std::vector<float>(1280, 1), 10);
+    std::unique_ptr<lintdb::VectorQueryNode> root = std::make_unique<lintdb::VectorQueryNode>(fv);
     lintdb::Query query(std::move(root));
 
     lintdb::SearchOptions opt;
@@ -204,12 +204,12 @@ TEST_P(IndexTest, SearchCorrectlyWithFilter) {
     index.train(docs);
 
     index.add(1, docs);
-    lintdb::FieldValue fv(std::vector<float>(1280, 1), 10);
-    std::unique_ptr<lintdb::VectorQueryNode> vector_node = std::make_unique<lintdb::VectorQueryNode>("colbert", fv);
-    lintdb::FieldValue text_value("test");
-    std::unique_ptr<lintdb::QueryNode> text_node = std::make_unique<lintdb::TermQueryNode>("filter0", text_value);
-    lintdb::FieldValue int_value(1);
-    std::unique_ptr<lintdb::QueryNode> int_node = std::make_unique<lintdb::TermQueryNode>("filter1", int_value);
+    lintdb::FieldValue fv("colbert", std::vector<float>(1280, 1), 10);
+    std::unique_ptr<lintdb::VectorQueryNode> vector_node = std::make_unique<lintdb::VectorQueryNode>(fv);
+    lintdb::FieldValue text_value("filter0", "test");
+    std::unique_ptr<lintdb::QueryNode> text_node = std::make_unique<lintdb::TermQueryNode>(text_value);
+    lintdb::FieldValue int_value("filter1", 1);
+    std::unique_ptr<lintdb::QueryNode> int_node = std::make_unique<lintdb::TermQueryNode>(int_value);
 
     std::vector<std::unique_ptr<lintdb::QueryNode>> children;
     children.push_back(std::move(vector_node));
@@ -249,9 +249,9 @@ TEST_P(IndexTest, SearchCorrectlyWithFilter) {
     index.add(1, text_docs);
 
     // when we search with the integer filter, we should get back the same ten results.
-    lintdb::FieldValue int_query_value(1);
-    std::unique_ptr<lintdb::QueryNode> int_query_node = std::make_unique<lintdb::TermQueryNode>("filter1", int_query_value);
-    std::unique_ptr<lintdb::VectorQueryNode> int_vector_node = std::make_unique<lintdb::VectorQueryNode>("colbert", fv);
+    lintdb::FieldValue int_query_value("filter1", 1);
+    std::unique_ptr<lintdb::QueryNode> int_query_node = std::make_unique<lintdb::TermQueryNode>(int_query_value);
+    std::unique_ptr<lintdb::VectorQueryNode> int_vector_node = std::make_unique<lintdb::VectorQueryNode>(fv);
     std::vector<std::unique_ptr<lintdb::QueryNode>> int_children;
     int_children.push_back(std::move(int_vector_node));
     int_children.push_back(std::move(int_query_node));
@@ -274,11 +274,11 @@ TEST_P(IndexTest, SearchCorrectlyWithFilter) {
     }
 
     // when we search with the text filter, we should get back 20 results.
-    lintdb::FieldValue text_query_value("test");
-    std::unique_ptr<lintdb::QueryNode> text_query_node = std::make_unique<lintdb::TermQueryNode>("filter0", text_query_value);
+    lintdb::FieldValue text_query_value("filter0", "test");
+    std::unique_ptr<lintdb::QueryNode> text_query_node = std::make_unique<lintdb::TermQueryNode>(text_query_value);
     std::vector<std::unique_ptr<lintdb::QueryNode>> text_children;
 
-    std::unique_ptr<lintdb::VectorQueryNode> text_vector_node = std::make_unique<lintdb::VectorQueryNode>("colbert", fv);
+    std::unique_ptr<lintdb::VectorQueryNode> text_vector_node = std::make_unique<lintdb::VectorQueryNode>( fv);
     text_children.push_back(std::move(text_vector_node));
     text_children.push_back(std::move(text_query_node));
     std::unique_ptr<lintdb::QueryNode> text_root = std::make_unique<lintdb::AndQueryNode>(std::move(text_children));
@@ -300,11 +300,11 @@ TEST_P(IndexTest, SearchCorrectlyWithFilter) {
     }
 
     // now let's search for a document with a text filter that doesn't exist.
-    lintdb::FieldValue text_value_two("test2");
-    std::unique_ptr<lintdb::QueryNode> text_node_two = std::make_unique<lintdb::TermQueryNode>("filter0", text_value_two);
+    lintdb::FieldValue text_value_two("filter0", "test2");
+    std::unique_ptr<lintdb::QueryNode> text_node_two = std::make_unique<lintdb::TermQueryNode>(text_value_two);
 
     auto text_children_two = std::vector<std::unique_ptr<lintdb::QueryNode>>();
-    std::unique_ptr<lintdb::VectorQueryNode> text_two_vector_node = std::make_unique<lintdb::VectorQueryNode>("colbert", fv);
+    std::unique_ptr<lintdb::VectorQueryNode> text_two_vector_node = std::make_unique<lintdb::VectorQueryNode>( fv);
     text_children_two.push_back(std::move(text_two_vector_node));
     text_children_two.push_back(std::move(text_node_two));
     std::unique_ptr<lintdb::QueryNode> text_root_two = std::make_unique<lintdb::AndQueryNode>(std::move(text_children_two));
@@ -332,8 +332,8 @@ TEST_P(IndexTest, LoadsCorrectly) {
     std::cout << "HERE" << std::endl;
     auto loaded_index = lintdb::IndexIVF(temp_db.string(), true);
 
-    lintdb::FieldValue fv(std::vector<float>(1280, 1), 10);
-    std::unique_ptr<lintdb::VectorQueryNode> root = std::make_unique<lintdb::VectorQueryNode>("colbert", fv);
+    lintdb::FieldValue fv("colbert", std::vector<float>(1280, 1), 10);
+    std::unique_ptr<lintdb::VectorQueryNode> root = std::make_unique<lintdb::VectorQueryNode>(fv);
     lintdb::Query query(std::move(root));
     std::cout << "HERE" << std::endl;
     auto one_results = index.search(
@@ -388,10 +388,9 @@ TEST_P(IndexTest, MergeCorrectly) {
     opts.n_probe = 100;
     opts.k_top_centroids = 10;
 
-    lintdb::FieldValue fv(std::vector<float>(1280, 1), 10);
-    std::unique_ptr<lintdb::VectorQueryNode> root = std::make_unique<lintdb::VectorQueryNode>("colbert", fv);
+    lintdb::FieldValue fv("colbert", std::vector<float>(1280, 1), 10);
+    std::unique_ptr<lintdb::VectorQueryNode> root = std::make_unique<lintdb::VectorQueryNode>(fv);
     lintdb::Query query(std::move(root));
-
 
     auto results = index.search(1, query, 5, opts);
     EXPECT_EQ(results.size(), 2);

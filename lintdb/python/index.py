@@ -1,2 +1,0 @@
-from .lintdb import IndexIVF
-

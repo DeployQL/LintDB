@@ -1,6 +1,5 @@
 #include "Schema.h"
 
-
 namespace lintdb {
 Json::Value Field::toJson() const {
     Json::Value json;

@@ -13,6 +13,7 @@
 #include <gsl/span>
 #include <iostream>
 #include <limits>
+#include <cmath>
 #include <string>
 #include <vector>
 #include "lintdb/api.h"
@@ -175,6 +176,8 @@ void IndexIVF::initialize_inverted_list(const Version& version) {
 }
 
 void IndexIVF::train(const std::vector<Document>& docs) {
+    LOG(INFO) << "num docs: " << docs.size();
+
     for(const auto& field: schema.fields) {
         // only train fields that are tensors and require indexing.
         if ((field.data_type == DataType::TENSOR ||
@@ -192,11 +195,18 @@ void IndexIVF::train(const std::vector<Document>& docs) {
             std::vector<float> embeddings;
             size_t num_embeddings = 0;
             for (auto doc : docs) {
-                if(doc.fields.count(field.name) == 0) {
+                FieldValue* fv;
+                for(auto& doc_fields: doc.fields) {
+                    if (doc_fields.name == field.name) {
+                        fv = &doc_fields;
+                        break;
+                    }
+                }
+                if (fv == nullptr) {
                     continue;
                 }
 
-                auto field_value = doc.fields.at(field.name);
+                auto field_value = *fv;
                 LINTDB_THROW_IF_NOT(field_value.data_type == DataType::TENSOR || field_value.data_type == DataType::QUANTIZED_TENSOR);
                 auto tensor = std::get<Tensor>(field_value.value);
 
@@ -210,6 +220,24 @@ void IndexIVF::train(const std::vector<Document>& docs) {
             cq->train(num_embeddings, embeddings.data(), field.parameters.num_centroids, field.parameters.num_iterations);
 
             if (field.parameters.quantization != QuantizerType::NONE) {
+                // randomly sample embeddings to train the quantizer on.
+                // we'll use the coarse quantizer to assign the embeddings to centroids.
+                if(num_embeddings > 1e5) {
+                    std::vector<size_t> sampled_ids = subsample(num_embeddings, std::sqrt(num_embeddings));
+                    num_embeddings = sampled_ids.size();
+
+                    std::vector<float> sampled_embeddings(num_embeddings * field.parameters.dimensions, 0);
+                    size_t count = 0;
+                    for(const auto& idx: sampled_ids) {
+                        for(size_t i = 0; i < field.parameters.dimensions; i++) {
+                            sampled_embeddings[count * field.parameters.dimensions + i] = embeddings[idx * field.parameters.dimensions + i];
+                        }
+                        count++;
+                    }
+                    embeddings = sampled_embeddings;
+                }
+
+
                 QuantizerConfig qc = {field.parameters.nbits, field.parameters.dimensions, field.parameters.num_subquantizers};
                 std::unique_ptr<Quantizer> quantizer = create_quantizer(field.parameters.quantization, qc);
 

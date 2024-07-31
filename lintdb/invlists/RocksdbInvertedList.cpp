@@ -30,6 +30,7 @@ void RocksdbInvertedList::remove(
         switch (field_type) {
             case FieldType::Indexed: {
                 for (idx_t id: ids) {
+                    LOG(INFO) << "deleting from index: " <<  id;
                     auto id_map = this->get_mapping(tenant, id);
                     // delete from the inverse index.
                     rocksdb::ReadOptions ro;
@@ -63,7 +64,9 @@ void RocksdbInvertedList::remove(
                     // delete from the inverse index.
                     rocksdb::ReadOptions ro;
                     for (auto idx: id_map) {
-                        std::string key = create_index_id(tenant, field, data_type, idx, id);
+                        LOG(INFO) << "deleting from index: " <<  idx;
+                        // colbert fields are always tensors, and tensors are always quantized in the index.
+                        std::string key = create_index_id(tenant, field, DataType::QUANTIZED_TENSOR, idx, id);
                         rocksdb::WriteOptions wo;
                         rocksdb::Status status = db_->Delete(
                                 wo,

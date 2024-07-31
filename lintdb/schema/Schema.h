@@ -4,11 +4,13 @@
 #include <string>
 #include <map>
 #include <stddef.h>
-#include <json/json.h>
 #include "lintdb/quantizers/Quantizer.h"
 #include "lintdb/schema/DataTypes.h"
+#include <json/json.h>
+
 
 namespace lintdb {
+
 
 enum class FieldType {
     Indexed,
@@ -37,8 +39,8 @@ struct Field {
     FieldParameters parameters; /// parameters for the field.
 
     Field() = default;
-    Field(const std::string& name, const idx_t data_type, std::vector<FieldType> field_types, const FieldParameters& parameters)
-        : name(name), data_type(DataType(data_type)), field_types(field_types), parameters(parameters) {}
+    Field(const std::string& name, const DataType data_type, const std::vector<FieldType>& field_types, const FieldParameters& parameters)
+        : name(name), data_type(data_type), field_types(field_types), parameters(parameters) {}
 
     Json::Value toJson() const;
     static Field fromJson(const Json::Value& json);
@@ -49,22 +51,22 @@ struct Field {
 };
 
 struct IndexedField : public Field {
-    IndexedField(const std::string& name, const idx_t data_type, const FieldParameters& parameters)
+    IndexedField(const std::string& name, const DataType data_type, const FieldParameters& parameters)
         : Field(name, data_type, {FieldType::Indexed}, parameters) {}
 };
 
 struct ContextField : public Field {
-    ContextField(const std::string& name, const idx_t data_type, const FieldParameters& parameters)
+    ContextField(const std::string& name, const DataType data_type, const FieldParameters& parameters)
         : Field(name, data_type, {FieldType::Context}, parameters) {}
 };
 
 struct StoredField : public Field {
-    StoredField(const std::string& name, const idx_t data_type, const FieldParameters& parameters)
+    StoredField(const std::string& name, const DataType data_type, const FieldParameters& parameters)
         : Field(name, data_type, {FieldType::Stored}, parameters) {}
 };
 
 struct ColbertField : public Field {
-    ColbertField(const std::string& name, const idx_t data_type, const FieldParameters& parameters)
+    ColbertField(const std::string& name, const DataType data_type, const FieldParameters& parameters)
         : Field(name, data_type, {FieldType::Colbert}, parameters) {}
 };
 
@@ -74,6 +76,9 @@ struct ColbertField : public Field {
  */
 struct Schema {
     std::vector<Field> fields;
+
+    Schema() = default;
+    explicit Schema(const std::vector<Field>& fields) : fields(fields) {}
 
     Json::Value toJson() const;
     static Schema fromJson(const Json::Value& json);

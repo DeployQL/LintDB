@@ -2,83 +2,54 @@
 
 cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
 
-project(pylintdb
+project(lintdb
     LANGUAGES CXX
 )
 
 set(CMAKE_CXX_STANDARD 17)
-find_package(SWIG REQUIRED COMPONENTS python)
-find_package(Python REQUIRED COMPONENTS NumPy Development.Module)
-include(${SWIG_USE_FILE})
 
-include(UseSWIG)
-
-# below is useful for debugging typemaps. It will log how each object resolves its typemap.
-# set(CMAKE_SWIG_FLAGS "-debug-tmsearch")
-
-set(UseSWIG_TARGET_NAME_PREFERENCE STANDARD)
-set(SWIG_SOURCE_FILE_EXTENSIONS swig)
-
-set(SRC lintdb.swig)
-
-
-if(UNIX AND NOT APPLE)
-    set_source_files_properties(${SRC} PROPERTIES 
-        SWIG_FLAGS -DSWIGWORDSIZE64
-    )
-endif()
-if(WIN32)
-    set_source_files_properties(${SRC} PROPERTIES
-        SWIG_FLAGS -DSWIGWIN
-    )
-endif()
-
-set_source_files_properties(${SRC} PROPERTIES 
-    CPLUSPLUS ON 
-    USE_TARGET_INCLUDE_DIRECTORIES TRUE
-)
-swig_add_library(pylintdb
-    TYPE SHARED
-    LANGUAGE python
-    SOURCES ${SRC}
+find_package(Python
+        REQUIRED COMPONENTS Interpreter Development.Module
+        OPTIONAL_COMPONENTS Development.SABIModule
 )
 
-set_property(TARGET pylintdb PROPERTY SWIG_COMPILE_OPTIONS -doxygen)
-set_property(TARGET pylintdb PROPERTY SWIG_USE_TARGET_INCLUDE_DIRECTORIES TRUE)
+message("=== Selected Python Variables ===")
+message(STATUS "Python3_STDLIB: " ${Python_STDLIB})
+message(STATUS "Python3_SITELIB: " ${Python_SITELIB})
+message(STATUS "Python3_VERSION: " ${Python_VERSION})
+message(STATUS "Python3_EXECUTABLE: " ${Python_EXECUTABLE})
 
-IF(NOT WIN32)
-    set_target_properties(pylintdb PROPERTIES SUFFIX .so)
-else()
-    target_compile_options(pylintdb PRIVATE /bigobj)
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build." FORCE)
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-if(TARGET lintdb)
-    set(SWIG_MODULE_pylintdb_EXTRA_DEPS)
-    foreach(h ${LINT_DB_HEADERS})
-        list(APPEND SWIG_MODULE_pylintdb_EXTRA_DEPS "${lintdb_SOURCE_DIR}/lintdb/${h}")
-    endforeach()
-else()
-    find_package(lintdb REQUIRED)
-endif()
+add_subdirectory(${PROJECT_SOURCE_DIR}/../../third_party/nanobind nanobind EXCLUDE_FROM_ALL)
+find_package(nanobind CONFIG REQUIRED)
 
-find_package(Microsoft.GSL CONFIG REQUIRED)
-target_link_libraries(pylintdb PRIVATE Microsoft.GSL::GSL)
-
-find_package(OpenMP REQUIRED)
-
-target_link_libraries(pylintdb PRIVATE 
-    lintdb
-    Python::Module
-    Python::NumPy
-    OpenMP::OpenMP_CXX
+nanobind_add_module(
+        core
+        NB_STATIC
+        STABLE_ABI
+        pylintdb.cpp
 )
 
-target_include_directories(pylintdb PRIVATE ${PROJECT_SOURCE_DIR}/../..)
+target_link_libraries(core PRIVATE
+        lintdb_lib
+)
 
-configure_file(setup.py setup.py COPYONLY)
-configure_file(__init__.py __init__.py COPYONLY)
-configure_file(schema.py schema.py COPYONLY)
-configure_file(document.py document.py COPYONLY)
+install(TARGETS core LIBRARY DESTINATION lintdb)
 
-# copy our version file
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/version.txt ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
+# this doesn't work because python looks for typing_extensions and doesn't find it on py3.10
+#nanobind_add_stub(
+#        lintdb_stub
+#        INSTALL_TIME
+#        MODULE core
+#        OUTPUT core.pyi
+#        PYTHON_PATH $<TARGET_FILE_DIR:core>
+#        DEPENDS core
+#        VERBOSE
+#)
+#
+#install(FILES "core.pyi" DESTINATION lintdb)
+#install(FILES "py.typed" DESTINATION lintdb)

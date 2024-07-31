@@ -26,12 +26,22 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -fopenmp -O3 -D_LIBCPP_
 # the below is caused by github actions failing to build flatbuffers.
 # therefore, we set this value so that we use a higher sdk version to build it.
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.13)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+
 # https://conda-forge.org/docs/maintainer/knowledge_base/#newer-c-features-with-old-sdk
 # if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 #     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ")
 # endif()
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+
+if (SKBUILD)
+  message("Building with scikit-build")
+  set(ENV{MKLROOT} "${CMAKE_CURRENT_BINARY_DIR}/vcpkg_installed/x64-linux/lib/intel64")
+  set(OpenMP_libiomp5_LIBRARY "${CMAKE_CURRENT_BINARY_DIR}/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so")
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
 
 # download assets from huggingface.
 if(NOT EXISTS "assets/colbert_tokenizer.json")

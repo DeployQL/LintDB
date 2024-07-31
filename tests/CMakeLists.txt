@@ -7,6 +7,7 @@ set(
         mocks.h
         keys_test.cpp
         #    xtr_test.cpp
+        doc_encoder_test.cpp
 #    colbert_test.cpp
         #    plaid_test.cpp
 
@@ -26,7 +27,7 @@ add_executable(
 configure_file(${PROJECT_SOURCE_DIR}/assets/colbert_tokenizer.json colbert_tokenizer.json COPYONLY)
 configure_file(${PROJECT_SOURCE_DIR}/assets/model.onnx model.onnx COPYONLY)
 
-target_link_libraries(lintdb-tests PRIVATE lintdb)
+target_link_libraries(lintdb-tests PRIVATE lintdb_lib)
 
 find_package(Bitsery CONFIG REQUIRED)
 target_link_libraries(lintdb-tests PRIVATE Bitsery::bitsery)

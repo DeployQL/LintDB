@@ -2,6 +2,7 @@
 #include <vector>
 #include <variant>
 #include <map>
+#include <unordered_set>
 #include <bitsery/bitsery.h>
 #include <bitsery/adapter/buffer.h>
 #include "lintdb/schema/DataTypes.h"
@@ -184,8 +185,14 @@ namespace lintdb {
         using Buffer = std::vector<uint8_t>;
         using OutputAdapter = bitsery::OutputBufferAdapter<Buffer>;
 
+        // create unique list of inverted index ids.
+        std::unordered_set<idx_t> inverted_mapping_ids;
+        for(const auto& id : data.centroid_ids) {
+            inverted_mapping_ids.insert(id);
+        }
+
         Buffer buf;
-        auto written = bitsery::quickSerialization(OutputAdapter{buf}, data.centroid_ids);
+        auto written = bitsery::quickSerialization(OutputAdapter{buf}, std::vector<idx_t>(inverted_mapping_ids.begin(), inverted_mapping_ids.end()));
         auto st = std::string(buf.begin(), buf.begin() + written);
 
         results.push_back({key, st});

@@ -8,6 +8,7 @@ namespace lintdb {
             const size_t num_query_tokens,
             const std::shared_ptr<ICoarseQuantizer> quantizer,
             const size_t num_calculated_centroids) {
+        LOG(INFO) << "calcualte";
         this->num_centroids = quantizer->num_centroids();
         this->total_centroids_to_calculate = num_calculated_centroids;
         this->query = query;
@@ -25,6 +26,7 @@ namespace lintdb {
                 coarse_idx.data()
         );
 
+        LOG(INFO) << "reorder";
         // We use this for ColBERT scoring.
         for (int i = 0; i <  num_centroids; i++) {
             for (int j = 0; j < total_centroids_to_calculate; j++) {
@@ -43,9 +45,10 @@ namespace lintdb {
             const size_t k_top_centroids,
             const size_t n_probe) const {
 
-        if (top_centroids.size() == k_top_centroids) {
-            return top_centroids;
-        }
+//        if (top_centroids.size() == k_top_centroids) {
+//            return top_centroids;
+//        }
+        LOG(INFO) << "top centroids";
         // we're finding the highest centroid scores per centroid.
         std::vector<float> high_scores(num_centroids, 0);
         for (size_t i = 0; i < num_centroids; i++) {
@@ -71,6 +74,7 @@ namespace lintdb {
             return p1.first > p2.first;
         };
 
+        LOG(INFO) << "heaping";
         std::vector<std::pair<float, idx_t>> centroid_scores;
         centroid_scores.reserve(n_probe);
         for (int i = 0; i < high_scores.size(); i++) {

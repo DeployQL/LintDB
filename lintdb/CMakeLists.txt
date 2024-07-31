@@ -6,8 +6,8 @@ set(
     quantizers/ProductEncoder.cpp
     quantizers/io.cpp
     util.cpp
-    index_builder/EmbeddingModel.cpp
-    index_builder/Tokenizer.cpp
+#    index_builder/EmbeddingModel.cpp
+#    index_builder/Tokenizer.cpp
     invlists/RocksdbForwardIndex.cpp
     invlists/EncodedDocument.cpp
         invlists/IndexWriter.cpp
@@ -59,8 +59,8 @@ set(
     SearchOptions.h
     SearchResult.h
     util.h
-    index_builder/EmbeddingModel.h
-    index_builder/Tokenizer.h
+#    index_builder/EmbeddingModel.h
+#    index_builder/Tokenizer.h
         invlists/IndexWriter.h
     invlists/InvertedList.h
     invlists/Iterator.h
@@ -111,77 +111,76 @@ set(
 
 set(LINT_DB_HEADERS ${LINT_DB_HEADERS} PARENT_SCOPE)
 
-add_library(lintdb ${LINT_DB_SRC})
+add_library(lintdb_lib ${LINT_DB_SRC})
 
 string(FIND "${CMAKE_CXX_FLAGS}" "FINTEGER" finteger_idx)
 if (${finteger_idx} EQUAL -1)
-  target_compile_definitions(lintdb PRIVATE FINTEGER=int)
+  target_compile_definitions(lintdb_lib PRIVATE FINTEGER=int)
 endif()
 
 find_package(OpenMP REQUIRED)
 if(OpenMP_CXX_FOUND)
   message(STATUS "found openMP")
-    target_link_libraries(lintdb PUBLIC OpenMP::OpenMP_CXX)
+    target_link_libraries(lintdb_lib PUBLIC OpenMP::OpenMP_CXX)
 endif()
 
 
-message(STATUS "using MKL root: $ENV{MKLROOT}")
+message(STATUS "using MKL root: ${MKLROOT}")
 find_package(MKL)
 if (MKL_FOUND)
   message(STATUS "libraries: ${MKL_LIBRARIES}")
-  target_link_libraries(lintdb PRIVATE ${MKL_LIBRARIES})
+  target_link_libraries(lintdb_lib PRIVATE ${MKL_LIBRARIES})
 else()
 find_package(OpenBLAS CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE OpenBLAS::OpenBLAS)
+target_link_libraries(lintdb_lib PRIVATE OpenBLAS::OpenBLAS)
 
 find_package(LAPACK CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE LAPACK::LAPACK)
+target_link_libraries(lintdb_lib PRIVATE LAPACK::LAPACK)
 endif()
   
 # this is heuristically generated, and may not be correct
 find_package(faiss CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE faiss)
+target_link_libraries(lintdb_lib PRIVATE faiss)
 
 # this is heuristically generated, and may not be correct
 find_package(RocksDB CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE RocksDB::rocksdb)
+target_link_libraries(lintdb_lib PRIVATE RocksDB::rocksdb)
 
 find_package(flatbuffers CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE flatbuffers::flatbuffers)
+target_link_libraries(lintdb_lib PRIVATE flatbuffers::flatbuffers)
 
 find_package(glog CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE glog::glog)
+target_link_libraries(lintdb_lib PRIVATE glog::glog)
 
 # this is heuristically generated, and may not be correct
 find_package(Microsoft.GSL CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE Microsoft.GSL::GSL)
+target_link_libraries(lintdb_lib PRIVATE Microsoft.GSL::GSL)
 
 find_package(jsoncpp CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE JsonCpp::JsonCpp)
+target_link_libraries(lintdb_lib PUBLIC JsonCpp::JsonCpp)
 
 find_package(Bitsery CONFIG REQUIRED)
-target_link_libraries(lintdb PRIVATE Bitsery::bitsery)
+target_link_libraries(lintdb_lib PUBLIC Bitsery::bitsery)
 
 # this is always dynamically linked! This places more responsbility on the user's environment!
-find_library(ONNXRUNTIME_LIBRARY onnxruntime)
-target_link_libraries(lintdb PRIVATE ${ONNXRUNTIME_LIBRARY})
-
-
-set(TOKENZIER_CPP_PATH ${PROJECT_SOURCE_DIR}/third_party/tokenizers-cpp)
-add_subdirectory(${TOKENZIER_CPP_PATH} tokenizers EXCLUDE_FROM_ALL)
-target_include_directories(lintdb PRIVATE ${TOKENZIER_CPP_PATH}/include)
-target_link_libraries(lintdb PRIVATE tokenizers_cpp)
+#find_library(ONNXRUNTIME_LIBRARY onnxruntime)
+#target_link_libraries(lintdb_lib PRIVATE ${ONNXRUNTIME_LIBRARY})
+#
+#set(TOKENZIER_CPP_PATH ${PROJECT_SOURCE_DIR}/third_party/tokenizers-cpp)
+#add_subdirectory(${TOKENZIER_CPP_PATH} tokenizers EXCLUDE_FROM_ALL)
+#target_include_directories(lintdb_lib PRIVATE ${TOKENZIER_CPP_PATH}/include)
+#target_link_libraries(lintdb_lib PRIVATE tokenizers_cpp)
 
 if(MSVC)
-  target_compile_options(lintdb PRIVATE /W4 /WX)
+  target_compile_options(lintdb_lib PRIVATE /W4 /WX)
 else()
-  target_compile_options(lintdb PRIVATE -Wall -Wpedantic)
+  target_compile_options(lintdb_lib PRIVATE -Wall -Wpedantic)
 endif()
 
-target_include_directories(lintdb PUBLIC
+target_include_directories(lintdb_lib PUBLIC
   $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)
 
-set_target_properties(lintdb PROPERTIES
+set_target_properties(lintdb_lib PROPERTIES
   POSITION_INDEPENDENT_CODE ON
   WINDOWS_EXPORT_ALL_SYMBOLS ON
 )
@@ -194,7 +193,7 @@ foreach(header ${LINT_DB_HEADERS})
 endforeach()
 
 
-install(TARGETS lintdb tokenizers_cpp tokenizers_c sentencepiece-static
+install(TARGETS lintdb_lib
   EXPORT lintdb-targets
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}

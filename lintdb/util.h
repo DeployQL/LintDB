@@ -9,6 +9,7 @@
 #include "lintdb/SearchOptions.h"
 #include <json/reader.h>
 #include <json/writer.h>
+#include <random>
 
 namespace lintdb {
 /**
@@ -61,6 +62,21 @@ std::vector<T> product(
 
 
 Json::Value loadJson(const std::string& path);
+
+inline std::vector<size_t> subsample(const size_t total, const size_t sample) {
+    std::mt19937 rng;
+    std::seed_seq seed{1234};
+
+    rng.seed(seed);
+
+    std::uniform_int_distribution<size_t> dist(0, total - 1);
+    std::vector<size_t> indices;
+    for (size_t i = 0; i < sample; i++) {
+        indices.push_back(dist(rng));
+    }
+
+    return indices;
+}
 
 } // namespace lintdb
 

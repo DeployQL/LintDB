@@ -32,18 +32,20 @@ void DocumentProcessor::processDocument(const uint64_t tenant, const Document& d
     std::vector<ProcessedData> stored_data;
     std::vector<ProcessedData> colbert_data;
 
-    for (const auto& [name, value] : document.fields) {
+    for (const auto& fv : document.fields) {
+        std::string name = fv.name;
+
         if (field_map.find(name) == field_map.end()) {
             throw std::invalid_argument(
                     "Field " + name + " not defined in schema.");
         }
         const Field& field = field_map[name];
-        validateField(field, value);
+        validateField(field, fv);
 
-        FieldValue quantizedValue = quantizeField(field, value);
+        FieldValue quantizedValue = quantizeField(field, fv);
 
         ProcessedData processed_data;
-        processed_data.centroid_ids = assignIVFCentroids(field, value);
+        processed_data.centroid_ids = assignIVFCentroids(field, fv);
 
         processed_data.value = quantizedValue;
         processed_data.doc_id = document.id;
@@ -65,7 +67,7 @@ void DocumentProcessor::processDocument(const uint64_t tenant, const Document& d
                     cd.doc_residuals = residuals;
 
                     size_t num_tokens = processed_data.value.num_tensors;
-                    processed_data.value = FieldValue(cd, num_tokens);
+                    processed_data.value = FieldValue(name, cd, num_tokens);
                     colbert_data.push_back(processed_data);
                     break;
                 }
@@ -99,6 +101,9 @@ void DocumentProcessor::processDocument(const uint64_t tenant, const Document& d
 
         posting_data.inverted.reserve(posting_data.inverted.size() + encoded_data.size());
         posting_data.inverted.insert(posting_data.inverted.end(), encoded_data.begin(), encoded_data.end());
+
+        std::vector<PostingData> mapping_data = DocEncoder::encode_inverted_mapping_data(data);
+        posting_data.inverted_mapping.insert(posting_data.inverted_mapping.end(), mapping_data.begin(), mapping_data.end());
     }
 
     // inverted data produces multiple posting data elements -- one for each centroid assigned to the vectors.
@@ -164,9 +169,8 @@ FieldValue DocumentProcessor::quantizeField(const Field& field, const FieldValue
         Tensor tensor = std::get<Tensor>(value.value);
         std::vector<residual_t > codes(value.num_tensors * quantizer->code_size());
         quantizer->sa_encode(value.num_tensors, tensor.data(), codes.data());
-//        FieldValue result = FieldValue(codes, value.num_tensors);
-//        result.data_type = field.data_type; /// ensure that the data type is set correctly.
-        return {codes, value.num_tensors };
+
+        return {value.name, codes, value.num_tensors };
     } else {
         return value; // No quantization needed for other data types
     }

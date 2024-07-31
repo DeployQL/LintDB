@@ -3,14 +3,31 @@
 #include <faiss/IndexFlat.h>
 #include <glog/logging.h>
 #include <faiss/index_io.h>
+#include <faiss/Clustering.h>
+#include "lintdb/quantizers/impl/kmeans.h"
 
 namespace lintdb {
 CoarseQuantizer::CoarseQuantizer(size_t d): d(d) {}
 
+CoarseQuantizer::CoarseQuantizer(size_t d, const std::vector<float>& centroids, size_t k): d(d), k(k), centroids(centroids) {
+    is_trained_ = true;
+}
+
 void CoarseQuantizer::train(const size_t n, const float* x, size_t k, size_t num_iter) {
     this->k = k;
-    centroids = kmeans(std::vector<float>(x, x + n * d), n, d, k, Metric::INNER_PRODUCT, num_iter);
+    centroids = kmeans(x, n, d, k, Metric::INNER_PRODUCT, num_iter);
+
+//    faiss::IndexFlatIP index(d);
+//    faiss::ClusteringParameters cp;
+//    cp.niter = num_iter;
+//    cp.nredo = 1;
+//    cp.verbose = true;
+//    faiss::Clustering clus(d, k, cp);
+
+//    clus.train(n, x, index);
+    centroids = std::vector<float>(centroids.data(), centroids.data() + k * d);
     is_trained_ = true;
+
 }
 
 void CoarseQuantizer::save(const std::string& path) {

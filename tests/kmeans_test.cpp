@@ -2,6 +2,20 @@
 #include "lintdb/quantizers/impl/kmeans.h"  // Include your kmeans implementation
 
 using namespace lintdb;
+
+// Helper function to compare two vectors with a tolerance
+bool vectorsAreEqual(const std::vector<float>& a, const std::vector<float>& b, float tolerance = 1e-5) {
+    if (a.size() != b.size()) {
+        return false;
+    }
+    for (size_t i = 0; i < a.size(); ++i) {
+        if (std::fabs(a[i] - b[i]) > tolerance) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // Test fixture for kmeans tests
 class KMeansTest : public ::testing::Test {
    protected:
@@ -75,6 +89,31 @@ TEST_F(KMeansTest, CentroidsUpdate) {
         }
     }
     ASSERT_FALSE(all_same);
+}
+
+TEST_F(KMeansTest, CorrectCentroidAssignment) {
+    // Simple dataset with two clear clusters
+    std::vector<float> data = {
+            1.0, 1.0,   // Cluster 1
+            1.5, 2.0,   // Cluster 1
+            5.0, 5.0,   // Cluster 2
+            6.0, 6.0    // Cluster 2
+    };
+    size_t n = 4;
+    size_t dim = 2;
+    size_t k = 2;
+    int iterations = 10;
+
+    // Expected centroids for the clusters
+    std::vector<float> expected_centroids = {
+            1.25, 1.5,  // Centroid of Cluster 1
+            5.5, 5.5    // Centroid of Cluster 2
+    };
+
+    std::vector<float> centroids = kmeans(data, n, dim, k, Metric::EUCLIDEAN, iterations);
+
+    ASSERT_EQ(centroids.size(), k * dim);
+    ASSERT_TRUE(vectorsAreEqual(centroids, expected_centroids));
 }
 
 // Test for correct assignment of points to clusters

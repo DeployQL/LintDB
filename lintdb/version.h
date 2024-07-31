@@ -6,8 +6,7 @@
 
 namespace lintdb {
 struct Version {
-    Version() = default;
-    Version(std::string versionStr) {
+    Version(std::string versionStr = LINTDB_VERSION_STRING) {
         sscanf(versionStr.c_str(), "%d.%d.%d", &major, &minor, &revision);
         metadata_enabled = major >= 0 && minor >= 3 && revision >= 0;
     }

@@ -10,12 +10,11 @@ namespace lintdb {
  * Each Document must have a unique id.
  */
 struct Document {
-    std::unordered_map<std::string, FieldValue> fields;
+    std::vector<FieldValue> fields;
     idx_t id; /// the unique id of the document
 
-    void addField(const std::string& name, const FieldValue& value) {
-        fields[name] = value;
-    }
+    Document(idx_t id, const std::vector<FieldValue>& fields)
+        : fields(fields), id(id) {}
 };
 
 }

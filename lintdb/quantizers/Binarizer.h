@@ -20,6 +20,14 @@ struct Binarizer : public Quantizer {
     std::vector<uint8_t> decompression_lut;
 
     Binarizer(size_t nbits, size_t dim);
+
+    Binarizer(const std::vector<float>& bucket_cutoffs,
+              const std::vector<float>& bucket_weights,
+              const float avg_residual,
+              const size_t nbits,
+              const size_t dim
+    );
+
     // copy constructor
     Binarizer(const Binarizer& other);
 
@@ -41,11 +49,6 @@ struct Binarizer : public Quantizer {
     }
 
     static std::unique_ptr<Binarizer> load(std::string path);
-
-    void set_weights(
-            const std::vector<float>& weights,
-            const std::vector<float>& cutoffs,
-            const float avg_residual);
 
     QuantizerType get_type() override;
 
