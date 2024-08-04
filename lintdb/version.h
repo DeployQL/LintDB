@@ -12,7 +12,8 @@ struct Version {
     }
 
     bool operator==(const Version& otherVersion) const {
-        return major == otherVersion.major && minor == otherVersion.minor && revision == otherVersion.revision;
+        return major == otherVersion.major && minor == otherVersion.minor &&
+                revision == otherVersion.revision;
     }
 
     bool operator<(const Version& otherVersion) {

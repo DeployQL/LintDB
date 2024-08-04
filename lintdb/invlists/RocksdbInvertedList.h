@@ -10,10 +10,10 @@
 #include <string>
 #include "lintdb/constants.h"
 #include "lintdb/exception.h"
+#include "lintdb/invlists/ContextIterator.h"
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/invlists/Iterator.h"
 #include "lintdb/version.h"
-#include "lintdb/invlists/ContextIterator.h"
 
 namespace lintdb {
 
@@ -30,24 +30,24 @@ struct RocksdbInvertedList : public InvertedList {
             std::vector<rocksdb::ColumnFamilyHandle*>& column_families,
             const Version& version);
 
-    void remove(const uint64_t tenant,
-                std::vector<idx_t> ids,
-                const uint8_t field,
-                const DataType data_type,
-                const std::vector<FieldType> field_types) override;
+    void remove(
+            const uint64_t tenant,
+            std::vector<idx_t> ids,
+            const uint8_t field,
+            const DataType data_type,
+            const std::vector<FieldType> field_types) override;
     void merge(rocksdb::DB* db, std::vector<rocksdb::ColumnFamilyHandle*>& cfs)
             override;
 
     std::vector<idx_t> get_mapping(const uint64_t tenant, idx_t id)
             const override;
 
-    [[nodiscard]]
-    std::unique_ptr<Iterator> get_iterator(const std::string &prefix) const override;
+    [[nodiscard]] std::unique_ptr<Iterator> get_iterator(
+            const std::string& prefix) const override;
 
     std::unique_ptr<ContextIterator> get_context_iterator(
             const uint64_t tenant,
-            const uint8_t field_id
-    ) const override;
+            const uint8_t field_id) const override;
 
    protected:
     Version version;

@@ -1,17 +1,26 @@
 #include "lintdb/quantizers/impl/kmeans.h"
-#include <vector>
-#include <random>
-#include <gsl/span>
-#include "lintdb/assert.h"
-#include <glog/logging.h>
 #include <faiss/Clustering.h>
 #include <faiss/IndexFlat.h>
+#include <glog/logging.h>
+#include <gsl/span>
+#include <random>
+#include <vector>
+#include "lintdb/assert.h"
 
 namespace lintdb {
-std::vector<float> kmeans(const float* data, size_t n, size_t dim, size_t k, Metric metric, int iterations) {
-    LINTDB_THROW_IF_NOT_MSG(n > k, "Number of data points must be greater than the number of clusters.");
+std::vector<float> kmeans(
+        const float* data,
+        size_t n,
+        size_t dim,
+        size_t k,
+        Metric metric,
+        int iterations) {
+    LINTDB_THROW_IF_NOT_MSG(
+            n > k,
+            "Number of data points must be greater than the number of clusters.");
 
-    LOG(INFO) << "clustering " << n << " points in " << dim << " dimensions into " << k << " clusters.";
+    LOG(INFO) << "clustering " << n << " points in " << dim
+              << " dimensions into " << k << " clusters.";
 
     faiss::IndexFlatIP index(dim);
     faiss::ClusteringParameters cp;
@@ -22,6 +31,6 @@ std::vector<float> kmeans(const float* data, size_t n, size_t dim, size_t k, Met
 
     clus.train(n, data, index);
 
-    return std::vector<float>(index.get_xb(), index.get_xb()+k*dim);
+    return std::vector<float>(index.get_xb(), index.get_xb() + k * dim);
 }
-}
+} // namespace lintdb

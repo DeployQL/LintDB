@@ -23,27 +23,31 @@ Binarizer::Binarizer(size_t nbits, size_t dim)
             dim);
 }
 
-    Binarizer::Binarizer(
-            const std::vector<float>& bucket_cutoffs,
-            const std::vector<float>& bucket_weights,
-            const float avg_residual,
-            const size_t nbits,
-            const size_t dim
-            ): Quantizer(), bucket_cutoffs(bucket_cutoffs), bucket_weights(bucket_weights), avg_residual(avg_residual), nbits(nbits), dim(dim){
-        LINTDB_THROW_IF_NOT_FMT(
-                dim % 8 == 0, "Dimension must be a multiple of 8, got %d", dim);
-        LINTDB_THROW_IF_NOT_FMT(
-                dim % (nbits * 8) == 0,
-                "Dimension must be a multiple of %d, got %d",
-                nbits * 8,
-                dim);
+Binarizer::Binarizer(
+        const std::vector<float>& bucket_cutoffs,
+        const std::vector<float>& bucket_weights,
+        const float avg_residual,
+        const size_t nbits,
+        const size_t dim)
+        : Quantizer(),
+          bucket_cutoffs(bucket_cutoffs),
+          bucket_weights(bucket_weights),
+          avg_residual(avg_residual),
+          nbits(nbits),
+          dim(dim) {
+    LINTDB_THROW_IF_NOT_FMT(
+            dim % 8 == 0, "Dimension must be a multiple of 8, got %d", dim);
+    LINTDB_THROW_IF_NOT_FMT(
+            dim % (nbits * 8) == 0,
+            "Dimension must be a multiple of %d, got %d",
+            nbits * 8,
+            dim);
 
-        reverse_bitmap = create_reverse_bitmap();
-        decompression_lut = create_decompression_lut();
-
+    reverse_bitmap = create_reverse_bitmap();
+    decompression_lut = create_decompression_lut();
 }
 
-Binarizer::Binarizer(const Binarizer &other) {
+Binarizer::Binarizer(const Binarizer& other) {
     this->nbits = other.nbits;
     this->dim = other.dim;
     this->bucket_cutoffs = other.bucket_cutoffs;
@@ -119,17 +123,15 @@ void Binarizer::save(std::string path) {
         out << writer.write(root);
         out.close();
     } else {
-        LOG(ERROR) << "Unable to open file for writing: "
-                   << path;
+        LOG(ERROR) << "Unable to open file for writing: " << path;
     }
 }
 
 std::unique_ptr<Binarizer> Binarizer::load(std::string path) {
     // Read JSON file
-    std::ifstream file(path );
+    std::ifstream file(path);
     if (!file.is_open()) {
-        LOG(ERROR) << "Unable to open file for writing: "
-                   << path;
+        LOG(ERROR) << "Unable to open file for writing: " << path;
         return nullptr;
     }
 
@@ -354,7 +356,6 @@ void Binarizer::sa_encode(size_t n, const float* x, residual_t* codes) {
             codes[i * code_size + j] = binarized[j];
         }
     }
-
 }
 
 void Binarizer::sa_decode(size_t n, const residual_t* residuals, float* x) {
@@ -383,6 +384,5 @@ void Binarizer::sa_decode(size_t n, const residual_t* residuals, float* x) {
 size_t Binarizer::code_size() {
     return dim / 8 * nbits;
 }
-
 
 } // namespace lintdb

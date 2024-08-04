@@ -1,9 +1,9 @@
 #pragma once
 
-#include "lintdb/invlists/KeyBuilder.h"
-#include "lintdb/constants.h"
-#include "rocksdb/db.h"
 #include <memory>
+#include "lintdb/constants.h"
+#include "lintdb/invlists/KeyBuilder.h"
+#include "rocksdb/db.h"
 
 namespace lintdb {
 

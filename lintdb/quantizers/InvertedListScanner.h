@@ -4,12 +4,12 @@
 #include <map>
 #include <memory>
 #include <vector>
-#include "ProductEncoder.h"
 #include "lintdb/api.h"
 #include "lintdb/invlists/EncodedDocument.h"
 #include "lintdb/invlists/Iterator.h"
 #include "lintdb/quantizers/PQDistanceTables.h"
 #include "lintdb/quantizers/Quantizer.h"
+#include "ProductEncoder.h"
 
 namespace lintdb {
 

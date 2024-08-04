@@ -20,30 +20,30 @@ ForwardIndexIterator::ForwardIndexIterator(
     it->Seek(this->prefix);
 }
 
-    bool ForwardIndexIterator::has_next() {
-        bool is_valid = it->Valid();
-        if (!is_valid) {
-            return false;
-        }
-        auto key = it->key().ToString();
-        this->current_key = ForwardIndexKey(key);
+bool ForwardIndexIterator::has_next() {
+    bool is_valid = it->Valid();
+    if (!is_valid) {
+        return false;
+    }
+    auto key = it->key().ToString();
+    this->current_key = ForwardIndexKey(key);
 
-        if (current_key.tenant() != tenant) {
-            return false;
-        }
-
-        return true;
+    if (current_key.tenant() != tenant) {
+        return false;
     }
 
-    void ForwardIndexIterator::next() {
-        it->Next();
-    }
+    return true;
+}
 
-    ForwardIndexKey ForwardIndexIterator::get_key() const {
-        return current_key;
-    }
+void ForwardIndexIterator::next() {
+    it->Next();
+}
 
-    std::string ForwardIndexIterator::get_value() const {
-        return it->value().ToString();
-    }
+ForwardIndexKey ForwardIndexIterator::get_key() const {
+    return current_key;
+}
+
+std::string ForwardIndexIterator::get_value() const {
+    return it->value().ToString();
+}
 } // namespace lintdb

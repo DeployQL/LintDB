@@ -1,10 +1,10 @@
 #include "InvertedIterator.h"
-#include "lintdb/invlists/ContextIterator.h"
-#include "lintdb/constants.h"
-#include <rocksdb/utilities/transaction.h>
-#include <rocksdb/slice.h>
 #include <glog/logging.h>
+#include <rocksdb/slice.h>
+#include <rocksdb/utilities/transaction.h>
 #include <memory>
+#include "lintdb/constants.h"
+#include "lintdb/invlists/ContextIterator.h"
 
 lintdb::RocksDBIterator::RocksDBIterator(
         std::shared_ptr<rocksdb::DB> db,

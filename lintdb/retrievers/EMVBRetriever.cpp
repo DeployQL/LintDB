@@ -1,19 +1,19 @@
 #include "lintdb/retrievers/EMVBRetriever.h"
-#include <faiss/IndexPQ.h>
 #include <faiss/impl/ProductQuantizer.h>
+#include <faiss/IndexPQ.h>
 #include <glog/logging.h>
 #include <omp.h>
 #include <numeric>
 #include <unordered_set>
-#include "lintdb/SearchOptions.h"
 #include "lintdb/assert.h"
 #include "lintdb/invlists/EncodedDocument.h"
 #include "lintdb/quantizers/ProductEncoder.h"
 #include "lintdb/quantizers/Quantizer.h"
-#include "lintdb/retrievers/Retriever.h"
 #include "lintdb/retrievers/emvb.h"
 #include "lintdb/retrievers/emvb_util.h"
+#include "lintdb/retrievers/Retriever.h"
 #include "lintdb/scoring/plaid.h"
+#include "lintdb/SearchOptions.h"
 
 namespace lintdb {
 extern "C" {

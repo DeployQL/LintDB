@@ -21,12 +21,12 @@ struct Binarizer : public Quantizer {
 
     Binarizer(size_t nbits, size_t dim);
 
-    Binarizer(const std::vector<float>& bucket_cutoffs,
-              const std::vector<float>& bucket_weights,
-              const float avg_residual,
-              const size_t nbits,
-              const size_t dim
-    );
+    Binarizer(
+            const std::vector<float>& bucket_cutoffs,
+            const std::vector<float>& bucket_weights,
+            const float avg_residual,
+            const size_t nbits,
+            const size_t dim);
 
     // copy constructor
     Binarizer(const Binarizer& other);
@@ -53,13 +53,13 @@ struct Binarizer : public Quantizer {
     QuantizerType get_type() override;
 
     friend void swap(Binarizer& first, Binarizer& second) {
-        std::swap( first.bucket_cutoffs, second.bucket_cutoffs );
-        std::swap( first.bucket_weights, second.bucket_weights );
-        std::swap( first.avg_residual, second.avg_residual );
-        std::swap( first.nbits, second.nbits );
-        std::swap( first.dim, second.dim );
-        std::swap( first.reverse_bitmap, second.reverse_bitmap );
-        std::swap( first.decompression_lut, second.decompression_lut );
+        std::swap(first.bucket_cutoffs, second.bucket_cutoffs);
+        std::swap(first.bucket_weights, second.bucket_weights);
+        std::swap(first.avg_residual, second.avg_residual);
+        std::swap(first.nbits, second.nbits);
+        std::swap(first.dim, second.dim);
+        std::swap(first.reverse_bitmap, second.reverse_bitmap);
+        std::swap(first.decompression_lut, second.decompression_lut);
     }
 
    private:

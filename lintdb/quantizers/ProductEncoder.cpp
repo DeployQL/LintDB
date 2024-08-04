@@ -1,13 +1,13 @@
 #include "lintdb/quantizers/ProductEncoder.h"
-#include <faiss/IndexPQ.h>
 #include <faiss/index_io.h>
+#include <faiss/IndexPQ.h>
 #include <faiss/utils/distances.h>
 #include <glog/logging.h>
+#include <algorithm>
 #include <list>
 #include <memory>
 #include "lintdb/assert.h"
 #include "lintdb/exception.h"
-#include <algorithm>
 
 namespace lintdb {
 ProductEncoder::ProductEncoder(
@@ -90,29 +90,27 @@ std::unique_ptr<PQDistanceTables> ProductEncoder::get_distance_tables(
             query_data, num_tokens, dim, this->pq, true);
 }
 
-    ProductEncoder::ProductEncoder(const ProductEncoder &other) {
-        this->pq = std::make_unique<faiss::IndexPQ>(
-                other.dim /*input dimensions*/,
-                other.num_subquantizers /* number of sub quantizers */,
-                other.nbits /* number of bits per subquantizer index */,
-                faiss::METRIC_INNER_PRODUCT);
-        this->pq->pq = other.pq->pq;
-        this->dsub = other.pq->pq.dsub;
-        this->ksub = other.pq->pq.ksub;
-        this->nbits = other.nbits;
-        this->dim = other.dim;
-        this->num_subquantizers = other.num_subquantizers;
+ProductEncoder::ProductEncoder(const ProductEncoder& other) {
+    this->pq = std::make_unique<faiss::IndexPQ>(
+            other.dim /*input dimensions*/,
+            other.num_subquantizers /* number of sub quantizers */,
+            other.nbits /* number of bits per subquantizer index */,
+            faiss::METRIC_INNER_PRODUCT);
+    this->pq->pq = other.pq->pq;
+    this->dsub = other.pq->pq.dsub;
+    this->ksub = other.pq->pq.ksub;
+    this->nbits = other.nbits;
+    this->dim = other.dim;
+    this->num_subquantizers = other.num_subquantizers;
+}
 
-    }
-
-    void swap(ProductEncoder &lhs, ProductEncoder &rhs) {
-        std::swap(lhs.pq, rhs.pq);
-        std::swap(lhs.nbits, rhs.nbits);
-        std::swap(lhs.dim, rhs.dim);
-        std::swap(lhs.num_subquantizers, rhs.num_subquantizers);
-        std::swap(lhs.dsub, rhs.dsub);
-        std::swap(lhs.ksub, rhs.ksub);
-
-    }
+void swap(ProductEncoder& lhs, ProductEncoder& rhs) {
+    std::swap(lhs.pq, rhs.pq);
+    std::swap(lhs.nbits, rhs.nbits);
+    std::swap(lhs.dim, rhs.dim);
+    std::swap(lhs.num_subquantizers, rhs.num_subquantizers);
+    std::swap(lhs.dsub, rhs.dsub);
+    std::swap(lhs.ksub, rhs.ksub);
+}
 
 } // namespace lintdb

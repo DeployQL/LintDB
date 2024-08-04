@@ -1,15 +1,15 @@
 #ifndef LINTDB_UTIL_H
 #define LINTDB_UTIL_H
 
+#include <json/reader.h>
+#include <json/writer.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <random>
 #include <string>
 #include <tuple>
 #include <vector>
 #include "lintdb/SearchOptions.h"
-#include <json/reader.h>
-#include <json/writer.h>
-#include <random>
 
 namespace lintdb {
 /**
@@ -59,7 +59,6 @@ std::vector<T> product(
     product_helper(pools, result, 0, current);
     return result;
 }
-
 
 Json::Value loadJson(const std::string& path);
 

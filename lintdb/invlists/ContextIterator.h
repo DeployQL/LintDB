@@ -1,22 +1,22 @@
 #pragma once
 
-#include <string>
-#include <rocksdb/slice.h>
 #include <rocksdb/db.h>
-#include "lintdb/invlists/KeyBuilder.h"
-#include "lintdb/invlists/Iterator.h"
+#include <rocksdb/slice.h>
+#include <string>
 #include "lintdb/constants.h"
+#include "lintdb/invlists/Iterator.h"
+#include "lintdb/invlists/KeyBuilder.h"
 
 namespace lintdb {
 class ContextIterator {
-public:
+   public:
     ContextIterator(
-        const std::shared_ptr<rocksdb::DB> db,
-        rocksdb::ColumnFamilyHandle* column_family,
-        const uint64_t tenant,
-        const uint8_t field): tenant(tenant), field(field) {
-
-        if(!column_family) {
+            const std::shared_ptr<rocksdb::DB> db,
+            rocksdb::ColumnFamilyHandle* column_family,
+            const uint64_t tenant,
+            const uint8_t field)
+            : tenant(tenant), field(field) {
+        if (!column_family) {
             throw std::runtime_error("Column family not found");
         }
         cf = column_family->GetID();
@@ -53,7 +53,8 @@ public:
     void advance(const idx_t doc_id) {
         KeyBuilder kb;
 
-        std::string expected_key = kb.add(tenant).add(field).add(doc_id).build();
+        std::string expected_key =
+                kb.add(tenant).add(field).add(doc_id).build();
         it->Seek(rocksdb::Slice(expected_key));
         has_read_key = false;
     }
@@ -73,7 +74,7 @@ public:
 
     std::unique_ptr<rocksdb::Iterator> it;
 
-    protected:
+   protected:
     lintdb::column_index_t cf;
     string prefix;
     string end_key;
@@ -85,4 +86,4 @@ public:
     const uint8_t field;
 };
 
-} // lintdb
+} // namespace lintdb

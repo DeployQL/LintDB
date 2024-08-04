@@ -1,19 +1,18 @@
 #ifndef LINTDB_KMEANS_H
 #define LINTDB_KMEANS_H
 
-#include <gsl/span>
-#include <vector>
 #include <stddef.h>
 #include <cmath>
+#include <gsl/span>
+#include <vector>
 
 namespace lintdb {
 
-enum class Metric {
-    EUCLIDEAN,
-    INNER_PRODUCT
-};
+enum class Metric { EUCLIDEAN, INNER_PRODUCT };
 // Helper function for Euclidean distance
-inline float euclidean_distance(gsl::span<const float> a, gsl::span<const float> b) {
+inline float euclidean_distance(
+        gsl::span<const float> a,
+        gsl::span<const float> b) {
     float sum = 0.0f;
     for (size_t i = 0; i < a.size(); ++i) {
         float diff = a[i] - b[i];
@@ -66,8 +65,14 @@ inline float inner_product(std::vector<float>& a, std::vector<float>& b) {
 }
 
 // K-means clustering for a single sub-vector
-std::vector<float> kmeans(const float* data, size_t n, size_t dim, size_t k, Metric metric, int iterations = 100);
+std::vector<float> kmeans(
+        const float* data,
+        size_t n,
+        size_t dim,
+        size_t k,
+        Metric metric,
+        int iterations = 100);
 
-}
+} // namespace lintdb
 
 #endif // LINTDB_KMEANS_H

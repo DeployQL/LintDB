@@ -2,6 +2,6 @@
 
 namespace lintdb {
 
-    Query::Query(std::unique_ptr<QueryNode> root) : root(std::move(root)) {}
+Query::Query(std::unique_ptr<QueryNode> root) : root(std::move(root)) {}
 
-} // lintdb
+} // namespace lintdb

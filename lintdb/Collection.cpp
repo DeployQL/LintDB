@@ -2,8 +2,8 @@
 #include <glog/logging.h>
 #include <chrono>
 #include <iostream>
-#include "lintdb/EmbeddingBlock.h"
 #include "lintdb/assert.h"
+#include "lintdb/EmbeddingBlock.h"
 #include "lintdb/util.h"
 #include "lintdb/utils/progress_bar.h"
 

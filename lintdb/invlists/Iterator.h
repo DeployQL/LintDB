@@ -1,8 +1,8 @@
 #ifndef LINTDB_INVLISTS_ITERATOR_H
 #define LINTDB_INVLISTS_ITERATOR_H
 
-#include "lintdb/invlists/KeyBuilder.h"
 #include <string>
+#include "lintdb/invlists/KeyBuilder.h"
 
 namespace lintdb {
 struct Iterator {

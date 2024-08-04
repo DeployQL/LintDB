@@ -4,12 +4,12 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include "lintdb/SearchOptions.h"
 #include "lintdb/exception.h"
 #include "lintdb/quantizers/Binarizer.h"
+#include "lintdb/quantizers/IdentityQuantizer.h"
 #include "lintdb/quantizers/ProductEncoder.h"
 #include "lintdb/quantizers/Quantizer.h"
-#include "lintdb/quantizers/IdentityQuantizer.h"
+#include "lintdb/SearchOptions.h"
 
 namespace lintdb {
 std::unique_ptr<Quantizer> load_quantizer(

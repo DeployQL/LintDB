@@ -3,8 +3,8 @@
 
 #include <gsl/span>
 #include <vector>
-#include "lintdb/SearchResult.h"
 #include "lintdb/api.h"
+#include "lintdb/SearchResult.h"
 
 namespace lintdb {
 struct RetrieverOptions {

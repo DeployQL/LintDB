@@ -1,10 +1,10 @@
 #include "lintdb/util.h"
-#include <unordered_map>
+#include <glog/logging.h>
 #include <fstream>
-#include "lintdb/SearchOptions.h"
+#include <unordered_map>
 #include "lintdb/api.h"
 #include "lintdb/exception.h"
-#include <glog/logging.h>
+#include "lintdb/SearchOptions.h"
 
 namespace lintdb {
 extern "C" {
@@ -49,7 +49,8 @@ Json::Value loadJson(const std::string& path) {
     std::string errs;
     if (in.is_open()) {
         if (!Json::parseFromStream(readerBuilder, in, &root, &errs)) {
-            LOG(ERROR) << "Failed to parse JSON from file: " << path << ", Error: " << errs;
+            LOG(ERROR) << "Failed to parse JSON from file: " << path
+                       << ", Error: " << errs;
         }
         in.close();
     } else {

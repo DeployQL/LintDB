@@ -3,12 +3,12 @@
 #include <map>
 #include <string>
 #include <vector>
-#include "lintdb/Passages.h"
-#include "lintdb/SearchOptions.h"
 #include "lintdb/api.h"
 #include "lintdb/index.h"
 #include "lintdb/index_builder/EmbeddingModel.h"
 #include "lintdb/index_builder/Tokenizer.h"
+#include "lintdb/Passages.h"
+#include "lintdb/SearchOptions.h"
 
 namespace lintdb {
 struct CollectionOptions {

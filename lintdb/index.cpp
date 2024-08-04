@@ -8,12 +8,13 @@
 #include <rocksdb/table.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <fstream>
 #include <algorithm>
+#include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <gsl/span>
 #include <iostream>
 #include <limits>
-#include <cmath>
 #include <string>
 #include <vector>
 #include "lintdb/api.h"
@@ -21,15 +22,14 @@
 #include "lintdb/cf.h"
 #include "lintdb/invlists/RocksdbForwardIndex.h"
 #include "lintdb/invlists/RocksdbInvertedList.h"
-#include "lintdb/quantizers/Quantizer.h"
 #include "lintdb/quantizers/io.h"
+#include "lintdb/quantizers/Quantizer.h"
+#include "lintdb/query/QueryExecutor.h"
+#include "lintdb/schema/DataTypes.h"
+#include "lintdb/schema/FieldMapper.h"
+#include "lintdb/scoring/Scorer.h"
 #include "lintdb/util.h"
 #include "lintdb/version.h"
-#include "lintdb/schema/FieldMapper.h"
-#include "lintdb/schema/DataTypes.h"
-#include "lintdb/query/QueryExecutor.h"
-#include "lintdb/scoring/Scorer.h"
-#include <filesystem>
 
 namespace lintdb {
 
@@ -56,7 +56,10 @@ IndexIVF::IndexIVF(const std::string& path, bool read_only)
     load_retrieval(path, config);
 }
 
-IndexIVF::IndexIVF(const std::string& path, const Schema& schema, const Configuration& config) {
+IndexIVF::IndexIVF(
+        const std::string& path,
+        const Schema& schema,
+        const Configuration& config) {
     this->config = config;
     this->path = path;
     this->schema = schema;
@@ -92,10 +95,13 @@ void IndexIVF::initialize_retrieval() {
     }
     // load coarse quantizers
     for (const auto& field : this->schema.fields) {
-        if (field.data_type != DataType::TENSOR && field.data_type != DataType::QUANTIZED_TENSOR) {
+        if (field.data_type != DataType::TENSOR &&
+            field.data_type != DataType::QUANTIZED_TENSOR) {
             continue;
         }
-        std::shared_ptr<FaissCoarseQuantizer> cq = std::make_shared<FaissCoarseQuantizer>(field.parameters.dimensions);
+        std::shared_ptr<FaissCoarseQuantizer> cq =
+                std::make_shared<FaissCoarseQuantizer>(
+                        field.parameters.dimensions);
         this->coarse_quantizer_map[field.name] = std::move(cq);
     }
 
@@ -105,33 +111,46 @@ void IndexIVF::initialize_retrieval() {
              field.data_type != DataType::QUANTIZED_TENSOR)) {
             continue;
         }
-        QuantizerConfig qc{field.parameters.nbits, field.parameters.dimensions, field.parameters.num_subquantizers};
-        std::shared_ptr<Quantizer> quantizer = create_quantizer(field.parameters.quantization, qc);
+        QuantizerConfig qc{
+                field.parameters.nbits,
+                field.parameters.dimensions,
+                field.parameters.num_subquantizers};
+        std::shared_ptr<Quantizer> quantizer =
+                create_quantizer(field.parameters.quantization, qc);
         this->quantizer_map[field.name] = std::move(quantizer);
     }
 }
 
-void IndexIVF::load_retrieval(const std::string& existing_path, const Configuration& config) {
+void IndexIVF::load_retrieval(
+        const std::string& existing_path,
+        const Configuration& config) {
     // load coarse quantizers
     for (const auto& field : this->schema.fields) {
-        if (field.data_type != DataType::TENSOR && field.data_type != DataType::QUANTIZED_TENSOR) {
+        if (field.data_type != DataType::TENSOR &&
+            field.data_type != DataType::QUANTIZED_TENSOR) {
             continue;
         }
-        std::string cqp = existing_path + "/" + field.name + "_coarse_quantizer";
-        std::shared_ptr<FaissCoarseQuantizer> cq = FaissCoarseQuantizer::deserialize(cqp, config.lintdb_version);
+        std::string cqp =
+                existing_path + "/" + field.name + "_coarse_quantizer";
+        std::shared_ptr<FaissCoarseQuantizer> cq =
+                FaissCoarseQuantizer::deserialize(cqp, config.lintdb_version);
         this->coarse_quantizer_map[field.name] = std::move(cq);
     }
 
     // load quantizers
     for (const auto& field : this->schema.fields) {
         if ((field.data_type != DataType::TENSOR &&
-            field.data_type != DataType::QUANTIZED_TENSOR)) {
+             field.data_type != DataType::QUANTIZED_TENSOR)) {
             continue;
         }
         LOG(INFO) << "loading quantizer for field: " << field.name;
         std::string qp = existing_path + "/" + field.name + "_quantizer";
-        QuantizerConfig qc{field.parameters.nbits, field.parameters.dimensions, field.parameters.num_subquantizers};
-        std::shared_ptr<Quantizer> quantizer = load_quantizer(qp, field.parameters.quantization, qc);
+        QuantizerConfig qc{
+                field.parameters.nbits,
+                field.parameters.dimensions,
+                field.parameters.num_subquantizers};
+        std::shared_ptr<Quantizer> quantizer =
+                load_quantizer(qp, field.parameters.quantization, qc);
         this->quantizer_map[field.name] = std::move(quantizer);
         LOG(INFO) << "done loading quantizer for field: " << field.name;
     }
@@ -160,14 +179,14 @@ void IndexIVF::initialize_inverted_list(const Version& version) {
     assert(s.ok());
 
     this->db = std::shared_ptr<rocksdb::DB>(ptr);
-    auto index_writer = std::make_unique<IndexWriter>(db, column_families, version);
+    auto index_writer =
+            std::make_unique<IndexWriter>(db, column_families, version);
     this->document_processor = std::make_shared<DocumentProcessor>(
-        this->schema,
-        this->quantizer_map,
-        this->coarse_quantizer_map,
-        this->field_mapper,
-        std::move(index_writer)
-    );
+            this->schema,
+            this->quantizer_map,
+            this->coarse_quantizer_map,
+            this->field_mapper,
+            std::move(index_writer));
 
     this->index_ = std::make_shared<RocksdbForwardIndex>(
             this->db, this->column_families, version);
@@ -176,25 +195,33 @@ void IndexIVF::initialize_inverted_list(const Version& version) {
 }
 
 void IndexIVF::train(const std::vector<Document>& docs) {
-    for(const auto& field: schema.fields) {
+    for (const auto& field : schema.fields) {
         // only train fields that are tensors and require indexing.
         if ((field.data_type == DataType::TENSOR ||
-            field.data_type == DataType::QUANTIZED_TENSOR ) &&
-                (std::find(field.field_types.begin(), field.field_types.end(), FieldType::Indexed) != field.field_types.end() ||
-                        std::find(field.field_types.begin(), field.field_types.end(), FieldType::Colbert) != field.field_types.end()) ) {
+             field.data_type == DataType::QUANTIZED_TENSOR) &&
+            (std::find(
+                     field.field_types.begin(),
+                     field.field_types.end(),
+                     FieldType::Indexed) != field.field_types.end() ||
+             std::find(
+                     field.field_types.begin(),
+                     field.field_types.end(),
+                     FieldType::Colbert) != field.field_types.end())) {
             LOG(INFO) << "training field: " << field.name;
 
             LINTDB_THROW_IF_NOT(field.parameters.num_centroids != 0);
 
-            // we've already initialized untrained quantizers in the constructor.
-            std::shared_ptr<ICoarseQuantizer> cq = this->coarse_quantizer_map[field.name];
+            // we've already initialized untrained quantizers in the
+            // constructor.
+            std::shared_ptr<ICoarseQuantizer> cq =
+                    this->coarse_quantizer_map[field.name];
 
             // pull out the embeddings from the documents.
             std::vector<float> embeddings;
             size_t num_embeddings = 0;
             for (auto doc : docs) {
                 FieldValue* fv;
-                for(auto& doc_fields: doc.fields) {
+                for (auto& doc_fields : doc.fields) {
                     if (doc_fields.name == field.name) {
                         fv = &doc_fields;
                         break;
@@ -205,50 +232,76 @@ void IndexIVF::train(const std::vector<Document>& docs) {
                 }
 
                 auto field_value = *fv;
-                LINTDB_THROW_IF_NOT(field_value.data_type == DataType::TENSOR || field_value.data_type == DataType::QUANTIZED_TENSOR);
+                LINTDB_THROW_IF_NOT(
+                        field_value.data_type == DataType::TENSOR ||
+                        field_value.data_type == DataType::QUANTIZED_TENSOR);
                 auto tensor = std::get<Tensor>(field_value.value);
 
-                LINTDB_THROW_IF_NOT(tensor.size() % field.parameters.dimensions == 0);
+                LINTDB_THROW_IF_NOT(
+                        tensor.size() % field.parameters.dimensions == 0);
                 LINTDB_THROW_IF_NOT(tensor.size() > 0);
 
                 num_embeddings += tensor.size() / field.parameters.dimensions;
-                embeddings.insert(embeddings.end(), tensor.begin(), tensor.end());
+                embeddings.insert(
+                        embeddings.end(), tensor.begin(), tensor.end());
             }
 
-            cq->train(num_embeddings, embeddings.data(), field.parameters.num_centroids, field.parameters.num_iterations);
+            cq->train(
+                    num_embeddings,
+                    embeddings.data(),
+                    field.parameters.num_centroids,
+                    field.parameters.num_iterations);
 
             if (field.parameters.quantization != QuantizerType::NONE) {
                 // randomly sample embeddings to train the quantizer on.
-                // we'll use the coarse quantizer to assign the embeddings to centroids.
-                if(num_embeddings > 1e5) {
-                    std::vector<size_t> sampled_ids = subsample(num_embeddings, std::sqrt(num_embeddings));
+                // we'll use the coarse quantizer to assign the embeddings to
+                // centroids.
+                if (num_embeddings > 1e5) {
+                    std::vector<size_t> sampled_ids = subsample(
+                            num_embeddings, std::sqrt(num_embeddings));
                     num_embeddings = sampled_ids.size();
 
-                    std::vector<float> sampled_embeddings(num_embeddings * field.parameters.dimensions, 0);
+                    std::vector<float> sampled_embeddings(
+                            num_embeddings * field.parameters.dimensions, 0);
                     size_t count = 0;
-                    for(const auto& idx: sampled_ids) {
-                        for(size_t i = 0; i < field.parameters.dimensions; i++) {
-                            sampled_embeddings[count * field.parameters.dimensions + i] = embeddings[idx * field.parameters.dimensions + i];
+                    for (const auto& idx : sampled_ids) {
+                        for (size_t i = 0; i < field.parameters.dimensions;
+                             i++) {
+                            sampled_embeddings
+                                    [count * field.parameters.dimensions +
+                                     i] = embeddings
+                                            [idx * field.parameters.dimensions +
+                                             i];
                         }
                         count++;
                     }
                     embeddings = sampled_embeddings;
                 }
 
-
-                QuantizerConfig qc = {field.parameters.nbits, field.parameters.dimensions, field.parameters.num_subquantizers};
-                std::unique_ptr<Quantizer> quantizer = create_quantizer(field.parameters.quantization, qc);
+                QuantizerConfig qc = {
+                        field.parameters.nbits,
+                        field.parameters.dimensions,
+                        field.parameters.num_subquantizers};
+                std::unique_ptr<Quantizer> quantizer =
+                        create_quantizer(field.parameters.quantization, qc);
 
                 LOG(INFO) << "Training quantizer for field: " << field.name;
                 std::vector<idx_t> assign(num_embeddings, 0);
 
                 cq->assign(num_embeddings, embeddings.data(), assign.data());
 
-                std::vector<float> residuals(num_embeddings * field.parameters.dimensions, 0);
+                std::vector<float> residuals(
+                        num_embeddings * field.parameters.dimensions, 0);
                 cq->compute_residual_n(
-                        num_embeddings, embeddings.data(), residuals.data(), assign.data());
+                        num_embeddings,
+                        embeddings.data(),
+                        residuals.data(),
+                        assign.data());
 
-                quantizer->train(num_embeddings, residuals.data(), field.parameters.dimensions);
+                quantizer->train(
+                        num_embeddings,
+                        residuals.data(),
+                        field.parameters.dimensions);
 
                 this->quantizer_map[field.name] = std::move(quantizer);
             }
@@ -270,8 +323,7 @@ void IndexIVF::save() {
             out << writer.write(root);
             out.close();
         } else {
-            LOG(ERROR) << "Unable to open file for writing: "
-                       << path;
+            LOG(ERROR) << "Unable to open file for writing: " << path;
         }
     };
 
@@ -284,13 +336,13 @@ void IndexIVF::save() {
     saveJson(field_mapper_path, field_mapper_root);
 
     // save coarse quantizers
-    for(const auto& [name, quantizer]: this->coarse_quantizer_map) {
+    for (const auto& [name, quantizer] : this->coarse_quantizer_map) {
         std::string cqp = this->path + "/" + name + "_coarse_quantizer";
         quantizer->serialize(cqp);
     }
 
     // save quantizers
-    for(const auto& [name, quantizer]: this->quantizer_map) {
+    for (const auto& [name, quantizer] : this->quantizer_map) {
         std::string qp = this->path + "/" + name + "_quantizer";
         save_quantizer(qp, quantizer.get());
     }
@@ -302,7 +354,6 @@ void IndexIVF::flush() {
     rocksdb::FlushOptions fo;
     this->db->Flush(fo, column_families);
 }
-
 
 /**
  * Implementation note:
@@ -318,23 +369,33 @@ std::vector<SearchResult> IndexIVF::search(
         const Query& query,
         const size_t k,
         const SearchOptions& opts) const {
-
-    uint8_t colbert_field_id = this->field_mapper->getFieldID(opts.colbert_field);
-    size_t colbert_code_size = this->quantizer_map.at(opts.colbert_field)->code_size();
+    uint8_t colbert_field_id =
+            this->field_mapper->getFieldID(opts.colbert_field);
+    size_t colbert_code_size =
+            this->quantizer_map.at(opts.colbert_field)->code_size();
 
     auto fm = field_mapper;
-    QueryContext context(tenant, opts.colbert_field, this->inverted_list_, fm, coarse_quantizer_map, quantizer_map);
+    QueryContext context(
+            tenant,
+            opts.colbert_field,
+            this->inverted_list_,
+            fm,
+            coarse_quantizer_map,
+            quantizer_map);
     PlaidScorer scorer(context);
     ColBERTScorer ranker(context);
     QueryExecutor executor(scorer, ranker);
 
-    std::vector<ScoredDocument> results = executor.execute(context, query, k, opts);
+    std::vector<ScoredDocument> results =
+            executor.execute(context, query, k, opts);
 
     if (opts.expected_id != -1) {
-        std::vector<idx_t> inverted_lists = this->inverted_list_->get_mapping(tenant, opts.expected_id);
+        std::vector<idx_t> inverted_lists =
+                this->inverted_list_->get_mapping(tenant, opts.expected_id);
         // print out the inverted lists.
         for (auto list : inverted_lists) {
-            LOG(INFO) << "expected document " << opts.expected_id << " in list: " << list;
+            LOG(INFO) << "expected document " << opts.expected_id
+                      << " in list: " << list;
         }
     }
 
@@ -349,7 +410,9 @@ std::vector<SearchResult> IndexIVF::search(
     return search_results;
 }
 
-void IndexIVF::set_quantizer(const std::string& field, std::shared_ptr<Quantizer> quantizer) {
+void IndexIVF::set_quantizer(
+        const std::string& field,
+        std::shared_ptr<Quantizer> quantizer) {
     // see if key exists in map, if it does, remove it.
     if (this->quantizer_map.find(field) != this->quantizer_map.end()) {
         this->quantizer_map.erase(field);
@@ -357,26 +420,24 @@ void IndexIVF::set_quantizer(const std::string& field, std::shared_ptr<Quantizer
     this->quantizer_map.insert({field, quantizer});
     std::string qp = this->path + "/" + field + "_quantizer";
     save_quantizer(qp, quantizer.get());
-
 }
 
-void IndexIVF::set_coarse_quantizer(const std::string& field, std::shared_ptr<ICoarseQuantizer> quantizer) {
+void IndexIVF::set_coarse_quantizer(
+        const std::string& field,
+        std::shared_ptr<ICoarseQuantizer> quantizer) {
     // see if key exists in map, if it does, remove it.
-    if (this->coarse_quantizer_map.find(field) != this->coarse_quantizer_map.end()) {
+    if (this->coarse_quantizer_map.find(field) !=
+        this->coarse_quantizer_map.end()) {
         this->coarse_quantizer_map.erase(field);
     }
     // add the new quantizer.
     this->coarse_quantizer_map.insert({field, quantizer});
 
-
     std::string cqp = this->path + "/" + field + "_coarse_quantizer";
     quantizer->serialize(cqp);
 }
 
-void IndexIVF::add(
-        const uint64_t tenant,
-        const std::vector<Document>& docs) {
-
+void IndexIVF::add(const uint64_t tenant, const std::vector<Document>& docs) {
 #pragma omp parallel for
     for (const auto& doc : docs) {
         add_single(tenant, doc);
@@ -388,9 +449,10 @@ void IndexIVF::add_single(const uint64_t tenant, const Document& doc) {
 }
 
 void IndexIVF::remove(const uint64_t tenant, const std::vector<idx_t>& ids) {
-    for( const auto& field: schema.fields) {
+    for (const auto& field : schema.fields) {
         uint8_t field_id = field_mapper->getFieldID(field.name);
-        inverted_list_->remove(tenant, ids, field_id, field.data_type, field.field_types);
+        inverted_list_->remove(
+                tenant, ids, field_id, field.data_type, field.field_types);
         index_->remove(tenant, ids);
     }
 }

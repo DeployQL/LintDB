@@ -6,10 +6,10 @@
 #include <tuple>
 #include <vector>
 #include "lintdb/Encoder.h"
-#include "lintdb/SearchResult.h"
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/retrievers/Retriever.h"
 #include "lintdb/scoring/plaid.h"
+#include "lintdb/SearchResult.h"
 
 namespace lintdb {
 /**

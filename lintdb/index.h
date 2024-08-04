@@ -8,20 +8,20 @@
 #include <vector>
 
 #include <unordered_set>
-#include "lintdb/SearchOptions.h"
-#include "lintdb/SearchResult.h"
 #include "lintdb/api.h"
 #include "lintdb/exception.h"
-#include "lintdb/invlists/InvertedList.h"
-#include "lintdb/retrievers/Retriever.h"
-#include "lintdb/version.h"
-#include "lintdb/schema/Schema.h"
-#include "lintdb/quantizers/CoarseQuantizer.h"
 #include "lintdb/invlists/IndexWriter.h"
-#include "lintdb/schema/Document.h"
-#include "lintdb/schema/DocProcessor.h"
-#include "lintdb/schema/FieldMapper.h"
+#include "lintdb/invlists/InvertedList.h"
+#include "lintdb/quantizers/CoarseQuantizer.h"
 #include "lintdb/query/Query.h"
+#include "lintdb/retrievers/Retriever.h"
+#include "lintdb/schema/DocProcessor.h"
+#include "lintdb/schema/Document.h"
+#include "lintdb/schema/FieldMapper.h"
+#include "lintdb/schema/Schema.h"
+#include "lintdb/SearchOptions.h"
+#include "lintdb/SearchResult.h"
+#include "lintdb/version.h"
 
 // forward declare these classes and avoid including the rocksdb headers.
 namespace rocksdb {
@@ -67,7 +67,10 @@ struct IndexIVF {
     /// load an existing index.
     IndexIVF(const std::string& path, bool read_only = false);
 
-    IndexIVF(const std::string& path, const Schema& schema, const Configuration& config);
+    IndexIVF(
+            const std::string& path,
+            const Schema& schema,
+            const Configuration& config);
 
     /**
      * Copy creates a new index at the given path from a trained index. The copy
@@ -87,8 +90,12 @@ struct IndexIVF {
      */
     void train(const std::vector<Document>& docs);
 
-    void set_quantizer(const std::string& field, std::shared_ptr<Quantizer> quantizer);
-    void set_coarse_quantizer(const std::string& field, std::shared_ptr<ICoarseQuantizer> quantizer);
+    void set_quantizer(
+            const std::string& field,
+            std::shared_ptr<Quantizer> quantizer);
+    void set_coarse_quantizer(
+            const std::string& field,
+            std::shared_ptr<ICoarseQuantizer> quantizer);
 
     /**
      * search will find the nearest neighbors for a vector block.
@@ -130,9 +137,7 @@ struct IndexIVF {
     /**
      * Update is a convenience function for remove and add.
      */
-    void update(
-            const uint64_t tenant,
-            const std::vector<Document>& docs);
+    void update(const uint64_t tenant, const std::vector<Document>& docs);
 
     /**
      * Merge will combine the index with another index.
@@ -157,7 +162,7 @@ struct IndexIVF {
 
     ~IndexIVF() {
         for (auto& cf : column_families) {
-            if(cf) {
+            if (cf) {
                 auto status = db->DestroyColumnFamilyHandle(cf);
                 assert(status.ok());
             }
@@ -171,13 +176,15 @@ struct IndexIVF {
     Schema schema;
     std::shared_ptr<FieldMapper> field_mapper;
 
-    std::unordered_map<std::string, std::shared_ptr<ICoarseQuantizer>> coarse_quantizer_map;
+    std::unordered_map<std::string, std::shared_ptr<ICoarseQuantizer>>
+            coarse_quantizer_map;
     std::unordered_map<std::string, std::shared_ptr<Quantizer>> quantizer_map;
     std::unique_ptr<Retriever> retriever;
 
     std::shared_ptr<DocumentProcessor> document_processor;
-    // Note: invertedList and ForwardIndex are becoming read-only classes for retrieval.
-    // writing is done through the index writer. Merging/Removing will likely move to the writer as well.
+    // Note: invertedList and ForwardIndex are becoming read-only classes for
+    // retrieval. writing is done through the index writer. Merging/Removing
+    // will likely move to the writer as well.
     std::shared_ptr<InvertedList> inverted_list_;
     std::shared_ptr<ForwardIndex> index_;
 
@@ -188,8 +195,6 @@ struct IndexIVF {
     void initialize_retrieval();
     // instead of initializing, load from disk.
     void load_retrieval(const std::string& path, const Configuration& config);
-
-
 
     /**
      * Flush data to disk.

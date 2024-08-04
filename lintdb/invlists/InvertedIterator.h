@@ -9,63 +9,63 @@
 #include <string>
 #include "lintdb/constants.h"
 #include "lintdb/exception.h"
+#include "lintdb/invlists/ContextIterator.h"
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/invlists/Iterator.h"
 #include "lintdb/invlists/KeyBuilder.h"
 #include "lintdb/version.h"
-#include "lintdb/invlists/ContextIterator.h"
 
 namespace lintdb {
 
-    struct RocksDBIterator : public lintdb::Iterator {
-        RocksDBIterator(
-                std::shared_ptr<rocksdb::DB> db,
-                rocksdb::ColumnFamilyHandle *column_family,
-                const std::string& prefix);
+struct RocksDBIterator : public lintdb::Iterator {
+    RocksDBIterator(
+            std::shared_ptr<rocksdb::DB> db,
+            rocksdb::ColumnFamilyHandle* column_family,
+            const std::string& prefix);
 
-        bool is_valid() override {
-            if (!has_read_key) {
-                bool is_valid = it->Valid();
-                if (!is_valid) {
-                    return false;
-                }
-
-                auto key = it->key();
-                std::string key_str = key.ToString();
-                if (key_str.compare(0, prefix.size(), prefix) != 0) {
-                    return false;
-                }
-
-                current_key = InvertedIndexKey(key_str);
+    bool is_valid() override {
+        if (!has_read_key) {
+            bool is_valid = it->Valid();
+            if (!is_valid) {
+                return false;
             }
 
-            has_read_key = true;
-            return true;
+            auto key = it->key();
+            std::string key_str = key.ToString();
+            if (key_str.compare(0, prefix.size(), prefix) != 0) {
+                return false;
+            }
+
+            current_key = InvertedIndexKey(key_str);
         }
 
-        void next() override {
-            it->Next();
-            has_read_key = false;
-        }
+        has_read_key = true;
+        return true;
+    }
 
-        InvertedIndexKey get_key() const override {
-            return current_key;
-        }
+    void next() override {
+        it->Next();
+        has_read_key = false;
+    }
 
-        string get_value() const override {
-            return it->value().ToString();
-        }
+    InvertedIndexKey get_key() const override {
+        return current_key;
+    }
 
-        std::unique_ptr<rocksdb::Iterator> it;
+    string get_value() const override {
+        return it->value().ToString();
+    }
 
-    protected:
-        lintdb::column_index_t cf;
-        string prefix;
-        string end_key;
-        rocksdb::Slice prefix_slice;
-        InvertedIndexKey current_key;
+    std::unique_ptr<rocksdb::Iterator> it;
 
-        bool has_read_key;
-    };
+   protected:
+    lintdb::column_index_t cf;
+    string prefix;
+    string end_key;
+    rocksdb::Slice prefix_slice;
+    InvertedIndexKey current_key;
 
-}
+    bool has_read_key;
+};
+
+} // namespace lintdb

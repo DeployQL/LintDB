@@ -1,13 +1,13 @@
 #include "lintdb/retrievers/PlaidRetriever.h"
 #include <glog/logging.h>
 #include <omp.h>
-#include <tuple>
 #include <algorithm>
+#include <tuple>
 #include <vector>
-#include "lintdb/SearchOptions.h"
 #include "lintdb/invlists/EncodedDocument.h"
 #include "lintdb/retrievers/Retriever.h"
 #include "lintdb/scoring/plaid.h"
+#include "lintdb/SearchOptions.h"
 
 #ifndef LINTDB_CHUNK_SIZE
 #define LINTDB_CHUNK_SIZE 1000

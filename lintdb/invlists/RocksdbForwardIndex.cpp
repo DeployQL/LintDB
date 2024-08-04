@@ -4,13 +4,13 @@
 #include <rocksdb/utilities/transaction.h>
 #include <iostream>
 #include <unordered_set>
-#include "RocksdbInvertedList.h"
 #include "lintdb/assert.h"
 #include "lintdb/constants.h"
 #include "lintdb/exception.h"
 #include "lintdb/invlists/ForwardIndexIterator.h"
 #include "lintdb/invlists/KeyBuilder.h"
 #include "lintdb/schema/DocEncoder.h"
+#include "RocksdbInvertedList.h"
 
 namespace lintdb {
 
@@ -20,8 +20,9 @@ RocksdbForwardIndex::RocksdbForwardIndex(
         const Version& version)
         : version(version), db_(db), column_families(column_families) {}
 
-    void RocksdbForwardIndex::remove(const uint64_t tenant,
-                std::vector<idx_t> ids) {
+void RocksdbForwardIndex::remove(
+        const uint64_t tenant,
+        std::vector<idx_t> ids) {
     for (idx_t id : ids) {
         // it's easier to skip the inverted index column families.
         if (id == kIndexColumnIndex || id == kMappingColumnIndex) {
@@ -40,7 +41,7 @@ RocksdbForwardIndex::RocksdbForwardIndex(
     }
 }
 
-    std::vector<std::map<uint8_t, SupportedTypes >> RocksdbForwardIndex::
+std::vector<std::map<uint8_t, SupportedTypes>> RocksdbForwardIndex::
         get_metadata(const uint64_t tenant, const std::vector<idx_t>& ids)
                 const {
     std::vector<std::string> key_strings;
@@ -58,12 +59,12 @@ RocksdbForwardIndex::RocksdbForwardIndex(
     VLOG(100) << "Getting num docs: " << key_strings.size()
               << " from the metadata index.";
 
-        std::vector<std::map<uint8_t, SupportedTypes >> docs;
+    std::vector<std::map<uint8_t, SupportedTypes>> docs;
     rocksdb::ReadOptions ro;
     std::vector<rocksdb::PinnableSlice> values(ids.size());
     std::vector<rocksdb::Status> statuses(ids.size());
 
-//#pragma omp parallel for
+    //#pragma omp parallel for
     for (int i = 0; i < key_strings.size(); i++) {
         auto key = rocksdb::Slice(key_strings[i].data(), key_strings[i].size());
 
@@ -74,7 +75,8 @@ RocksdbForwardIndex::RocksdbForwardIndex(
     for (size_t i = 0; i < ids.size(); i++) {
         if (statuses[i].ok() && values[i].size() > 0) {
             auto doc = values[i].ToString();
-            std::map<uint8_t, SupportedTypes> metadata = DocEncoder::decode_forward_data(doc);
+            std::map<uint8_t, SupportedTypes> metadata =
+                    DocEncoder::decode_forward_data(doc);
 
             docs.push_back(std::move(metadata));
             // release the memory used by rocksdb for this value.
@@ -121,8 +123,8 @@ void RocksdbForwardIndex::merge(
 }
 
 std::unique_ptr<ForwardIndexIterator> RocksdbForwardIndex::get_iterator(
-            const uint64_t tenant,
-            idx_t column_index) const {
+        const uint64_t tenant,
+        idx_t column_index) const {
     return std::make_unique<ForwardIndexIterator>(ForwardIndexIterator(
             db_, column_families[kIndexColumnIndex], tenant));
 }

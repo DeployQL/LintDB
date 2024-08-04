@@ -2,8 +2,8 @@
 #define LINTDB_SEARCH_OPTIONS_H
 
 #include <cstddef>
-#include <vector>
 #include <string>
+#include <vector>
 #include "lintdb/api.h"
 
 namespace lintdb {

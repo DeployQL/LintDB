@@ -5,9 +5,9 @@
 #include <gsl/span>
 #include <vector>
 #include "lintdb/Encoder.h"
-#include "lintdb/SearchResult.h"
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/retrievers/Retriever.h"
+#include "lintdb/SearchResult.h"
 
 namespace faiss {
 struct ProductQuantizer;

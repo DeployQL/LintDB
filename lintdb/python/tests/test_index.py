@@ -1,22 +1,17 @@
-import unittest
-import tempfile
-import shutil
-import os
 import numpy as np
+import os
+import shutil
+import tempfile
+import unittest
 
 from lintdb import (
     Schema,
     ColbertField,
-    StoredField,
-    IndexedField,
-    ContextField,
     QuantizerType,
     Binarizer,
     Configuration,
     CoarseQuantizer,
-    SearchOptions,
     DataType,
-    FieldValue,
     TensorFieldValue,
     QuantizedTensorFieldValue,
     IntFieldValue,
@@ -26,11 +21,10 @@ from lintdb import (
     Document,
     IndexIVF,
     Version,
-    TermQueryNode,
     VectorQueryNode,
-    AndQueryNode,
     Query
 )
+
 
 class TestIndex(unittest.TestCase):
     def setUp(self):

@@ -32,13 +32,15 @@ Field Field::fromJson(const Json::Value& json) {
 
     const Json::Value& fieldTypesJson = json["field_types"];
     for (const auto& fieldTypeJson : fieldTypesJson) {
-        field.field_types.push_back(static_cast<FieldType>(fieldTypeJson.asInt()));
+        field.field_types.push_back(
+                static_cast<FieldType>(fieldTypeJson.asInt()));
     }
 
     const Json::Value& params = json["parameters"];
     field.parameters.dimensions = params["dimensions"].asUInt();
     field.parameters.analyzer = params["analyzer"].asString();
-    field.parameters.quantization = static_cast<QuantizerType>(params["quantization"].asInt());
+    field.parameters.quantization =
+            static_cast<QuantizerType>(params["quantization"].asInt());
     field.parameters.num_centroids = params["num_centroids"].asUInt();
     field.parameters.num_iterations = params["num_iterations"].asUInt();
     field.parameters.num_subquantizers = params["num_subquantizers"].asUInt();

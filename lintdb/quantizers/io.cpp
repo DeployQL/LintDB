@@ -47,19 +47,18 @@ void save_quantizer(std::string path, Quantizer* quantizer) {
             quantizer->save(path);
             break;
 
-
         default:
             throw LintDBException("Quantizer type not valid.");
     }
 }
-
 
 std::unique_ptr<Quantizer> create_quantizer(
         QuantizerType type,
         QuantizerConfig& config) {
     switch (type) {
         case QuantizerType::NONE:
-            return std::make_unique<IdentityQuantizer>(config.dim);;
+            return std::make_unique<IdentityQuantizer>(config.dim);
+            ;
 
         case QuantizerType::BINARIZER:
             return std::make_unique<Binarizer>(config.nbits, config.dim);

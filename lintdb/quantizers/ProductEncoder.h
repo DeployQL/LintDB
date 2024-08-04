@@ -25,13 +25,12 @@ struct ProductEncoder : public Quantizer {
 
     ProductEncoder(const ProductEncoder& other);
 
-    friend void swap( ProductEncoder& lhs, ProductEncoder& rhs);
+    friend void swap(ProductEncoder& lhs, ProductEncoder& rhs);
 
     ProductEncoder& operator=(ProductEncoder& other) {
         swap(*this, other);
         return *this;
     }
-
 
     bool is_trained = false;
 

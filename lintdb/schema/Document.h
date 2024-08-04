@@ -14,9 +14,7 @@ struct Document {
     idx_t id; /// the unique id of the document
 
     Document(idx_t id, const std::vector<FieldValue>& fields)
-        : fields(fields), id(id) {}
+            : fields(fields), id(id) {}
 };
 
-}
-
-
+} // namespace lintdb

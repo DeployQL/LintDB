@@ -3,18 +3,17 @@
 #include <rocksdb/slice.h>
 #include <rocksdb/utilities/transaction.h>
 #include <iostream>
+#include "InvertedIterator.h"
 #include "lintdb/assert.h"
 #include "lintdb/constants.h"
 #include "lintdb/exception.h"
+#include "lintdb/invlists/ContextIterator.h"
 #include "lintdb/invlists/RocksdbForwardIndex.h"
 #include "lintdb/schema/DocEncoder.h"
-#include "lintdb/invlists/ContextIterator.h"
-#include "InvertedIterator.h"
-
 
 namespace lintdb {
 
-    RocksdbInvertedList::RocksdbInvertedList(
+RocksdbInvertedList::RocksdbInvertedList(
         std::shared_ptr<rocksdb::DB> db,
         std::vector<rocksdb::ColumnFamilyHandle*>& column_families,
         const Version& version)
@@ -26,16 +25,17 @@ void RocksdbInvertedList::remove(
         const uint8_t field,
         const DataType data_type,
         const std::vector<FieldType> field_types) {
-    for (auto field_type: field_types) {
+    for (auto field_type : field_types) {
         switch (field_type) {
             case FieldType::Indexed: {
-                for (idx_t id: ids) {
-                    LOG(INFO) << "deleting from index: " <<  id;
+                for (idx_t id : ids) {
+                    LOG(INFO) << "deleting from index: " << id;
                     auto id_map = this->get_mapping(tenant, id);
                     // delete from the inverse index.
                     rocksdb::ReadOptions ro;
-                    for (auto idx: id_map) {
-                        std::string key = create_index_id(tenant, field, data_type, idx, id);
+                    for (auto idx : id_map) {
+                        std::string key = create_index_id(
+                                tenant, field, data_type, idx, id);
                         rocksdb::WriteOptions wo;
                         rocksdb::Status status = db_->Delete(
                                 wo,
@@ -47,7 +47,7 @@ void RocksdbInvertedList::remove(
                 break;
             }
             case FieldType::Context: {
-                for (idx_t id: ids) {
+                for (idx_t id : ids) {
                     std::string key = create_context_id(tenant, field, id);
                     rocksdb::WriteOptions wo;
                     rocksdb::Status status = db_->Delete(
@@ -59,14 +59,20 @@ void RocksdbInvertedList::remove(
                 break;
             }
             case FieldType::Colbert: {
-                for (idx_t id: ids) {
+                for (idx_t id : ids) {
                     auto id_map = this->get_mapping(tenant, id);
                     // delete from the inverse index.
                     rocksdb::ReadOptions ro;
-                    for (auto idx: id_map) {
-                        LOG(INFO) << "deleting from index: " <<  idx;
-                        // colbert fields are always tensors, and tensors are always quantized in the index.
-                        std::string key = create_index_id(tenant, field, DataType::QUANTIZED_TENSOR, idx, id);
+                    for (auto idx : id_map) {
+                        LOG(INFO) << "deleting from index: " << idx;
+                        // colbert fields are always tensors, and tensors are
+                        // always quantized in the index.
+                        std::string key = create_index_id(
+                                tenant,
+                                field,
+                                DataType::QUANTIZED_TENSOR,
+                                idx,
+                                id);
                         rocksdb::WriteOptions wo;
                         rocksdb::Status status = db_->Delete(
                                 wo,
@@ -144,15 +150,16 @@ void RocksdbInvertedList::merge(
     }
 }
 
-    std::unique_ptr<Iterator> RocksdbInvertedList::get_iterator(const std::string &prefix) const {
+std::unique_ptr<Iterator> RocksdbInvertedList::get_iterator(
+        const std::string& prefix) const {
     return std::make_unique<RocksDBIterator>(
             db_, column_families[kIndexColumnIndex], prefix);
 }
 
 std::unique_ptr<ContextIterator> RocksdbInvertedList::get_context_iterator(
         const uint64_t tenant,
-        const uint8_t field_id
-) const {
-    return std::make_unique<ContextIterator>(db_, column_families[kCodesColumnIndex], tenant, field_id);
+        const uint8_t field_id) const {
+    return std::make_unique<ContextIterator>(
+            db_, column_families[kCodesColumnIndex], tenant, field_id);
 }
 } // namespace lintdb
