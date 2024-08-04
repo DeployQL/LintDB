@@ -47,13 +47,11 @@ def batch(iterable, n=1):
 
 
 @app.command()
-def run(index_path: str = "local_db.index"):
+def run(index_path: str = "local_db.index", stop:int=40000, reuse_colbert_clusters=True):
     experiment = ""
     checkpoint = "colbert-ir/colbertv2.0"
     dataset = 'lifestyle'
     split = 'dev'
-    stop = 40000
-    reuse_colbert_clusters = True
 
     print("Beginning indexing...")
 

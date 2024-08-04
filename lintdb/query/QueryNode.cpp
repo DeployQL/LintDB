@@ -23,9 +23,10 @@ namespace lintdb {
         DataType field_type = context.getFieldMapper()->getDataType(field_id);
 
         std::shared_ptr<KnnNearestCentroids> nearest_centroids = context.getOrCreateNearestCentroids(this->value.name);
+        size_t num_centroids = context.getCoarseQuantizer(this->value.name)->num_centroids();
         if (!nearest_centroids->is_valid()) {
             Tensor query = std::get<Tensor>(this->value.value);
-            size_t num_centroids = context.getCoarseQuantizer(this->value.name)->num_centroids();
+
             size_t num_tensors = this->value.num_tensors;
             nearest_centroids->calculate(
                     query,
@@ -35,7 +36,9 @@ namespace lintdb {
                     );
         }
 
-        std::vector<std::pair<float, idx_t>> top_centroids = nearest_centroids->get_top_centroids(opts.k_top_centroids, opts.n_probe);
+        size_t max_centroids = std::min(opts.k_top_centroids, num_centroids);
+
+        std::vector<std::pair<float, idx_t>> top_centroids = nearest_centroids->get_top_centroids(max_centroids, opts.n_probe);
 
         std::vector<std::unique_ptr<DocIterator>> iterators;
 

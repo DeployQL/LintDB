@@ -1,0 +1,18 @@
+{
+   "fields" : [
+      {
+         "data_type" : 0,
+         "field_types" : [ 3 ],
+         "name" : "colbert",
+         "parameters" : {
+            "analyzer" : "",
+            "dimensions" : 128,
+            "nbits" : 1,
+            "num_centroids" : 32768,
+            "num_iterations" : 10,
+            "num_subquantizers" : 0,
+            "quantization" : 2
+         }
+      }
+   ]
+}

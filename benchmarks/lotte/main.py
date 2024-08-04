@@ -23,7 +23,7 @@ app = typer.Typer()
 
 @app.command()
 def colbert(dataset, experiment, split='dev', k: int=5, checkpoint: str = "colbert-ir/colbertv2.0"):
-    d = load_lotte(dataset, split, stop=40000)
+    d = load_lotte(dataset, split, stop=1000)
 
     with Run().context(RunConfig(nranks=1, experiment=experiment)):
         config = ColBERTConfig.load_from_checkpoint(checkpoint)

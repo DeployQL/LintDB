@@ -160,9 +160,11 @@ TEST_P(IndexTest, SearchCorrectly) {
     lintdb::IndexIVF index(
             temp_db.string(), schema, config);
 
-    auto docs = create_colbert_documents(10, 10, 128);
-    index.train(docs);
+    auto training_docs = create_colbert_documents(400, 10, 128);
+    index.train(training_docs);
 
+
+    auto docs = create_colbert_documents(10, 10, 128);
     index.add(1, docs);
 
     lintdb::FieldValue fv("colbert", std::vector<float>(1280, 1), 10);
@@ -200,9 +202,11 @@ TEST_P(IndexTest, SearchCorrectlyWithFilter) {
     lintdb::IndexIVF index(
             temp_db.string(), schema, config);
 
-    auto docs = create_colbert_documents(10, 10, 128, {lintdb::DataType::TEXT, lintdb::DataType::INTEGER});
-    index.train(docs);
+    auto training_docs = create_colbert_documents(400, 10, 128);
+    index.train(training_docs);
 
+
+    auto docs = create_colbert_documents(10, 10, 128, {lintdb::DataType::TEXT, lintdb::DataType::INTEGER});
     index.add(1, docs);
     lintdb::FieldValue fv("colbert", std::vector<float>(1280, 1), 10);
     std::unique_ptr<lintdb::VectorQueryNode> vector_node = std::make_unique<lintdb::VectorQueryNode>(fv);
@@ -221,7 +225,8 @@ TEST_P(IndexTest, SearchCorrectlyWithFilter) {
 
     lintdb::SearchOptions opt;
     opt.n_probe = 100;
-    opt.k_top_centroids = 10;
+    opt.k_top_centroids = 100;
+    opt.expected_id = 1;
 
     auto results = index.search(1, query, 50, opt);
     // create a set of range 0...9
@@ -323,28 +328,27 @@ TEST_P(IndexTest, LoadsCorrectly) {
     lintdb::IndexIVF index(
             temp_db.string(), schema, config);
 
+    auto training_docs = create_colbert_documents(400, 10, 128);
+    index.train(training_docs);
+
+
     auto docs = create_colbert_documents(10, 10, 128);
-
-    index.train(docs);
-
-    std::cout << "HERE" << std::endl;
     index.add(1, docs);
-    std::cout << "HERE" << std::endl;
+
+    index.add(1, docs);
     auto loaded_index = lintdb::IndexIVF(temp_db.string(), true);
 
     lintdb::FieldValue fv("colbert", std::vector<float>(1280, 1), 10);
     std::unique_ptr<lintdb::VectorQueryNode> root = std::make_unique<lintdb::VectorQueryNode>(fv);
     lintdb::Query query(std::move(root));
-    std::cout << "HERE" << std::endl;
     auto one_results = index.search(
             1, query, 10);
-    std::cout << "HERE" << std::endl;
+
     lintdb::SearchOptions opt;
     opt.n_probe = 100;
     opt.k_top_centroids = 10;
     auto results = loaded_index.search(
             1, query, 10, opt);
-    std::cout << "HERE" << std::endl;
     EXPECT_EQ(results.size(), one_results.size());
 
     index.close();
@@ -359,18 +363,15 @@ TEST_P(IndexTest, MergeCorrectly) {
     lintdb::IndexIVF index(
             temp_db.string(), schema, config);
 
-    auto docs = create_colbert_documents(10, 10, 128);
+    auto docs = create_colbert_documents(400, 10, 128);
 
     index.train(docs);
 
     index.add(1, {docs[0]});
 
     index.save();
-    std::cout << "first file path: " << temp_db.string() << std::endl;
     temp_db_two = create_temporary_directory();
-    std::cout << "second file path: " << temp_db_two.string() << std::endl;
-//
-//    // create a second db.
+
     std::filesystem::path path_two = std::filesystem::temp_directory_path();
     // copy the first index to create the second db.
     // this makes it simpler to add a document, since we don't need to retrain.
@@ -395,61 +396,6 @@ TEST_P(IndexTest, MergeCorrectly) {
     auto results = index.search(1, query, 5, opts);
     EXPECT_EQ(results.size(), 2);
 }
-
-//TEST_P(IndexTest, SearchWithMetadataCorrectly) {
-//    size_t dim = 128;
-//    // we'll generate num_docs * num_tokens random vectors for training.
-//    // keep in mind this needs to be larger than the number of dimensions.
-//    size_t num_docs = 100;
-//    size_t num_tokens = 100;
-//
-//    size_t kclusters = 250; // number of centroids to calculate.
-//
-//    size_t centroid_bits = 2;
-//    temp_db = create_temporary_directory();
-//    // buffer for the randomly created vectors.
-//    // we want 128 dimension vectors for 10 tokens, for each of the 5 docs.
-//    std::vector<float> buf(dim * (num_docs * num_tokens));
-//    // fake data where every vector is either all 1s,2s...9s.
-//    for (size_t i = 0; i < num_docs * num_tokens; i++) {
-//        for (size_t j = 0; j < dim; j++) {
-//            buf[i * dim + j] = i % 11 + 1;
-//        }
-//    }
-//    // normalize before training. ColBERT returns normalized embeddings.
-//    lintdb::normalize_vector(buf.data(), num_docs * num_tokens, dim);
-//
-//    lintdb::IndexIVF index(
-//            temp_db.string(), kclusters, dim, centroid_bits, 4, 16, type);
-//
-//    index.train(num_docs * num_tokens, buf, kclusters, 2);
-//
-//
-//    std::vector<float> fake_doc(dim * num_tokens, 3);
-//    lintdb::normalize_vector(fake_doc.data(), num_tokens, dim);
-//
-//    lintdb::EmbeddingBlock block{fake_doc.data(), num_tokens, dim};
-//
-//    lintdb::EmbeddingPassage doc(
-//            fake_doc.data(),
-//            num_tokens,
-//            dim,
-//            1,
-//            std::map<std::string, std::string>{{"title", "test"}});
-//    std::vector<lintdb::EmbeddingPassage> docs = {doc};
-//    index.add(lintdb::kDefaultTenant, docs);
-//
-//    auto opts = lintdb::SearchOptions();
-//    opts.centroid_score_threshold = 0;
-//    opts.k_top_centroids = 250;
-//    auto results = index.search(lintdb::kDefaultTenant, block, 250, 5, opts);
-//
-//    ASSERT_GT(results.size(), 0);
-//
-//    auto actual = results[0].id;
-//    EXPECT_EQ(actual, 1);
-//    EXPECT_EQ(results[0].metadata.at("title"), "test");
-//}
 
 INSTANTIATE_TEST_SUITE_P(
         IndexTest,

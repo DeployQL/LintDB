@@ -176,8 +176,6 @@ void IndexIVF::initialize_inverted_list(const Version& version) {
 }
 
 void IndexIVF::train(const std::vector<Document>& docs) {
-    LOG(INFO) << "num docs: " << docs.size();
-
     for(const auto& field: schema.fields) {
         // only train fields that are tensors and require indexing.
         if ((field.data_type == DataType::TENSOR ||

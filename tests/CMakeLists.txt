@@ -8,7 +8,7 @@ set(
         keys_test.cpp
         #    xtr_test.cpp
         doc_encoder_test.cpp
-#    colbert_test.cpp
+        colbert_test.cpp
         #    plaid_test.cpp
 
         binarizer_test.cpp

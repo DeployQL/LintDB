@@ -222,6 +222,7 @@ FaissCoarseQuantizer::FaissCoarseQuantizer(size_t d, const std::vector<float>& c
     index = faiss::IndexFlatIP(d);
     index.add(k, centroids.data());
     index.is_trained = true;
+    is_trained_ = true;
 }
 
 void FaissCoarseQuantizer::train(const size_t n, const float* x, size_t k, size_t num_iter) {
@@ -230,6 +231,7 @@ void FaissCoarseQuantizer::train(const size_t n, const float* x, size_t k, size_
 
     faiss::Clustering clus(d, k, cp);
     clus.train(n, x,index);
+    is_trained_ = true;
 }
 void FaissCoarseQuantizer::save(const std::string& path) {
     faiss::write_index(&index, path.c_str());
@@ -276,6 +278,11 @@ std::unique_ptr<FaissCoarseQuantizer> FaissCoarseQuantizer::deserialize(const st
 
     auto faiss_quantizer = std::make_unique<FaissCoarseQuantizer>(index->d);
     faiss_quantizer->index = *dynamic_cast<faiss::IndexFlatIP*>(index);
+
+    faiss_quantizer->k = faiss_quantizer->index.ntotal;
+    faiss_quantizer->d = faiss_quantizer->index.d;
+    faiss_quantizer->is_trained_ = faiss_quantizer->index.is_trained;
+
 
     return faiss_quantizer;
 }
