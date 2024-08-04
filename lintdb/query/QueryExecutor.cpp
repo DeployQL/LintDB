@@ -20,8 +20,11 @@ namespace lintdb {
             const SearchOptions& opts) {
         std::unique_ptr<DocIterator> doc_it = query.root->process(context, opts);
 
-        std::priority_queue<ScoredDocument, std::vector<ScoredDocument>, std::greater<>> results;
+        std::priority_queue<ScoredDocument, std::vector<ScoredDocument>, std::less<>> results;
         for(;doc_it->is_valid(); doc_it->advance()) {
+            if (opts.expected_id != -1 && doc_it->doc_id() == opts.expected_id) {
+                LOG(INFO) << "expected document found";
+            }
             std::vector<DocValue> dvs = doc_it->fields();
             // optionally decode quantized tensors from fields.
             for (auto & dv : dvs) {
@@ -33,8 +36,10 @@ namespace lintdb {
             }
 
             ScoredDocument scored = retriever.score(context, doc_it->doc_id(), dvs);
-
-            results.emplace(scored);
+            if (opts.expected_id != -1 && doc_it->doc_id() == opts.expected_id) {
+                LOG(INFO) << "\tscore: " << scored.score;
+            }
+            results.push(scored);
         }
 
         std::vector<ScoredDocument> top_results;

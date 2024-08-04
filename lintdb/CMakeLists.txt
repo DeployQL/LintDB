@@ -124,7 +124,6 @@ if(OpenMP_CXX_FOUND)
     target_link_libraries(lintdb_lib PUBLIC OpenMP::OpenMP_CXX)
 endif()
 
-
 message(STATUS "using MKL root: ${MKLROOT}")
 find_package(MKL)
 if (MKL_FOUND)

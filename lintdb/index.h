@@ -88,7 +88,7 @@ struct IndexIVF {
     void train(const std::vector<Document>& docs);
 
     void set_quantizer(const std::string& field, std::shared_ptr<Quantizer> quantizer);
-    void set_coarse_quantizer(const std::string& field, std::shared_ptr<CoarseQuantizer> quantizer);
+    void set_coarse_quantizer(const std::string& field, std::shared_ptr<ICoarseQuantizer> quantizer);
 
     /**
      * search will find the nearest neighbors for a vector block.

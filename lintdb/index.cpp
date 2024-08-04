@@ -95,7 +95,7 @@ void IndexIVF::initialize_retrieval() {
         if (field.data_type != DataType::TENSOR && field.data_type != DataType::QUANTIZED_TENSOR) {
             continue;
         }
-        std::shared_ptr<CoarseQuantizer> cq = std::make_shared<CoarseQuantizer>(field.parameters.dimensions);
+        std::shared_ptr<FaissCoarseQuantizer> cq = std::make_shared<FaissCoarseQuantizer>(field.parameters.dimensions);
         this->coarse_quantizer_map[field.name] = std::move(cq);
     }
 
@@ -118,7 +118,7 @@ void IndexIVF::load_retrieval(const std::string& existing_path, const Configurat
             continue;
         }
         std::string cqp = existing_path + "/" + field.name + "_coarse_quantizer";
-        std::shared_ptr<CoarseQuantizer> cq = CoarseQuantizer::deserialize(cqp, config.lintdb_version);
+        std::shared_ptr<FaissCoarseQuantizer> cq = FaissCoarseQuantizer::deserialize(cqp, config.lintdb_version);
         this->coarse_quantizer_map[field.name] = std::move(cq);
     }
 
@@ -332,6 +332,14 @@ std::vector<SearchResult> IndexIVF::search(
 
     std::vector<ScoredDocument> results = executor.execute(context, query, k, opts);
 
+    if (opts.expected_id != -1) {
+        std::vector<idx_t> inverted_lists = this->inverted_list_->get_mapping(tenant, opts.expected_id);
+        // print out the inverted lists.
+        for (auto list : inverted_lists) {
+            LOG(INFO) << "expected document " << opts.expected_id << " in list: " << list;
+        }
+    }
+
     std::vector<SearchResult> search_results;
     for (const auto& result : results) {
         SearchResult sr;
@@ -343,19 +351,36 @@ std::vector<SearchResult> IndexIVF::search(
     return search_results;
 }
 
-void IndexIVF::set_quantizer(const std::string& field, const std::shared_ptr<Quantizer> quantizer) {
-    this->quantizer_map.insert({field, std::move(quantizer)});
+void IndexIVF::set_quantizer(const std::string& field, std::shared_ptr<Quantizer> quantizer) {
+    // see if key exists in map, if it does, remove it.
+    if (this->quantizer_map.find(field) != this->quantizer_map.end()) {
+        this->quantizer_map.erase(field);
+    }
+    this->quantizer_map.insert({field, quantizer});
+    std::string qp = this->path + "/" + field + "_quantizer";
+    save_quantizer(qp, quantizer.get());
+
 }
 
-void IndexIVF::set_coarse_quantizer(const std::string& field, const std::shared_ptr<CoarseQuantizer> quantizer) {
-    this->coarse_quantizer_map.insert({field, std::move(quantizer)});
+void IndexIVF::set_coarse_quantizer(const std::string& field, std::shared_ptr<ICoarseQuantizer> quantizer) {
+    // see if key exists in map, if it does, remove it.
+    if (this->coarse_quantizer_map.find(field) != this->coarse_quantizer_map.end()) {
+        this->coarse_quantizer_map.erase(field);
+    }
+    // add the new quantizer.
+    this->coarse_quantizer_map.insert({field, quantizer});
+
+
+    std::string cqp = this->path + "/" + field + "_coarse_quantizer";
+    quantizer->serialize(cqp);
 }
 
 void IndexIVF::add(
         const uint64_t tenant,
         const std::vector<Document>& docs) {
 
-    for (auto doc : docs) {
+#pragma omp parallel for
+    for (const auto& doc : docs) {
         add_single(tenant, doc);
     }
 }

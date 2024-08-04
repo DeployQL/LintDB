@@ -23,7 +23,7 @@ app = typer.Typer()
 
 @app.command()
 def colbert(dataset, experiment, split='dev', k: int=5, checkpoint: str = "colbert-ir/colbertv2.0"):
-    d = load_lotte(dataset, split, stop=1000)
+    d = load_lotte(dataset, split, stop=40000)
 
     with Run().context(RunConfig(nranks=1, experiment=experiment)):
         config = ColBERTConfig.load_from_checkpoint(checkpoint)
@@ -37,7 +37,6 @@ def colbert(dataset, experiment, split='dev', k: int=5, checkpoint: str = "colbe
         searcher = Searcher(index=experiment, config=config, collection=d.collection)
 
         mapped_queries = {id: q for id, q in zip(d.qids, d.queries)}
-        print(mapped_queries)
         queries = Queries(data = mapped_queries)
         ranking = searcher.search_all(queries, k=100)
         ranking.save(f"{experiment}.ranking.tsv")

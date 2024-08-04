@@ -7,7 +7,7 @@ from lintdb.core import (
     QuantizerType,
     Binarizer,
     Configuration,
-    CoarseQuantizer,
+    FaissCoarseQuantizer,
     SearchOptions,
     DataType,
     FieldValue,
@@ -47,13 +47,13 @@ def batch(iterable, n=1):
 
 
 @app.command()
-def run():
+def run(index_path: str = "local_db.index"):
     experiment = ""
-    index_path = "local_db.index"
     checkpoint = "colbert-ir/colbertv2.0"
     dataset = 'lifestyle'
     split = 'dev'
     stop = 40000
+    reuse_colbert_clusters = True
 
     print("Beginning indexing...")
 
@@ -79,17 +79,45 @@ def run():
     # lifestyle full centroids == 65536
     #lifestyle-40k-benchmark centroids == 32768
 
-    print("Training...")
-    training_docs = []
-    training_data = random.sample(d.collection, min(20000, len(d.collection)))
-    for doc in tqdm(training_data, desc="embedding training data"):
-        embeddings = checkpoint.docFromText([doc])
+    if not reuse_colbert_clusters:
+        print("Training...")
+        training_docs = []
+        training_data = random.sample(d.collection, min(20000, len(d.collection)))
+        for b in tqdm(batch(training_data, n=1000)):
+            embeddings = checkpoint.docFromText(b)
+            for emb in embeddings:
+                emb = np.squeeze(emb.cpu().numpy().astype('float32'))
+                doc = Document(0, [TensorFieldValue("colbert", emb)])
+                training_docs.append(doc)
 
-        emb = np.squeeze(embeddings.cpu().numpy().astype('float32'))
-        # for training, we don't really care about the doc id
-        doc = Document(0, [TensorFieldValue("colbert", emb)])
-        training_docs.append(doc)
-    index.train(training_docs)
+        # for doc in tqdm(training_data, desc="embedding training data"):
+        #     embeddings = checkpoint.docFromText([doc])
+        #
+        #     emb = np.squeeze(embeddings.cpu().numpy().astype('float32'))
+        #     # for training, we don't really care about the doc id
+        #     doc = Document(0, [TensorFieldValue("colbert", emb)])
+        #     training_docs.append(doc)
+        index.train(training_docs)
+    else:
+        print("Reusing colbert centroids")
+        from colbert import Searcher
+        from colbert.infra import Run, RunConfig
+        with Run().context(RunConfig(nranks=1, experiment='colbert')):
+            searcher = Searcher(index='colbert', collection=d.collection)
+            centroids = searcher.ranker.codec.centroids.cpu().numpy().astype('float32')
+
+            coarse_quantizer = FaissCoarseQuantizer(centroids)
+            index.set_coarse_quantizer('colbert', coarse_quantizer)
+
+            binarizer = Binarizer(
+                searcher.ranker.codec.bucket_cutoffs.tolist(),
+                searcher.ranker.codec.bucket_weights.tolist(),
+                searcher.ranker.codec.avg_residual,
+                1,
+                128
+            )
+            index.set_quantizer('colbert', binarizer)
+            index.save()
 
     print("Indexing...")
     start = time.perf_counter()
@@ -99,7 +127,7 @@ def run():
         'indexing': [],
         'per_doc': [],
     }
-    for b in tqdm(batch(list(zip(d.dids, d.collection)),n=25)):
+    for b in tqdm(batch(list(zip(d.dids, d.collection)),n=1)):
         ids = [i for i,_ in b]
         docs = [d for _, d in b]
 
@@ -109,7 +137,7 @@ def run():
         latencies['embedding'].append(end - start)
 
         start = time.perf_counter()
-        e = embedding.cpu().numpy().astype('float32')
+        e = np.squeeze(embedding.cpu().numpy().astype('float32'))
 
         for i, ee in zip(ids, e):
             start = time.perf_counter()
@@ -129,9 +157,9 @@ def run():
 
 
 @app.command()
-def eval(experiment="", dataset: str = 'lifestyle', split: str = 'dev', stop: int = 40000):
+def eval(index_path = "local_db_2.index", dataset: str = 'lifestyle', split: str = 'dev', stop: int = 40000):
     checkpoint = "colbert-ir/colbertv2.0"
-    index_path = "local_db.index"
+    experiment=""
 
     from colbert.modeling.checkpoint import Checkpoint
     from colbert import Searcher
@@ -143,10 +171,8 @@ def eval(experiment="", dataset: str = 'lifestyle', split: str = 'dev', stop: in
 
     with open(f"experiments/{experiment}.ranking.tsv", "w") as f:
         for id, query in zip(data.qids, data.queries):
-            # opts = SearchOptions()
-            # opts.k_top_centroids = 32
-            # opts.expected_id = 509
-
+            # if id != 16:
+            #     continue
             embeddings = checkpoint.queryFromText([query], bsize=1)
             normalized = torch.nn.functional.normalize(embeddings, p=2, dim=2)
             converted = np.squeeze(normalized.cpu().numpy().astype('float32'))
@@ -162,6 +188,7 @@ def eval(experiment="", dataset: str = 'lifestyle', split: str = 'dev', stop: in
                 100,
                 {
                     'k_top_centroids': 32,
+                    # 'expected_id': 3701,
                 }
             )
 

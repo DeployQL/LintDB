@@ -42,10 +42,10 @@ void DocumentProcessor::processDocument(const uint64_t tenant, const Document& d
         const Field& field = field_map[name];
         validateField(field, fv);
 
-        FieldValue quantizedValue = quantizeField(field, fv);
-
         ProcessedData processed_data;
         processed_data.centroid_ids = assignIVFCentroids(field, fv);
+
+        FieldValue quantizedValue = quantizeField(field, fv);
 
         processed_data.value = quantizedValue;
         processed_data.doc_id = document.id;
@@ -137,7 +137,7 @@ void DocumentProcessor::processDocument(const uint64_t tenant, const Document& d
 }
 
 std::vector<idx_t> DocumentProcessor::assignIVFCentroids(const Field& field, const FieldValue& value) {
-    if (field.data_type == DataType::TENSOR || field.data_type == DataType::QUANTIZED_TENSOR) {
+    if (field.data_type == DataType::TENSOR) {
         std::shared_ptr<ICoarseQuantizer> encoder = coarse_quantizer_map.at(field.name);
         assert(encoder->is_trained());
 

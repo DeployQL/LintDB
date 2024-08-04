@@ -275,6 +275,7 @@ std::vector<uint8_t> Binarizer::bucketize(const std::vector<float>& residuals) {
     // residuals is a vector of size dim.
     std::vector<uint8_t> binarized(residuals.size() * nbits);
 
+#pragma omp parallel for
     for (size_t i = 0; i < residuals.size(); ++i) {
         uint8_t bucket = 0;
         bool bucket_found = false;
@@ -353,6 +354,7 @@ void Binarizer::sa_encode(size_t n, const float* x, residual_t* codes) {
             codes[i * code_size + j] = binarized[j];
         }
     }
+
 }
 
 void Binarizer::sa_decode(size_t n, const residual_t* residuals, float* x) {

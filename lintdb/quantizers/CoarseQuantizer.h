@@ -16,6 +16,7 @@
 #include <memory>
 #include "lintdb/version.h"
 #include <faiss/IndexFlat.h>
+#include <faiss/Clustering.h>
 
 namespace lintdb {
 
@@ -85,6 +86,41 @@ class CoarseQuantizer: public ICoarseQuantizer {
 
     uint8_t find_nearest_centroid_index(gsl::span<const float> vec) const;
 };
+
+class FaissCoarseQuantizer: public ICoarseQuantizer {
+    public:
+        bool is_trained_ = false; // Is the quantizer trained
+
+        explicit FaissCoarseQuantizer(size_t d);
+        FaissCoarseQuantizer(size_t d, const std::vector<float>& centroids, size_t k);
+
+        void train(const size_t n, const float* x, size_t k, size_t num_iter=10) override;
+        void save(const std::string& path) override;
+        void assign(size_t n, const float* x, idx_t* codes) override;
+        void sa_decode(size_t n, const idx_t* codes, float* x) override;
+        void compute_residual(const float* vec, float* residual, idx_t centroid_id) override;
+        void compute_residual_n(int n, const float* vec, float* residual, idx_t* centroid_ids) override;
+        void reconstruct(idx_t centroid_id, float* embedding) override;
+        void search(size_t num_query_tok, const float* data, size_t k_top_centroids, float* distances, idx_t* coarse_idx) override;
+        void reset() override;
+        void add(int n, float* data) override;
+        size_t code_size() override;
+        size_t num_centroids() override;
+        float* get_xb() override;
+        void serialize(const std::string& filename) const override;
+        static std::unique_ptr<FaissCoarseQuantizer> deserialize(const std::string& filename, const Version& version);
+
+        bool is_trained() const override {
+            return is_trained_;
+        }
+
+    private:
+        size_t d; // Dimensionality of data points
+        size_t k; // Number of centroids
+        faiss::IndexFlatIP index;
+
+        uint8_t find_nearest_centroid_index(gsl::span<const float> vec) const;
+    };
 
 } // namespace lintdb
 #endif // LINTDB_COARSEQUANTIZER_H

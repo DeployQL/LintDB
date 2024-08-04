@@ -80,19 +80,13 @@ namespace lintdb {
         ColBERTContextData codes = std::get<ColBERTContextData>(colbert_context);
         size_t num_tensors = codes.doc_codes.size();
 
-        std::vector<idx_t> doc_codes(num_tensors, -1);
-        for (size_t i = 0; i < num_tensors; i++) {
-            doc_codes[i] = nearest_centroids->get_assigned_centroid(i);
-        }
-
         // create DocValues for the context info.
         uint8_t colbert_field_id = context.getFieldMapper()->getFieldID(context.colbert_context);
         fvs.emplace_back(colbert_context, colbert_field_id, DataType::COLBERT);
 
         QueryTensor query = context.getOrCreateNearestCentroids(context.colbert_context)->get_query_tensor();
-
         float score = colbert_centroid_score(
-                doc_codes,
+                codes.doc_codes,
                 reordered_distances,
                 query.num_query_tokens,
                 coarse_quantizer->num_centroids(),

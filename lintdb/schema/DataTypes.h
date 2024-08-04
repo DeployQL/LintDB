@@ -34,7 +34,7 @@ enum DataType {
     FLOAT,
     TEXT,
     DATETIME,
-    COLBERT
+    COLBERT // colbert is our internal representation of colbert data. it includes the residual codes and indexes.
 };
 
 const std::unordered_map<int, DataType> IntToDataType = {

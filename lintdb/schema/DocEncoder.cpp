@@ -105,7 +105,6 @@ namespace lintdb {
                     std::string key = create_index_id(data.tenant, data.field, DataType::QUANTIZED_TENSOR, centroid_id, data.doc_id);
 
                     keys.push_back(key);
-
                     // ColBERT implicitly skips values. This is because the value isn't stored in the inverted index, but we need
                     // to build a posting list for it.
                     values.emplace_back("");

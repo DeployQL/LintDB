@@ -38,10 +38,11 @@
                     "${sourceDir}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
-                "BUILD_SHARED_LIBS": "ON",
+                "BUILD_SHARED_LIBS": "OFF",
                 "CMAKE_INSTALL_LIBDIR": "lib",
                 "CMAKE_VERBOSE_MAKEFILE":"ON",
                 "ENABLE_PYTHON": "OFF",
+                "ENABLE_BENCHMARKS": "ON",
                 "BLA_VENDOR":"Intel10_64lp"
             }
         },

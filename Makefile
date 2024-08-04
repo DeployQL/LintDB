@@ -1,12 +1,20 @@
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 build-release:
-	CC=clang-18 CXX=clang++-18 MKLROOT=${ROOT_DIR}/builds/release/vcpkg_installed/x64-linux/lib/intel64 cmake --preset release
-	CC=clang-18 CXX=clang++-18 MKLROOT=${ROOT_DIR}/builds/release/vcpkg_installed/x64-linux/lib/intel64 cmake --build -j12 --preset release
+	MKLROOT=${ROOT_DIR}/builds/release/vcpkg_installed/x64-linux/lib/intel64 cmake \
+	--preset release \
+	-DCMAKE_CXX_COMPILER=clang++-18 \
+	-DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
+	-DOpenMP_CXX_LIB_NAMES=libiomp5 \
+	-DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/builds/release/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
+	.
+
+	cmake --build --preset release -j12
 
 build-debug:
 	MKLROOT=${ROOT_DIR}/builds/debug/vcpkg_installed/x64-linux/lib/intel64 cmake \
 	--preset debug \
+	-DCMAKE_CXX_COMPILER=clang++-18 \
 	-DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
 	-DOpenMP_CXX_LIB_NAMES=libiomp5 \
 	-DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/builds/debug/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
@@ -68,24 +76,10 @@ py-docs:
 debug-conda:
 	conda debug lintdb --python 3.10 --output-id 'lintdb-*-py*' 
 
-build-conda:
-	CC=clang-18 CXX=clang++-18 MKLROOT=${ROOT_DIR}/_build_python_/vcpkg_installed/x64-linux/lib/intel64 cmake -B _build_python_${PY_VER} \
-	-DBUILD_SHARED_LIBS=ON \
-	-DENABLE_PYTHON=ON \
-	-DBUILD_TESTING=OFF \
-	-DCMAKE_BUILD_TYPE=Release \
-	-DBLA_VENDOR=Intel10_64lp \
-	-DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
-	-DOpenMP_CXX_LIB_NAMES=libiomp5 \
-	-DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/_build_python_/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
-	.
-
-	cmake --build _build_python_${PY_VER} --target lintdb -j12
-	cd _build_python_/lintdb/python && python setup.py build
-
 build-benchmarks:
-	MKLROOT=${ROOT_DIR}/build_benchmarks/vcpkg_installed/x64-linux/lib/intel64 cmake -B build_benchmarks \
+	MKLROOT=${ROOT_DIR}/builds/benchmarks/vcpkg_installed/x64-linux/lib/intel64 cmake -B builds/benchmarks \
       -DBUILD_SHARED_LIBS=ON \
+      -DCMAKE_CXX_COMPILER=clang++-18 \
       -DBUILD_TESTING=OFF \
       -DCMAKE_BUILD_TYPE=Release \
       -DENABLE_BENCHMARKS=ON \
@@ -95,7 +89,7 @@ build-benchmarks:
 	  -DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/build_benchmarks/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
 	  -DBLA_VENDOR=Intel10_64lp \
 	  .
-	CC=gcc CXX=g++ CMAKE_C_COMPILER=gcc CMAKE_CXX_COMPILER=g++ cmake --build build_benchmarks --target=bench_lintdb -j12
+	CC=clang-18 CXX=clang++-18 cmake --build builds/benchmarks --target=bench_lintdb -j12
 
 run-perf:
 # make sure your system allows perf to run. ex: sudo sysctl -w kernel.perf_event_paranoid=1 

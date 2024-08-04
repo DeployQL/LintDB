@@ -3,6 +3,7 @@
 #include <nanobind/stl/string.h>
 #include <nanobind/ndarray.h>
 #include <nanobind/stl/unique_ptr.h>
+#include <nanobind/stl/shared_ptr.h>
 #include <vector>
 #include <string>
 #include <cstddef>
@@ -52,13 +53,13 @@ namespace lintdb {
         return FieldValue(name, value);
     }
 
-    FieldValue TensorFieldValue(std::string name, nb::ndarray<float, nb::device::cpu> value) {
+    FieldValue TensorFieldValue(std::string name, nb::ndarray<float, nb::ndim<2>, nb::device::cpu> value) {
         std::vector<float> vec = std::vector<float>(value.data(), value.data() + value.size());
         return FieldValue(name, vec, value.shape(0));
     }
 
 
-    FieldValue QuantizedTensorFieldValue(std::string name, nb::ndarray <uint8_t, nb::device::cpu> value) {
+    FieldValue QuantizedTensorFieldValue(std::string name, nb::ndarray <uint8_t, nb::ndim<2>, nb::device::cpu> value) {
         std::vector<uint8_t> vec = std::vector<uint8_t>(value.data(), value.data() + value.size());
         return FieldValue(name, vec, value.shape(0));
     }
@@ -145,6 +146,20 @@ namespace lintdb {
 
     std::unique_ptr<QueryNode> CreateAndQueryNode(std::vector<std::unique_ptr<QueryNode>> its) {
         return std::make_unique<AndQueryNode>(std::move(its));
+    }
+
+    std::shared_ptr<CoarseQuantizer> CreateCoarseQuantizer(const nb::ndarray <float, nb::device::cpu> centroids) {
+        std::vector<float> vec = std::vector<float>(centroids.data(), centroids.data() + centroids.size());
+        return std::make_shared<CoarseQuantizer>(centroids.shape(1), vec, centroids.shape(0));
+    }
+
+    std::shared_ptr<FaissCoarseQuantizer> CreateFaissCoarseQuantizer(const nb::ndarray <float, nb::device::cpu> centroids) {
+        std::vector<float> vec = std::vector<float>(centroids.data(), centroids.data() + centroids.size());
+        return std::make_shared<FaissCoarseQuantizer>(centroids.shape(1), vec, centroids.shape(0));
+    }
+
+    std::shared_ptr<Binarizer> CreateBinarizer(const std::vector<float> &bucket_cutoffs, const std::vector<float> &bucket_weights, float avg_residual, size_t nbits, size_t dim) {
+        return std::make_shared<Binarizer>(bucket_cutoffs, bucket_weights, avg_residual, nbits, dim);
     }
 
     NB_MODULE(core, m
@@ -579,7 +594,7 @@ nb::class_<Quantizer>(m,
 
 // Binarizer
 nb::class_<Binarizer, Quantizer>(m,
-"Binarizer", "Binarizer class derived from Quantizer.")
+"_Binarizer", "Binarizer class derived from Quantizer.")
 .
 
 def(nb::init<size_t, size_t>(), nb::arg("nbits"), nb::arg("dim"),
@@ -640,6 +655,8 @@ data(), x
 .def("get_type", &Binarizer::get_type,
 "Get the type of quantizer.\n\n"
 ":return: Quantizer type.");
+
+m.def("Binarizer", &CreateBinarizer, "Create a Binarizer object");
 
 // Bindings for ICoarseQuantizer
 nb::class_<ICoarseQuantizer>(m,
@@ -709,7 +726,7 @@ nb::class_<ICoarseQuantizer>(m,
 
 //// Bindings for CoarseQuantizer
 nb::class_<CoarseQuantizer, ICoarseQuantizer>(m,
-"CoarseQuantizer", "CoarseQuantizer class derived from ICoarseQuantizer.")
+"_CoarseQuantizer", "CoarseQuantizer class derived from ICoarseQuantizer.")
 .
 
 def(nb::init<size_t>(), nb::arg("d"),
@@ -804,6 +821,107 @@ data(), k, num_iter
 .def("is_trained", &CoarseQuantizer::is_trained,
 "Check if the quantizer is trained.\n\n"
 ":return: True if trained, False otherwise.");
+
+//// Bindings for FaissCoarseQuantizer
+nb::class_<FaissCoarseQuantizer, ICoarseQuantizer>(m,
+"_FaissCoarseQuantizer", "FaissCoarseQuantizer class derived from ICoarseQuantizer.")
+.
+
+def(nb::init<size_t>(), nb::arg("d"),
+
+"Constructor with dimensionality.\n\n"
+":param d: Dimensionality of data points.")
+.
+
+def(nb::init<size_t, const std::vector<float> &, size_t>(), nb::arg("d"), nb::arg("centroids"), nb::arg("k"),
+
+"Constructor with dimensionality, centroids, and number of centroids.\n\n"
+":param d: Dimensionality of data points.\n"
+":param centroids: Initial centroids.\n"
+":param k: Number of centroids.")
+//.def("train", &CoarseQuantizer::train, nb::arg("n"), nb::arg("x"), nb::arg("k"), nb::arg("num_iter") = 10,
+//"Train the quantizer with the given data.\n\n"
+//":param n: Number of data points.\n"
+//":param x: Pointer to data.\n"
+//":param k: Number of centroids.\n"
+//":param num_iter: Number of iterations (default: 10).")
+.def("train", [](
+FaissCoarseQuantizer &self, nb::ndarray<float, nb::ndim<2>, nb::device::cpu>
+&x,
+size_t k, size_t
+num_iter) {
+self.
+train(x
+.shape(0), x.
+
+data(), k, num_iter
+
+);
+}, nb::arg("x"), nb::arg("k"), nb::arg("num_iter") = 10, "Train the FaissCoarseQuantizer with the given data.")
+.def("save", &FaissCoarseQuantizer::save, nb::arg("path"),
+"Save the quantizer to the specified path.\n\n"
+":param path: Path to save the quantizer.")
+.def("assign", &FaissCoarseQuantizer::assign, nb::arg("n"), nb::arg("x"), nb::arg("codes"),
+"Assign the nearest centroids to the given data points.\n\n"
+":param n: Number of data points.\n"
+":param x: Pointer to data.\n"
+":param codes: Pointer to assigned codes.")
+.def("sa_decode", &FaissCoarseQuantizer::sa_decode, nb::arg("n"), nb::arg("codes"), nb::arg("x"),
+"Decode the given codes to data points.\n\n"
+":param n: Number of data points.\n"
+":param codes: Pointer to codes.\n"
+":param x: Pointer to decoded data.")
+.def("compute_residual", &FaissCoarseQuantizer::compute_residual, nb::arg("vec"), nb::arg("residual"), nb::arg("centroid_id"),
+"Compute the residual vector for a given data point and centroid.\n\n"
+":param vec: Pointer to data point.\n"
+":param residual: Pointer to residual vector.\n"
+":param centroid_id: Centroid ID.")
+.def("compute_residual_n", &FaissCoarseQuantizer::compute_residual_n, nb::arg("n"), nb::arg("vec"), nb::arg("residual"), nb::arg("centroid_ids"),
+"Compute the residual vectors for multiple data points and centroids.\n\n"
+":param n: Number of data points.\n"
+":param vec: Pointer to data points.\n"
+":param residual: Pointer to residual vectors.\n"
+":param centroid_ids: Pointer to centroid IDs.")
+.def("reconstruct", &FaissCoarseQuantizer::reconstruct, nb::arg("centroid_id"), nb::arg("embedding"),
+"Reconstruct the embedding for a given centroid.\n\n"
+":param centroid_id: Centroid ID.\n"
+":param embedding: Pointer to reconstructed embedding.")
+.def("search", &FaissCoarseQuantizer::search, nb::arg("num_query_tok"), nb::arg("data"), nb::arg("k_top_centroids"), nb::arg("distances"), nb::arg("coarse_idx"),
+"Search for the nearest centroids to the given data points.\n\n"
+":param num_query_tok: Number of query tokens.\n"
+":param data: Pointer to data points.\n"
+":param k_top_centroids: Number of top centroids to search.\n"
+":param distances: Pointer to distances to nearest centroids.\n"
+":param coarse_idx: Pointer to coarse indices of nearest centroids.")
+.def("reset", &FaissCoarseQuantizer::reset,
+"Reset the quantizer.")
+.def("add", &FaissCoarseQuantizer::add, nb::arg("n"), nb::arg("data"),
+"Add new data points to the quantizer.\n\n"
+":param n: Number of data points.\n"
+":param data: Pointer to data points.")
+.def("code_size", &FaissCoarseQuantizer::code_size,
+"Get the size of the code.\n\n"
+":return: Size of the code.")
+.def("num_centroids", &FaissCoarseQuantizer::num_centroids,
+"Get the number of centroids.\n\n"
+":return: Number of centroids.")
+.def("get_xb", &FaissCoarseQuantizer::get_xb,
+"Get the centroids.\n\n"
+":return: Pointer to centroids.")
+.def("serialize", &FaissCoarseQuantizer::serialize, nb::arg("filename"),
+"Serialize the quantizer to a file.\n\n"
+":param filename: File name to serialize to.")
+.def_static("deserialize", &FaissCoarseQuantizer::deserialize, nb::arg("filename"), nb::arg("version"),
+"Deserialize a quantizer from a file.\n\n"
+":param filename: File name to deserialize from.\n"
+":param version: Version of the quantizer.\n"
+":return: Deserialized quantizer.")
+.def("is_trained", &FaissCoarseQuantizer::is_trained,
+"Check if the quantizer is trained.\n\n"
+":return: True if trained, False otherwise.");
+
+//m.def("CoarseQuantizer", &CreateCoarseQuantizer, nb::arg("centroids"));
+m.def("FaissCoarseQuantizer", &CreateFaissCoarseQuantizer, nb::arg("centroids"));
 
 // Version
 nb::class_<Version>(m,

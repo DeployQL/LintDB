@@ -8,15 +8,14 @@ namespace lintdb {
             const size_t num_query_tokens,
             const std::shared_ptr<ICoarseQuantizer> quantizer,
             const size_t num_calculated_centroids) {
-        LOG(INFO) << "calcualte";
-        this->num_centroids = quantizer->num_centroids();
+         this->num_centroids = quantizer->num_centroids();
         this->total_centroids_to_calculate = num_calculated_centroids;
         this->query = query;
         this->num_query_tokens = num_query_tokens;
 
         distances.resize(num_query_tokens * total_centroids_to_calculate);
         coarse_idx.resize(num_query_tokens * total_centroids_to_calculate);
-        reordered_distances.resize(num_query_tokens * total_centroids_to_calculate);
+        reordered_distances.resize(num_query_tokens * num_centroids);
 
         quantizer->search(
                 num_query_tokens,
@@ -26,15 +25,14 @@ namespace lintdb {
                 coarse_idx.data()
         );
 
-        LOG(INFO) << "reorder";
         // We use this for ColBERT scoring.
-        for (int i = 0; i <  num_centroids; i++) {
+        for (int i = 0; i <  num_query_tokens; i++) {
             for (int j = 0; j < total_centroids_to_calculate; j++) {
                 auto current_code =
                         coarse_idx[i * total_centroids_to_calculate + j];
                 float dis = distances[i * total_centroids_to_calculate + j];
                 reordered_distances
-                [i * total_centroids_to_calculate + current_code] =
+                [i * num_centroids + current_code] =
                         dis;
             }
         }
@@ -45,13 +43,9 @@ namespace lintdb {
             const size_t k_top_centroids,
             const size_t n_probe) const {
 
-//        if (top_centroids.size() == k_top_centroids) {
-//            return top_centroids;
-//        }
-        LOG(INFO) << "top centroids";
         // we're finding the highest centroid scores per centroid.
         std::vector<float> high_scores(num_centroids, 0);
-        for (size_t i = 0; i < num_centroids; i++) {
+        for (size_t i = 0; i < num_query_tokens; i++) {
             for (size_t j = 0; j < k_top_centroids; j++) {
                 auto centroid_of_interest =
                         coarse_idx[i * num_centroids + j];
@@ -74,13 +68,12 @@ namespace lintdb {
             return p1.first > p2.first;
         };
 
-        LOG(INFO) << "heaping";
         std::vector<std::pair<float, idx_t>> centroid_scores;
         centroid_scores.reserve(n_probe);
         for (int i = 0; i < high_scores.size(); i++) {
             auto key = i;
             auto score = high_scores[i];
-            if (score >= 0) {
+            if (score > 0) {
                 if (centroid_scores.size() < n_probe) {
                     centroid_scores.push_back(std::pair<float, idx_t>(score, key));
 
@@ -114,10 +107,10 @@ namespace lintdb {
                     centroid_scores.begin(), centroid_scores.end(), comparator);
         }
 
-        VLOG(1) << "num centroids: " << centroid_scores.size();
-        for (auto p : centroid_scores) {
-            VLOG(1) << "centroid: " << p.second << " score: " << p.first;
-        }
+//        VLOG(1) << "num centroids: " << centroid_scores.size();
+//        for (auto p : centroid_scores) {
+//            VLOG(1) << "centroid: " << p.second << " score: " << p.first;
+//        }
 
         return centroid_scores;
     }

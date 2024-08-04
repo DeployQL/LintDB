@@ -17,14 +17,6 @@ void CoarseQuantizer::train(const size_t n, const float* x, size_t k, size_t num
     this->k = k;
     centroids = kmeans(x, n, d, k, Metric::INNER_PRODUCT, num_iter);
 
-//    faiss::IndexFlatIP index(d);
-//    faiss::ClusteringParameters cp;
-//    cp.niter = num_iter;
-//    cp.nredo = 1;
-//    cp.verbose = true;
-//    faiss::Clustering clus(d, k, cp);
-
-//    clus.train(n, x, index);
     centroids = std::vector<float>(centroids.data(), centroids.data() + k * d);
     is_trained_ = true;
 
@@ -36,6 +28,8 @@ void CoarseQuantizer::save(const std::string& path) {
 
 void CoarseQuantizer::assign(size_t n, const float* x, idx_t* codes) {
     if (!is_trained()) {
+        LOG(INFO) << "centroids size: " << centroids.size();
+        LOG(INFO) << "k: " << k;
         throw std::runtime_error("Coarse quantizer is not trained.");
     }
     for (size_t i = 0; i < n; ++i) {
@@ -220,4 +214,70 @@ uint8_t CoarseQuantizer::find_nearest_centroid_index(gsl::span<const float> vec)
 
     return best_index;
 }
+
+FaissCoarseQuantizer::FaissCoarseQuantizer(size_t d): d(d) {
+    index = faiss::IndexFlatIP(d);
+}
+FaissCoarseQuantizer::FaissCoarseQuantizer(size_t d, const std::vector<float>& centroids, size_t k): d(d), k(k) {
+    index = faiss::IndexFlatIP(d);
+    index.add(k, centroids.data());
+    index.is_trained = true;
+}
+
+void FaissCoarseQuantizer::train(const size_t n, const float* x, size_t k, size_t num_iter) {
+    faiss::ClusteringParameters cp;
+    cp.niter = num_iter;
+
+    faiss::Clustering clus(d, k, cp);
+    clus.train(n, x,index);
+}
+void FaissCoarseQuantizer::save(const std::string& path) {
+    faiss::write_index(&index, path.c_str());
+}
+void FaissCoarseQuantizer::assign(size_t n, const float* x, idx_t* codes) {
+    return index.assign(n, x, codes);
+}
+void FaissCoarseQuantizer::sa_decode(size_t n, const idx_t* codes, float* x) {
+    const uint8_t *codes_ptr = reinterpret_cast<const uint8_t*>(codes);
+    return index.sa_decode(n, codes_ptr, x);
+}
+void FaissCoarseQuantizer::compute_residual(const float* vec, float* residual, idx_t centroid_id) {
+    return index.compute_residual(vec, residual, centroid_id);
+}
+void FaissCoarseQuantizer::compute_residual_n(int n, const float* vec, float* residual, idx_t* centroid_ids) {
+    return index.compute_residual_n(n, vec, residual, centroid_ids);
+}
+void FaissCoarseQuantizer::reconstruct(idx_t centroid_id, float* embedding) {
+    return index.reconstruct(centroid_id, embedding);
+}
+void FaissCoarseQuantizer::search(size_t num_query_tok, const float* data, size_t k_top_centroids, float* distances, idx_t* coarse_idx) {
+    return index.search(num_query_tok, data, k_top_centroids, distances, coarse_idx);
+}
+void FaissCoarseQuantizer::reset() {
+    index.reset();
+}
+void FaissCoarseQuantizer::add(int n, float* data) {
+    index.add(n, data);
+}
+size_t FaissCoarseQuantizer::code_size() {
+    return index.code_size;
+}
+size_t FaissCoarseQuantizer::num_centroids() {
+    return index.ntotal;
+}
+float* FaissCoarseQuantizer::get_xb() {
+    return index.get_xb();
+}
+void FaissCoarseQuantizer::serialize(const std::string& filename) const {
+    faiss::write_index(&index, filename.c_str());
+}
+std::unique_ptr<FaissCoarseQuantizer> FaissCoarseQuantizer::deserialize(const std::string& filename, const Version& version) {
+    faiss::Index* index = faiss::read_index(filename.c_str());
+
+    auto faiss_quantizer = std::make_unique<FaissCoarseQuantizer>(index->d);
+    faiss_quantizer->index = *dynamic_cast<faiss::IndexFlatIP*>(index);
+
+    return faiss_quantizer;
+}
+
 }

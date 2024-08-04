@@ -43,17 +43,10 @@ if (SKBUILD)
 endif()
 
 
-# download assets from huggingface.
-if(NOT EXISTS "assets/colbert_tokenizer.json")
-message("Downloading assets from huggingface.")
-file(DOWNLOAD "https://huggingface.co/colbert-ir/colbertv2.0/resolve/main/tokenizer.json" "assets/colbert_tokenizer.json")
-file(DOWNLOAD "https://huggingface.co/colbert-ir/colbertv2.0/resolve/main/model.onnx" "assets/model.onnx")
-endif()
-
 set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
 
 option(ENABLE_PYTHON "Build Python extension." ON)
-option(ENABLE_BENCHMARKS "Build benchmarks." OFF)
+option(ENABLE_BENCHMARKS "Build benchmarks." ON)
 
 add_subdirectory(lintdb)
 
