@@ -22,7 +22,7 @@
                 "BUILD_SHARED_LIBS": "OFF",
                 "BUILD_TESTING": "ON",
                 "CMAKE_INSTALL_LIBDIR": "lib",
-                "ENABLE_PYTHON": "OFF",
+                "ENABLE_PYTHON": "ON",
                 "CMAKE_VERBOSE_MAKEFILE":"ON",
                 "BLA_VENDOR":"Intel10_64lp"
             }

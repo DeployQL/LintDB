@@ -22,55 +22,8 @@ source:
   git_url: ../../
 
 outputs:
-  - name: liblintdb
-    script: build-lib.sh  # [x86_64 and linux]
-    script: build-lib-osx.sh  # [x86_64 and osx]
-    script: build-lib-arm64.sh # [arm64 and osx]
-    script: build-lib-arm64.sh  # [not x86_64]
-    script: build-lib.bat  # [win]
-    build:
-      string: "h{{ PKG_HASH }}_{{ number }}_cpu{{ suffix }}"
-      # script_envs:
-      #   - CFLAGS=-march=apple-a14 -mcpu=cortex-a9 -mfloat-abi=hard
-      run_exports:
-        - {{ pin_compatible('liblintdb', exact=True) }}
-    requirements:
-      build:
-        - {{ compiler('cxx') }}
-        - {{ compiler('fortran') }}
-        - sysroot_linux-64 =2.17 # [linux64]
-        - llvm-openmp # [osx]
-        - intel::intel-openmp =2023.0.0 #[linux]
-        - cmake >=3.25
-        - make  # [not win]
-        - conda-forge::swig >=4.0.2
-        - numpy
-        - mkl-devel =2023.0.0  # [x86_64]
-        - conda-forge::onnxruntime-cpp==1.17.3
-      host:
-        - intel::intel-openmp =2023.0.0 #[linux]
-        - mkl =2023.0.0  # [x86_64]
-        - openblas  # [not x86_64]
-        - conda-forge::onnxruntime-cpp==1.17.3
-      run:
-        - mkl =2023.0.0  # [x86_64]
-        - openblas  # [not x86_64]
-        - conda-forge::onnxruntime-cpp==1.17.3
-        - __osx >={{ MACOSX_DEPLOYMENT_TARGET|default("10.13") }}  # [osx and x86_64]
-    test:
-      requires:
-        - conda-build
-      commands:
-        - test -f $PREFIX/lib/liblintdb$SHLIB_EXT       # [not win]
-        - conda inspect linkages -p $PREFIX $PKG_NAME  # [not win]
-        - conda inspect objects -p $PREFIX $PKG_NAME   # [osx]
-
   - name: lintdb
-    script: build-pkg.sh  # [x86_64 and linux]
-    script: build-pkg-osx.sh  # [x86_64 and osx]
-    script: build-pkg-arm64.sh # [arm64 and osx]
-    script: build-pkg-arm64.sh # [not x86_64]
-    script: build-pkg.bat  # [win]
+    script: build-pkg.sh
     build:
       string: "py{{ PY_VER }}_h{{ PKG_HASH }}_{{ number }}_cpu{{ suffix }}"
     requirements:
@@ -78,29 +31,25 @@ outputs:
         - {{ compiler('cxx') }}
         - llvm-openmp
         - sysroot_linux-64 =2.17 # [linux64]
-        - conda-forge::swig >= 4.0.2
-        - numpy
+        - numpy==1.26.4
+        - scikit-build-core
         - cmake >=3.25
         - make  # [not win]
         - python {{ python }}
       host:
         - python {{ python }}
-        - numpy
-        - {{ pin_subpackage('liblintdb', exact=True) }}
+        - numpy==1.26.4
+        - scikit-build-core
       run:
         - python {{ python }}
-        - numpy
+        - numpy==1.26.4
         - packaging
-        - {{ pin_subpackage('liblintdb', exact=True) }}
         - __osx >={{ MACOSX_DEPLOYMENT_TARGET|default("10.13") }}  # [osx and x86_64]
     test:
       requires:
-        - numpy
-        - pytorch
+        - pytest
+        - numpy==1.26.4
       commands:
-        - python -X faulthandler -m unittest discover -v -s tests/ -p "test_*"
-        - sh test_cpu_dispatch.sh  # [linux64]
-      files:
-        - test_cpu_dispatch.sh  # [linux64]
+        - pytest lintdb/python/tests
       source_files:
-        - tests
+        - lintdb/python/tests

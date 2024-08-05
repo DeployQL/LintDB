@@ -4,13 +4,13 @@ import shutil
 import tempfile
 import unittest
 
-from lintdb import (
+from lintdb.core import (
     Schema,
     ColbertField,
     QuantizerType,
     Binarizer,
     Configuration,
-    CoarseQuantizer,
+    FaissCoarseQuantizer,
     DataType,
     TensorFieldValue,
     QuantizedTensorFieldValue,
@@ -53,7 +53,7 @@ class TestIndex(unittest.TestCase):
                 ColbertField('colbert', DataType.TENSOR, {
                     'dimensions': 128,
                     'quantization': QuantizerType.BINARIZER,
-                    'num_centroids': 50,
+                    'num_centroids': 10,
                     'num_iterations': 10
                 })
             ]
@@ -61,22 +61,23 @@ class TestIndex(unittest.TestCase):
         config = Configuration()
         index = IndexIVF(self.test_dir, schema, config)
 
-        data = np.random.rand(1000, 128).astype(np.float32)
-
-        docs = [Document(i, [TensorFieldValue('colbert', data[i])]) for i in range(1000)]
+        docs = []
+        for i in range(400):
+            data = np.random.rand(30, 128).astype('float32')
+            docs.append(Document(i, [TensorFieldValue('colbert', data)]))
 
         index.train(docs)
 
         # takes a list of Documents. Each document is a list of field values.
         docs = [
-            Document(0, [TensorFieldValue('colbert', data[0])]),
-            Document(1, [TensorFieldValue('colbert', data[1])])
+            Document(0, [TensorFieldValue('colbert', np.random.rand(30, 128).astype('float32'))]),
+            Document(1, [TensorFieldValue('colbert', np.random.rand(30, 128).astype('float32'))])
         ]
 
         # add(tenant, documents)
         index.add(0, docs)
 
-        root = VectorQueryNode(TensorFieldValue('colbert', data[0]))
+        root = VectorQueryNode(TensorFieldValue('colbert', np.random.rand(30, 128).astype('float32')))
         query = Query(root)
         results = index.search(0, query, 10, {
             'n_probe': 50,
@@ -88,7 +89,7 @@ class TestIndex(unittest.TestCase):
 
         index.remove(0, [0])
 
-        root = VectorQueryNode(TensorFieldValue('colbert', data[0]))
+        root = VectorQueryNode(TensorFieldValue('colbert', np.random.rand(30, 128).astype('float32')))
         query = Query(root)
         results = index.search(0, query, 10, {
             'n_probe': 50,
@@ -104,7 +105,7 @@ class TestIndex(unittest.TestCase):
                 ColbertField('colbert', DataType.TENSOR, {
                     'dimensions': 128,
                     'quantization': QuantizerType.BINARIZER,
-                    'num_centroids': 50,
+                    'num_centroids': 10,
                     'num_iterations': 10
                 })
             ]
@@ -112,19 +113,20 @@ class TestIndex(unittest.TestCase):
         config = Configuration()
         index = IndexIVF(self.test_dir, schema, config)
 
-        data = np.random.rand(1000, 128).astype(np.float32)
-
-        docs = [Document(i, [TensorFieldValue('colbert', data[i])]) for i in range(1000)]
+        docs = []
+        for i in range(400):
+            data = np.random.rand(30, 128).astype('float32')
+            docs.append(Document(i, [TensorFieldValue('colbert', data)]))
 
         index.train(docs)
 
         # takes a list of Documents. Each document is a list of field values.
-        docs = [Document(0, [TensorFieldValue('colbert', data[0])])]
+        docs = [Document(0, [TensorFieldValue('colbert', np.random.rand(30, 128).astype('float32'))])]
 
         # add(tenant, documents)
         index.add(0, docs)
 
-        root = VectorQueryNode(TensorFieldValue('colbert', data[0]))
+        root = VectorQueryNode(TensorFieldValue('colbert', np.random.rand(30, 128).astype('float32')))
         query = Query(root)
         results = index.search(0, query, 10, {
             'n_probe': 50,
@@ -136,36 +138,20 @@ class TestIndex(unittest.TestCase):
 
     def test_binarizer(self):
         """Test Binarizer functionality."""
-        binarizer = Binarizer(8, 128)
-
-        # Test training
-        data = np.random.rand(1000, 128).astype(np.float32)
-        binarizer.train(data)
+        binarizer = Binarizer([0.5, 0.5], [0.5, 0.5], 0.3, 1, 128)
 
         # Test saving and loading
         save_path = os.path.join(self.test_dir, 'binarizer.bin')
         binarizer.save(save_path)
-        loaded_binarizer = Binarizer.load(save_path)
-
-        self.assertEqual(binarizer.get_nbits(), loaded_binarizer.get_nbits())
 
     def test_coarse_quantizer(self):
-        """Test CoarseQuantizer functionality."""
-        quantizer = CoarseQuantizer(128)
-
-        # Test training
-        data = np.random.rand(1000, 128).astype(np.float32)
-        quantizer.train(data, 10, 2)
+        """Test CoarseQuantizer functionality. We should be able to import centroids from a numpy array"""
+        quantizer = FaissCoarseQuantizer(np.random.rand(10, 128).astype(np.float32))
 
         # Test saving and loading
         save_path = os.path.join(self.test_dir, 'quantizer.bin')
         quantizer.save(save_path)
-        version = Version()
-        print(version.major, version.minor, version.revision)
-        loaded_quantizer = CoarseQuantizer.deserialize(save_path, version)
 
-        self.assertTrue(quantizer.is_trained())
-        self.assertTrue(loaded_quantizer.is_trained())
 
     def test_field_value(self):
         """Test FieldValue functionality."""

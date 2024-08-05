@@ -23,7 +23,7 @@ dependencies = [
 Homepage = "https://github.com/deployQL/lintdb"
 
 [tool.pytest.ini_options]
-pythonpath = [ "./builds/python/lintdb/python/Release", "lintdb/python" ]
+#pythonpath = [ "./builds/python/lintdb/python/Release", "lintdb/python" ]
 testpaths = [
     "lintdb/python/tests"
 ]

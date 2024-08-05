@@ -15,8 +15,6 @@ jobs:
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           sudo ./llvm.sh 18 all
-      - name: install rust 
-        uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: actions/checkout@v3
         with:
           submodules: recursive
