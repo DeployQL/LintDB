@@ -1,7 +1,7 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join('..', '..', 'builds/python/lintdb/python/build/lib')))
+sys.path.insert(0, os.path.abspath(os.path.join('..', '..', 'builds/python/lintdb/python/Release')))
 
 # Configuration file for the Sphinx documentation builder.
 #
