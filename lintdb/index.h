@@ -14,7 +14,6 @@
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/quantizers/CoarseQuantizer.h"
 #include "lintdb/query/Query.h"
-#include "lintdb/retrievers/Retriever.h"
 #include "lintdb/schema/DocProcessor.h"
 #include "lintdb/schema/Document.h"
 #include "lintdb/schema/FieldMapper.h"
@@ -179,7 +178,6 @@ struct IndexIVF {
     std::unordered_map<std::string, std::shared_ptr<ICoarseQuantizer>>
             coarse_quantizer_map;
     std::unordered_map<std::string, std::shared_ptr<Quantizer>> quantizer_map;
-    std::unique_ptr<Retriever> retriever;
 
     std::shared_ptr<DocumentProcessor> document_processor;
     // Note: invertedList and ForwardIndex are becoming read-only classes for

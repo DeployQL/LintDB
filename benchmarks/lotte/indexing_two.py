@@ -88,13 +88,6 @@ def run(index_path: str = "local_db.index", stop:int=40000, reuse_colbert_cluste
                 doc = Document(0, [TensorFieldValue("colbert", emb)])
                 training_docs.append(doc)
 
-        # for doc in tqdm(training_data, desc="embedding training data"):
-        #     embeddings = checkpoint.docFromText([doc])
-        #
-        #     emb = np.squeeze(embeddings.cpu().numpy().astype('float32'))
-        #     # for training, we don't really care about the doc id
-        #     doc = Document(0, [TensorFieldValue("colbert", emb)])
-        #     training_docs.append(doc)
         index.train(training_docs)
     else:
         print("Reusing colbert centroids")
@@ -169,8 +162,6 @@ def eval(index_path = "local_db_2.index", dataset: str = 'lifestyle', split: str
 
     with open(f"experiments/{experiment}.ranking.tsv", "w") as f:
         for id, query in zip(data.qids, data.queries):
-            # if id != 16:
-            #     continue
             embeddings = checkpoint.queryFromText([query], bsize=1)
             normalized = torch.nn.functional.normalize(embeddings, p=2, dim=2)
             converted = np.squeeze(normalized.cpu().numpy().astype('float32'))
@@ -186,7 +177,6 @@ def eval(index_path = "local_db_2.index", dataset: str = 'lifestyle', split: str
                 100,
                 {
                     'k_top_centroids': 32,
-                    # 'expected_id': 3701,
                 }
             )
 

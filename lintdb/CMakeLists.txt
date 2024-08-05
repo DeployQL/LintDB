@@ -62,7 +62,6 @@ set(LINT_DB_HEADERS
     invlists/IndexWriter.h
     invlists/PostingData.h
     invlists/ContextIterator.h
-    retrievers/Retriever.h
     schema/Schema.h
     schema/DocEncoder.h
     schema/DocProcessor.h
