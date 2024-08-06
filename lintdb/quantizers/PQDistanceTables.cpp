@@ -1,7 +1,7 @@
 #include "PQDistanceTables.h"
-#include <faiss/IndexPQ.h>
-#include <faiss/impl/ProductQuantizer.h>
 #include <faiss/impl/code_distance/code_distance.h>
+#include <faiss/impl/ProductQuantizer.h>
+#include <faiss/IndexPQ.h>
 #include <faiss/utils/distances.h>
 #include <glog/logging.h>
 #include "lintdb/assert.h"

@@ -21,6 +21,21 @@ struct Binarizer : public Quantizer {
 
     Binarizer(size_t nbits, size_t dim);
 
+    Binarizer(
+            const std::vector<float>& bucket_cutoffs,
+            const std::vector<float>& bucket_weights,
+            const float avg_residual,
+            const size_t nbits,
+            const size_t dim);
+
+    // copy constructor
+    Binarizer(const Binarizer& other);
+
+    Binarizer& operator=(Binarizer other) {
+        swap(*this, other);
+        return *this;
+    }
+
     std::vector<uint8_t> binarize(const std::vector<float>& residuals);
     void train(const size_t n, const float* x, const size_t dim) override;
     void save(const std::string path) override;
@@ -35,12 +50,17 @@ struct Binarizer : public Quantizer {
 
     static std::unique_ptr<Binarizer> load(std::string path);
 
-    void set_weights(
-            const std::vector<float>& weights,
-            const std::vector<float>& cutoffs,
-            const float avg_residual);
-
     QuantizerType get_type() override;
+
+    friend void swap(Binarizer& first, Binarizer& second) {
+        std::swap(first.bucket_cutoffs, second.bucket_cutoffs);
+        std::swap(first.bucket_weights, second.bucket_weights);
+        std::swap(first.avg_residual, second.avg_residual);
+        std::swap(first.nbits, second.nbits);
+        std::swap(first.dim, second.dim);
+        std::swap(first.reverse_bitmap, second.reverse_bitmap);
+        std::swap(first.decompression_lut, second.decompression_lut);
+    }
 
    private:
     void calculate_quantiles(const std::vector<float>& heldoout_residual);

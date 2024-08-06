@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "lintdb/quantizers/impl/product_quantizer.h"
+#include "lintdb/quantizers/impl/kmeans.h"
 
 using namespace lintdb;
 // Fixture for ProductQuantizer tests

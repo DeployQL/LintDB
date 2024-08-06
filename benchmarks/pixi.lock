@@ -122,7 +122,6 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/9d/6e/e792999e816d19d7fcbfa94c730936750036d65656a76a5a688b57a656c4/werkzeug-3.0.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/eb/3a/25c4aecb61a49d4415fd71d4f66a8a5b558dd44a52d7054ea9aa59ccbac1/xxhash-3.4.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/9f/ea/94ad7d8299df89844e666e4aa8a0e9b88e02416cd6a7dd97969e9eae5212/yarl-1.9.4-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: ../builds/python/lintdb/python
 packages:
 - kind: conda
   name: _libgcc_mutex
@@ -1171,15 +1170,6 @@ packages:
   purls: []
   size: 61574
   timestamp: 1716874187109
-- kind: pypi
-  name: lintdb
-  version: 0.2.0
-  path: ../builds/python/lintdb/python
-  sha256: f9e6f8dd910f230dd346b4790173fd1b3e733a4e0cb83267ad1c69aeb6e69398
-  requires_dist:
-  - numpy
-  - packaging
-  editable: true
 - kind: conda
   name: llvm-openmp
   version: 18.1.8

@@ -1,8 +1,9 @@
 #include "lintdb/quantizers/ProductEncoder.h"
-#include <faiss/IndexPQ.h>
 #include <faiss/index_io.h>
+#include <faiss/IndexPQ.h>
 #include <faiss/utils/distances.h>
 #include <glog/logging.h>
+#include <algorithm>
 #include <list>
 #include <memory>
 #include "lintdb/assert.h"
@@ -38,7 +39,7 @@ size_t ProductEncoder::code_size() {
 }
 
 void ProductEncoder::save(std::string path) {
-    auto quantizer_path = path + "/" + QUANTIZER_FILENAME;
+    auto quantizer_path = path;
     faiss::write_index(pq.get(), quantizer_path.c_str());
 }
 
@@ -47,10 +48,10 @@ std::unique_ptr<ProductEncoder> ProductEncoder::load(
         QuantizerConfig& config) {
     std::unique_ptr<faiss::IndexPQ> quantizer;
 
-    if (FILE* file = fopen((path + "/" + QUANTIZER_FILENAME).c_str(), "r")) {
+    if (FILE* file = fopen((path).c_str(), "r")) {
         fclose(file);
         auto qptr = std::unique_ptr<faiss::Index>(
-                faiss::read_index((path + "/" + QUANTIZER_FILENAME).c_str()));
+                faiss::read_index((path).c_str()));
         quantizer = std::unique_ptr<faiss::IndexPQ>(
                 static_cast<faiss::IndexPQ*>(qptr.release()));
     } else {
@@ -87,6 +88,29 @@ std::unique_ptr<PQDistanceTables> ProductEncoder::get_distance_tables(
         size_t num_tokens) const {
     return std::make_unique<PQDistanceTables>(
             query_data, num_tokens, dim, this->pq, true);
+}
+
+ProductEncoder::ProductEncoder(const ProductEncoder& other) {
+    this->pq = std::make_unique<faiss::IndexPQ>(
+            other.dim /*input dimensions*/,
+            other.num_subquantizers /* number of sub quantizers */,
+            other.nbits /* number of bits per subquantizer index */,
+            faiss::METRIC_INNER_PRODUCT);
+    this->pq->pq = other.pq->pq;
+    this->dsub = other.pq->pq.dsub;
+    this->ksub = other.pq->pq.ksub;
+    this->nbits = other.nbits;
+    this->dim = other.dim;
+    this->num_subquantizers = other.num_subquantizers;
+}
+
+void swap(ProductEncoder& lhs, ProductEncoder& rhs) {
+    std::swap(lhs.pq, rhs.pq);
+    std::swap(lhs.nbits, rhs.nbits);
+    std::swap(lhs.dim, rhs.dim);
+    std::swap(lhs.num_subquantizers, rhs.num_subquantizers);
+    std::swap(lhs.dsub, rhs.dsub);
+    std::swap(lhs.ksub, rhs.ksub);
 }
 
 } // namespace lintdb

@@ -7,18 +7,16 @@
 #include <map>
 #include <memory>
 #include <vector>
-#include "lintdb/EmbeddingBlock.h"
 #include "lintdb/cf.h"
 #include "lintdb/index.h"
-#include "lintdb/invlists/EncodedDocument.h"
-#include "lintdb/invlists/RocksdbInvertedListV2.h"
 #include "lintdb/version.h"
 #include "util.h"
+#include "lintdb/invlists/KeyBuilder.h"
 
-using ::testing::TestWithParam;
+using ::testing::Test;
 using ::testing::Values;
 
-class InvertedListTest : public TestWithParam<lintdb::IndexEncoding> {
+class InvertedListTest : public Test {
    public:
     ~InvertedListTest() override {}
     void SetUp() override {
@@ -52,65 +50,55 @@ class InvertedListTest : public TestWithParam<lintdb::IndexEncoding> {
 };
 
 TEST_F(InvertedListTest, StoresCodesCorrectly) {
-    lintdb::RocksdbInvertedListV2 invlist(db, column_families, version);
+    lintdb::RocksdbInvertedList invlist(db, column_families, version);
 
-    lintdb::EncodedDocument doc(
-            {1, 2, 3}, std::vector<residual_t>(3 * 1, 1), 3, 555, 1, {});
 
-    invlist.add(0, &doc);
+    auto one = lintdb::create_index_id(0, 1, lintdb::DataType::QUANTIZED_TENSOR, 1, 555);
+    auto two = lintdb::create_index_id(0, 1, lintdb::DataType::QUANTIZED_TENSOR, 1, 556);
+    auto three = lintdb::create_index_id(0, 1, lintdb::DataType::QUANTIZED_TENSOR, 3, 555);
+    rocksdb::WriteOptions wo;
+    this->db->Put(wo, column_families[lintdb::kIndexColumnIndex], one, "value");
+    this->db->Put(wo, column_families[lintdb::kIndexColumnIndex], two, "value");
+    this->db->Put(wo, column_families[lintdb::kIndexColumnIndex], three, "value");
 
-    lintdb::Key start{0, 1, 0, true};
-    lintdb::Key end{0, 1, std::numeric_limits<idx_t>::max(), false};
-    auto options = rocksdb::ReadOptions();
-    rocksdb::Slice end_slice(end.serialize());
-    options.iterate_upper_bound = &end_slice;
-    std::string start_string = start.serialize();
-    auto it = std::unique_ptr<rocksdb::Iterator>(
-            db->NewIterator(options, column_families[1]));
+    std::string prefix = lintdb::create_index_prefix(0, 1, lintdb::DataType::QUANTIZED_TENSOR, 1);
+    auto it1 = invlist.get_iterator(prefix);
 
-    rocksdb::Slice prefix(start_string);
-    it->Seek(prefix);
-    int count = 0;
-    for (; it->Valid(); it->Next()) {
-        auto k = it->key().ToString();
-        auto key = lintdb::TokenKey::from_slice(k);
+    // inverted list should have 2 entries
+    EXPECT_TRUE(it1->is_valid());
+    auto key = it1->get_key();
+    ASSERT_EQ(key.doc_id(), 555);
 
-        auto id = key.doc_id;
-        EXPECT_EQ(id, idx_t(555));
+    std::string val = it1->get_value();
+    ASSERT_EQ(val, "value");
 
-        auto val = it->value().ToString();
-        ASSERT_EQ(val.size(), 1);
-        count++;
-    }
-    ASSERT_EQ(count, 3);
+    it1->next();
 
-    auto it1 = invlist.get_iterator(0, 1);
-    for (; it1->has_next(); it1->next()) {
-        auto key = it1->get_key();
-        ASSERT_EQ(key.doc_id, 555);
-        ASSERT_EQ(key.token_id, 0);
+    EXPECT_TRUE(it1->is_valid());
+    key = it1->get_key();
+    ASSERT_EQ(key.doc_id(), 556);
 
-        auto val = it1->get_value();
-        ASSERT_EQ(val.partial_residuals.size(), 1);
-    }
+    val = it1->get_value();
+    ASSERT_EQ(val, "value");
 
-    auto it2 = invlist.get_iterator(0, 2);
-    for (; it2->has_next(); it2->next()) {
-        auto key = it2->get_key();
-        ASSERT_EQ(key.doc_id, 555);
-        ASSERT_EQ(key.token_id, 1);
+    // only two documents.
+    it1->next();
+    EXPECT_FALSE(it1->is_valid());
 
-        auto val = it2->get_value();
-        ASSERT_EQ(val.partial_residuals.size(), 1);
-    }
 
-    auto it3 = invlist.get_iterator(0, 3);
-    for (; it3->has_next(); it3->next()) {
-        auto key = it3->get_key();
-        ASSERT_EQ(key.doc_id, 555);
-        ASSERT_EQ(key.token_id, 2);
+    std::string prefix_three = lintdb::create_index_prefix(0, 1, lintdb::DataType::QUANTIZED_TENSOR, 3);
+    auto it3 = invlist.get_iterator(prefix_three);
 
-        auto val = it3->get_value();
-        ASSERT_EQ(val.partial_residuals.size(), 1);
-    }
+    EXPECT_TRUE(it3->is_valid());
+
+    auto key_three = it3->get_key();
+    ASSERT_EQ(key_three.doc_id(), 555);
+
+    std::string val_three = it3->get_value();
+    ASSERT_EQ(val_three, "value");
+
+    // only one document.
+    it3->next();
+    EXPECT_FALSE(it3->is_valid());
+
 }

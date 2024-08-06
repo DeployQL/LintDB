@@ -8,6 +8,9 @@
 #include <rocksdb/table.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <algorithm>
+#include <cmath>
+#include <filesystem>
 #include <fstream>
 #include <gsl/span>
 #include <iostream>
@@ -19,198 +22,141 @@
 #include "lintdb/cf.h"
 #include "lintdb/invlists/RocksdbForwardIndex.h"
 #include "lintdb/invlists/RocksdbInvertedList.h"
-#include "lintdb/invlists/RocksdbInvertedListV2.h"
-#include "lintdb/quantizers/Quantizer.h"
 #include "lintdb/quantizers/io.h"
-#include "lintdb/retrievers/Retriever.h"
-#include "lintdb/retrievers/XTRRetriever.h"
-#include "lintdb/schema/util.h"
+#include "lintdb/quantizers/Quantizer.h"
+#include "lintdb/query/QueryExecutor.h"
+#include "lintdb/schema/DataTypes.h"
+#include "lintdb/schema/FieldMapper.h"
+#include "lintdb/scoring/Scorer.h"
 #include "lintdb/util.h"
 #include "lintdb/version.h"
-#include "lintdb/Encoder.h"
-#include "lintdb/EncoderV2.h"
 
 namespace lintdb {
-
-// Allows easier swapping of the internal encoder.
-typedef DefaultEncoderV2 LintDBEncoder;
 
 // env var to set the number of threads for processing.
 const char* PROCESSING_THREADS = "LINTDB_NUM_THREADS";
 
-std::ostream& operator<<(std::ostream& os, const Configuration& config) {
-    os << "Configuration(" << config.nlist << ", " << config.nbits << ", "
-       << config.niter << ", " << config.dim << ", " << config.num_subquantizers
-       << ", " << serialize_encoding(config.quantizer_type) << ")";
-    return os;
-}
-
 IndexIVF::IndexIVF(const std::string& path, bool read_only)
         : read_only(read_only), path(path) {
-    LOG(INFO) << "loading LintDB from path: " << path;
+    // check that path exists as a directory
+    if (!std::filesystem::is_directory(path)) {
+        throw LintDBException("Path does not exist: " + path);
+    }
 
     // set all of our individual attributes.
     this->config = this->read_metadata(path);
 
-    initialize_inverted_list(config.lintdb_version);
+    Json::Value schema_root = loadJson(path + "/" + "_schema.json");
+    this->schema = Schema::fromJson(schema_root);
 
+    Json::Value field_mapper_root = loadJson(path + "/" + "_field_mapper.json");
+    this->field_mapper = FieldMapper::fromJson(field_mapper_root);
+
+    initialize_inverted_list(config.lintdb_version);
     load_retrieval(path, config);
 }
 
-IndexIVF::IndexIVF(std::string path, Configuration& config)
-        : config(config), read_only(false), path(path) {
-    LINTDB_THROW_IF_NOT(config.nlist <= std::numeric_limits<code_t>::max());
-    this->config = config;
-
-    initialize_inverted_list(config.lintdb_version);
-    initialize_retrieval(this->config.quantizer_type);
-}
-
 IndexIVF::IndexIVF(
-        std::string path,
-        size_t nlist,
-        size_t dim,
-        size_t binarize_nbits,
-        size_t niter,
-        size_t num_subquantizers,
-        IndexEncoding quantizer_type,
-        bool read_only)
-        : read_only(read_only), path(path) {
-    LINTDB_THROW_IF_NOT(nlist <= std::numeric_limits<code_t>::max());
-
-    Configuration config;
-    config.nlist = nlist;
-    config.nbits = binarize_nbits;
-    config.niter = niter;
-    config.dim = dim;
-    config.num_subquantizers = num_subquantizers;
-    config.quantizer_type = quantizer_type;
-    config.lintdb_version = LINTDB_VERSION;
-
+        const std::string& path,
+        const Schema& schema,
+        const Configuration& config) {
     this->config = config;
+    this->path = path;
+    this->schema = schema;
+    this->read_only = false;
+
+    this->field_mapper = std::make_shared<FieldMapper>();
+    this->field_mapper->addSchema(schema);
 
     initialize_inverted_list(config.lintdb_version);
-    initialize_retrieval(this->config.quantizer_type);
+    initialize_retrieval();
 }
 
-IndexIVF::IndexIVF(const IndexIVF& other, const std::string path) {
+IndexIVF::IndexIVF(const IndexIVF& other, const std::string& path) {
     // we'll leverage the loading methods and construct the index components
     // from files on disk.
     this->config = Configuration(other.config);
+    this->schema = other.schema;
     this->read_only = false; // copying an existing index will always create a
                              // writeable blank index.
+    FieldMapper* theirs = other.field_mapper.get();
+    this->field_mapper = std::make_shared<FieldMapper>(*theirs);
 
     this->path = path;
-
     this->initialize_inverted_list(this->config.lintdb_version);
     load_retrieval(other.path, other.config);
-
     this->save();
 }
 
-void IndexIVF::initialize_retrieval(IndexEncoding quantizer_type) {
+void IndexIVF::initialize_retrieval() {
     // set omp threads
     if (std::getenv(PROCESSING_THREADS) != nullptr) {
         omp_set_num_threads(std::stoi(std::getenv(PROCESSING_THREADS)));
     }
-    switch (quantizer_type) {
-        case IndexEncoding::NONE:
-            this->quantizer = nullptr;
-            this->encoder = std::make_unique<LintDBEncoder>(
-                    this->config.dim, quantizer);
-            this->retriever = std::make_unique<PlaidRetriever>(PlaidRetriever(
-                    this->inverted_list_, this->index_, this->encoder));
-            break;
-
-        case IndexEncoding::BINARIZER:
-            this->quantizer =
-                    std::make_unique<Binarizer>(config.nbits, config.dim);
-            this->encoder = std::make_unique<LintDBEncoder>(
-                    this->config.dim, quantizer);
-            this->retriever = std::make_unique<PlaidRetriever>(PlaidRetriever(
-                    this->inverted_list_, this->index_, this->encoder));
-            break;
-
-        case IndexEncoding::PRODUCT_QUANTIZER:
-            this->quantizer = std::make_unique<ProductEncoder>(
-                    config.dim, config.nbits, config.num_subquantizers);
-            this->encoder = std::make_unique<LintDBEncoder>(
-                    this->config.dim, quantizer);
-            this->retriever = std::make_unique<PlaidRetriever>(PlaidRetriever(
-                    this->inverted_list_, this->index_, this->encoder));
-            break;
-        case IndexEncoding::XTR:
-            this->quantizer = std::make_unique<ProductEncoder>(
-                    config.dim, config.nbits, config.num_subquantizers);
-
-            this->encoder = std::make_unique<LintDBEncoder>(
-                    this->config.dim, this->quantizer);
-
-            this->retriever = std::make_unique<XTRRetriever>(
-                    this->inverted_list_,
-                    this->index_,
-                    this->encoder,
-                    std::dynamic_pointer_cast<ProductEncoder>(this->quantizer));
-            break;
-
-        default:
-            throw LintDBException("Quantizer type not valid.");
+    // load coarse quantizers
+    for (const auto& field : this->schema.fields) {
+        if (field.data_type != DataType::TENSOR &&
+            field.data_type != DataType::QUANTIZED_TENSOR) {
+            continue;
+        }
+        std::shared_ptr<FaissCoarseQuantizer> cq =
+                std::make_shared<FaissCoarseQuantizer>(
+                        field.parameters.dimensions);
+        this->coarse_quantizer_map[field.name] = std::move(cq);
     }
 
-    // this is just legacy behavior.
-    if (this->config.nlist) {
-        this->encoder->nlist = this->config.nlist;
-        this->encoder->niter = this->config.niter;
+    // load quantizers
+    for (const auto& field : this->schema.fields) {
+        if ((field.data_type != DataType::TENSOR &&
+             field.data_type != DataType::QUANTIZED_TENSOR)) {
+            continue;
+        }
+        QuantizerConfig qc{
+                field.parameters.nbits,
+                field.parameters.dimensions,
+                field.parameters.num_subquantizers};
+        std::shared_ptr<Quantizer> quantizer =
+                create_quantizer(field.parameters.quantization, qc);
+        this->quantizer_map[field.name] = std::move(quantizer);
     }
 }
 
-void IndexIVF::load_retrieval(std::string path, const Configuration& config) {
-    QuantizerConfig qc{config.nbits, config.dim, config.num_subquantizers};
-    this->quantizer = load_quantizer(path, config.quantizer_type, qc);
-
-    EncoderConfig ec;
-    ec.nlist = config.nlist;
-    ec.nbits = config.nbits;
-    ec.niter = config.niter;
-    ec.dim = config.dim;
-    ec.num_subquantizers = config.num_subquantizers;
-    ec.type = config.quantizer_type;
-    ec.version = config.lintdb_version;
-
-    this->encoder = LintDBEncoder::load(path, this->quantizer, ec);
-
-    switch (config.quantizer_type) {
-        case IndexEncoding::XTR:
-            this->retriever = std::make_unique<XTRRetriever>(
-                    this->inverted_list_,
-                    this->index_,
-                    this->encoder,
-                    std::dynamic_pointer_cast<ProductEncoder>(this->quantizer));
-            break;
-        case IndexEncoding::BINARIZER:
-            this->retriever = std::make_unique<PlaidRetriever>(PlaidRetriever(
-                    this->inverted_list_, this->index_, this->encoder));
-            break;
-        case IndexEncoding::PRODUCT_QUANTIZER:
-            this->retriever = std::make_unique<PlaidRetriever>(PlaidRetriever(
-                    this->inverted_list_, this->index_, this->encoder));
-            break;
-        case IndexEncoding::NONE:
-            this->retriever = std::make_unique<PlaidRetriever>(PlaidRetriever(
-                    this->inverted_list_, this->index_, this->encoder));
-            break;
-        default:
-            throw LintDBException("Index Encoding not known.");
+void IndexIVF::load_retrieval(
+        const std::string& existing_path,
+        const Configuration& config) {
+    // load coarse quantizers
+    for (const auto& field : this->schema.fields) {
+        if (field.data_type != DataType::TENSOR &&
+            field.data_type != DataType::QUANTIZED_TENSOR) {
+            continue;
+        }
+        std::string cqp =
+                existing_path + "/" + field.name + "_coarse_quantizer";
+        std::shared_ptr<FaissCoarseQuantizer> cq =
+                FaissCoarseQuantizer::deserialize(cqp, config.lintdb_version);
+        this->coarse_quantizer_map[field.name] = std::move(cq);
     }
 
-    // this is just legacy behavior.
-    if (this->config.nlist) {
-        this->encoder->nlist = config.nlist;
-        this->encoder->niter = config.niter;
+    // load quantizers
+    for (const auto& field : this->schema.fields) {
+        if ((field.data_type != DataType::TENSOR &&
+             field.data_type != DataType::QUANTIZED_TENSOR)) {
+            continue;
+        }
+        LOG(INFO) << "loading quantizer for field: " << field.name;
+        std::string qp = existing_path + "/" + field.name + "_quantizer";
+        QuantizerConfig qc{
+                field.parameters.nbits,
+                field.parameters.dimensions,
+                field.parameters.num_subquantizers};
+        std::shared_ptr<Quantizer> quantizer =
+                load_quantizer(qp, field.parameters.quantization, qc);
+        this->quantizer_map[field.name] = std::move(quantizer);
+        LOG(INFO) << "done loading quantizer for field: " << field.name;
     }
 }
 
-void IndexIVF::initialize_inverted_list(Version& version) {
+void IndexIVF::initialize_inverted_list(const Version& version) {
     rocksdb::Options options;
     options.create_if_missing = true;
     options.create_missing_column_families = true;
@@ -228,113 +174,185 @@ void IndexIVF::initialize_inverted_list(Version& version) {
     }
     if (!s.ok()) {
         LOG(ERROR) << s.ToString();
+        throw LintDBException("Could not open database at path: " + path);
     }
     assert(s.ok());
 
     this->db = std::shared_ptr<rocksdb::DB>(ptr);
+    auto index_writer =
+            std::make_unique<IndexWriter>(db, column_families, version);
+    this->document_processor = std::make_shared<DocumentProcessor>(
+            this->schema,
+            this->quantizer_map,
+            this->coarse_quantizer_map,
+            this->field_mapper,
+            std::move(index_writer));
 
     this->index_ = std::make_shared<RocksdbForwardIndex>(
             this->db, this->column_families, version);
-    if (this->config.quantizer_type == IndexEncoding::XTR) {
-        this->inverted_list_ = std::make_shared<RocksdbInvertedListV2>(
-                this->db, this->column_families, version);
-    } else {
-        this->inverted_list_ = std::make_shared<RocksdbInvertedList>(
-                this->db, this->column_families, version);
-    }
+    this->inverted_list_ = std::make_shared<RocksdbInvertedList>(
+            this->db, this->column_families, version);
 }
 
-void IndexIVF::train(
-        size_t n,
-        std::vector<float>& embeddings,
-        size_t nlist,
-        size_t niter) {
-    this->train(embeddings.data(), n, config.dim, nlist, niter);
-}
+void IndexIVF::train(const std::vector<Document>& docs) {
+    for (const auto& field : schema.fields) {
+        // only train fields that are tensors and require indexing.
+        if ((field.data_type == DataType::TENSOR ||
+             field.data_type == DataType::QUANTIZED_TENSOR) &&
+            (std::find(
+                     field.field_types.begin(),
+                     field.field_types.end(),
+                     FieldType::Indexed) != field.field_types.end() ||
+             std::find(
+                     field.field_types.begin(),
+                     field.field_types.end(),
+                     FieldType::Colbert) != field.field_types.end())) {
+            LOG(INFO) << "training field: " << field.name;
 
-void IndexIVF::train(
-        float* embeddings,
-        size_t n,
-        size_t dim,
-        size_t nlist,
-        size_t niter) {
-    assert(config.nlist <= std::numeric_limits<code_t>::max() &&
-           "nlist must be less than 32 bits.");
+            LINTDB_THROW_IF_NOT(field.parameters.num_centroids != 0);
 
-    if (nlist != 0) {
-        this->config.nlist = nlist;
+            // we've already initialized untrained quantizers in the
+            // constructor.
+            std::shared_ptr<ICoarseQuantizer> cq =
+                    this->coarse_quantizer_map[field.name];
+
+            // pull out the embeddings from the documents.
+            std::vector<float> embeddings;
+            size_t num_embeddings = 0;
+            for (auto doc : docs) {
+                FieldValue* fv;
+                for (auto& doc_fields : doc.fields) {
+                    if (doc_fields.name == field.name) {
+                        fv = &doc_fields;
+                        break;
+                    }
+                }
+                if (fv == nullptr) {
+                    continue;
+                }
+
+                auto field_value = *fv;
+                LINTDB_THROW_IF_NOT(
+                        field_value.data_type == DataType::TENSOR ||
+                        field_value.data_type == DataType::QUANTIZED_TENSOR);
+                auto tensor = std::get<Tensor>(field_value.value);
+
+                LINTDB_THROW_IF_NOT(
+                        tensor.size() % field.parameters.dimensions == 0);
+                LINTDB_THROW_IF_NOT(tensor.size() > 0);
+
+                num_embeddings += tensor.size() / field.parameters.dimensions;
+                embeddings.insert(
+                        embeddings.end(), tensor.begin(), tensor.end());
+            }
+
+            cq->train(
+                    num_embeddings,
+                    embeddings.data(),
+                    field.parameters.num_centroids,
+                    field.parameters.num_iterations);
+
+            if (field.parameters.quantization != QuantizerType::NONE) {
+                // randomly sample embeddings to train the quantizer on.
+                // we'll use the coarse quantizer to assign the embeddings to
+                // centroids.
+                if (num_embeddings > 1e5) {
+                    std::vector<size_t> sampled_ids = subsample(
+                            num_embeddings, std::sqrt(num_embeddings));
+                    num_embeddings = sampled_ids.size();
+
+                    std::vector<float> sampled_embeddings(
+                            num_embeddings * field.parameters.dimensions, 0);
+                    size_t count = 0;
+                    for (const auto& idx : sampled_ids) {
+                        for (size_t i = 0; i < field.parameters.dimensions;
+                             i++) {
+                            sampled_embeddings
+                                    [count * field.parameters.dimensions +
+                                     i] = embeddings
+                                            [idx * field.parameters.dimensions +
+                                             i];
+                        }
+                        count++;
+                    }
+                    embeddings = sampled_embeddings;
+                }
+
+                QuantizerConfig qc = {
+                        field.parameters.nbits,
+                        field.parameters.dimensions,
+                        field.parameters.num_subquantizers};
+                std::unique_ptr<Quantizer> quantizer =
+                        create_quantizer(field.parameters.quantization, qc);
+
+                LOG(INFO) << "Training quantizer for field: " << field.name;
+                std::vector<idx_t> assign(num_embeddings, 0);
+
+                cq->assign(num_embeddings, embeddings.data(), assign.data());
+
+                std::vector<float> residuals(
+                        num_embeddings * field.parameters.dimensions, 0);
+                cq->compute_residual_n(
+                        num_embeddings,
+                        embeddings.data(),
+                        residuals.data(),
+                        assign.data());
+
+                quantizer->train(
+                        num_embeddings,
+                        residuals.data(),
+                        field.parameters.dimensions);
+
+                this->quantizer_map[field.name] = std::move(quantizer);
+            }
+        }
     }
-    if (niter != 0) {
-        this->config.niter = niter;
-    }
 
-    encoder->train(embeddings, n, dim, nlist, niter);
     this->save();
-}
 
-void IndexIVF::train(
-        float* embeddings,
-        int n,
-        int dim,
-        size_t nlist,
-        size_t niter) {
-    train(embeddings,
-          static_cast<size_t>(n),
-          static_cast<size_t>(dim),
-          nlist,
-          niter);
+    LOG(INFO) << "done training";
 }
 
 void IndexIVF::save() {
-    this->encoder->save(this->path);
-    save_quantizer(path, quantizer.get());
+    // save schema using json cpp
+
+    auto saveJson = [](std::string& path, Json::Value& root) {
+        std::ofstream out(path);
+        Json::StyledWriter writer;
+        if (out.is_open()) {
+            out << writer.write(root);
+            out.close();
+        } else {
+            LOG(ERROR) << "Unable to open file for writing: " << path;
+        }
+    };
+
+    std::string schema_path = path + "/" + "_schema.json";
+    Json::Value schema_root = schema.toJson();
+    saveJson(schema_path, schema_root);
+
+    std::string field_mapper_path = path + "/" + "_field_mapper.json";
+    Json::Value field_mapper_root = field_mapper->toJson();
+    saveJson(field_mapper_path, field_mapper_root);
+
+    // save coarse quantizers
+    for (const auto& [name, quantizer] : this->coarse_quantizer_map) {
+        std::string cqp = this->path + "/" + name + "_coarse_quantizer";
+        quantizer->serialize(cqp);
+    }
+
+    // save quantizers
+    for (const auto& [name, quantizer] : this->quantizer_map) {
+        std::string qp = this->path + "/" + name + "_quantizer";
+        save_quantizer(qp, quantizer.get());
+    }
+
     this->write_metadata();
 }
 
 void IndexIVF::flush() {
     rocksdb::FlushOptions fo;
     this->db->Flush(fo, column_families);
-}
-
-std::vector<SearchResult> IndexIVF::search(
-        const uint64_t tenant,
-        const EmbeddingBlock& block,
-        const size_t n_probe,
-        const size_t k,
-        const SearchOptions& opts) const {
-    return search(
-            tenant,
-            block.embeddings.data(),
-            block.num_tokens,
-            block.dimensions,
-            n_probe,
-            k,
-            opts);
-}
-
-std::vector<SearchResult> IndexIVF::search(
-        const uint64_t tenant,
-        const EmbeddingBlock& block,
-        const size_t k,
-        const SearchOptions& opts) const {
-    return search(
-            tenant,
-            block.embeddings.data(),
-            block.num_tokens,
-            block.dimensions,
-            opts.n_probe,
-            k,
-            opts);
-}
-
-std::vector<SearchResult> IndexIVF::search(
-        const uint64_t tenant,
-        const float* data,
-        const int n,
-        const int dim,
-        const size_t k,
-        const SearchOptions& opts) const {
-    return search(tenant, data, n, dim, opts.n_probe, k, opts);
 }
 
 /**
@@ -348,84 +366,100 @@ std::vector<SearchResult> IndexIVF::search(
  */
 std::vector<SearchResult> IndexIVF::search(
         const uint64_t tenant,
-        const float* data,
-        const int n,
-        const int dim,
-        const size_t n_probe,
+        const Query& query,
         const size_t k,
         const SearchOptions& opts) const {
-    // per block, run a matrix multiplication and find the nearest centroid.
-    // block: (num_tokens x dimensions)
-    // centroids: (nlist x dimensions)
-    // result: (num_tokens x nlist)
-    gsl::span<const float> query_span = gsl::span(data, n);
-    RetrieverOptions plaid_options = RetrieverOptions{
-            .total_centroids_to_calculate = config.nlist,
-            .num_second_pass = opts.num_second_pass,
-            .expected_id = opts.expected_id,
-            .centroid_threshold = opts.centroid_score_threshold,
-            .k_top_centroids = opts.k_top_centroids,
-            .n_probe = n_probe,
-            .nearest_tokens_to_fetch = opts.nearest_tokens_to_fetch,
-    };
+    uint8_t colbert_field_id =
+            this->field_mapper->getFieldID(opts.colbert_field);
+    size_t colbert_code_size =
+            this->quantizer_map.at(opts.colbert_field)->code_size();
 
-    auto results =
-            this->retriever->retrieve(tenant, query_span, n, k, plaid_options);
-    std::vector<idx_t> ids;
-    for (auto& result : results) {
-        ids.push_back(result.id);
-    }
-    if (config.lintdb_version.metadata_enabled) {
-        auto metadata = this->index_->get_metadata(tenant, ids);
+    auto fm = field_mapper;
+    QueryContext context(
+            tenant,
+            opts.colbert_field,
+            this->inverted_list_,
+            fm,
+            coarse_quantizer_map,
+            quantizer_map);
+    PlaidScorer scorer(context);
+    ColBERTScorer ranker(context);
+    QueryExecutor executor(scorer, ranker);
 
-        for (size_t i = 0; i < results.size(); i++) {
-            auto md = metadata[i]->metadata;
-            for (auto& m : md) {
-                results[i].metadata[m.first] = m.second;
-            }
+    std::vector<ScoredDocument> results =
+            executor.execute(context, query, k, opts);
+
+    if (opts.expected_id != -1) {
+        std::vector<idx_t> inverted_lists =
+                this->inverted_list_->get_mapping(tenant, opts.expected_id);
+        // print out the inverted lists.
+        for (auto list : inverted_lists) {
+            LOG(INFO) << "expected document " << opts.expected_id
+                      << " in list: " << list;
         }
     }
 
-    return results;
+    std::vector<SearchResult> search_results;
+    for (const auto& result : results) {
+        SearchResult sr;
+        sr.id = result.doc_id;
+        sr.score = result.score;
+        search_results.push_back(sr);
+    }
+
+    return search_results;
 }
 
-void IndexIVF::set_centroids(float* data, int n, int dim) {
-    encoder->set_centroids(data, n, dim);
+void IndexIVF::set_quantizer(
+        const std::string& field,
+        std::shared_ptr<Quantizer> quantizer) {
+    // see if key exists in map, if it does, remove it.
+    if (this->quantizer_map.find(field) != this->quantizer_map.end()) {
+        this->quantizer_map.erase(field);
+    }
+    this->quantizer_map.insert({field, quantizer});
+    std::string qp = this->path + "/" + field + "_quantizer";
+    save_quantizer(qp, quantizer.get());
 }
 
-void IndexIVF::set_weights(
-        const std::vector<float> weights,
-        const std::vector<float> cutoffs,
-        const float avg_residual) {
-    encoder->set_weights(weights, cutoffs, avg_residual);
+void IndexIVF::set_coarse_quantizer(
+        const std::string& field,
+        std::shared_ptr<ICoarseQuantizer> quantizer) {
+    // see if key exists in map, if it does, remove it.
+    if (this->coarse_quantizer_map.find(field) !=
+        this->coarse_quantizer_map.end()) {
+        this->coarse_quantizer_map.erase(field);
+    }
+    // add the new quantizer.
+    this->coarse_quantizer_map.insert({field, quantizer});
+
+    std::string cqp = this->path + "/" + field + "_coarse_quantizer";
+    quantizer->serialize(cqp);
 }
 
-void IndexIVF::add(
-        const uint64_t tenant,
-        const std::vector<EmbeddingPassage>& docs) {
-    LINTDB_THROW_IF_NOT(this->encoder->is_trained);
-
-    for (auto doc : docs) {
+void IndexIVF::add(const uint64_t tenant, const std::vector<Document>& docs) {
+#pragma omp parallel for
+    for (const auto& doc : docs) {
         add_single(tenant, doc);
     }
 }
 
-void IndexIVF::add_single(const uint64_t tenant, const EmbeddingPassage& doc) {
-    auto encoded = encoder->encode_vectors(doc);
-    inverted_list_->add(tenant, encoded.get());
-    //
-    index_->add(
-            tenant, encoded.get(), config.quantizer_type != IndexEncoding::XTR);
+void IndexIVF::add_single(const uint64_t tenant, const Document& doc) {
+    this->document_processor->processDocument(tenant, doc);
 }
 
 void IndexIVF::remove(const uint64_t tenant, const std::vector<idx_t>& ids) {
-    inverted_list_->remove(tenant, ids);
-    index_->remove(tenant, ids);
+    for (const auto& field : schema.fields) {
+        uint8_t field_id = field_mapper->getFieldID(field.name);
+        inverted_list_->remove(
+                tenant, ids, field_id, field.data_type, field.field_types);
+        index_->remove(tenant, ids);
+    }
 }
 
 void IndexIVF::update(
         const uint64_t tenant,
-        const std::vector<EmbeddingPassage>& docs) {
+        const std::vector<Document>& docs) {
     std::vector<idx_t> ids;
     for (auto doc : docs) {
         ids.push_back(doc.id);
@@ -434,7 +468,7 @@ void IndexIVF::update(
     add(tenant, docs);
 }
 
-void IndexIVF::merge(const std::string path) {
+void IndexIVF::merge(const std::string& path) {
     Configuration incoming_config = read_metadata(path);
 
     LINTDB_THROW_IF_NOT(this->config == incoming_config);
@@ -460,11 +494,13 @@ void IndexIVF::merge(const std::string path) {
 }
 
 void IndexIVF::close() {
-    for (auto cf : column_families) {
+    for (auto& cf : column_families) {
         db->DestroyColumnFamilyHandle(cf);
     }
     auto status = db->Close();
     assert(status.ok());
+
+    column_families.clear();
 }
 
 void IndexIVF::write_metadata() {
@@ -472,16 +508,6 @@ void IndexIVF::write_metadata() {
     std::ofstream out(out_path);
 
     Json::Value metadata;
-    // the below castings to Json types enables this to build on M1 Mac.
-    metadata["nlist"] = Json::UInt64(this->config.nlist);
-    metadata["nbits"] = Json::UInt64(this->config.nbits);
-    metadata["dim"] = Json::UInt64(this->config.dim);
-    metadata["niter"] = Json::UInt64(this->config.niter);
-    metadata["num_subquantizers"] =
-            Json::UInt64(this->config.num_subquantizers);
-
-    auto quantizer_type = serialize_encoding(this->config.quantizer_type);
-    metadata["quantizer_type"] = Json::String(quantizer_type);
 
     metadata["lintdb_version"] = Json::String(LINTDB_VERSION_STRING);
 
@@ -490,9 +516,9 @@ void IndexIVF::write_metadata() {
     out.close();
 }
 
-Configuration IndexIVF::read_metadata(std::string path) {
-    this->path = path;
-    std::string in_path = path + "/" + METADATA_FILENAME;
+Configuration IndexIVF::read_metadata(const std::string& p) {
+    this->path = p;
+    std::string in_path = p + "/" + METADATA_FILENAME;
     std::ifstream in(in_path);
     if (!in) {
         throw LintDBException("Could not read metadata from path: " + in_path);
@@ -503,15 +529,6 @@ Configuration IndexIVF::read_metadata(std::string path) {
     reader.parse(in, metadata);
 
     Configuration config;
-
-    config.nlist = metadata["nlist"].asUInt();
-    config.nbits = metadata["nbits"].asUInt();
-    config.dim = metadata["dim"].asUInt();
-    config.niter = metadata["niter"].asUInt();
-    config.num_subquantizers = metadata["num_subquantizers"].asUInt();
-
-    auto quantizer_type = metadata["quantizer_type"].asString();
-    config.quantizer_type = deserialize_encoding(quantizer_type);
 
     std::string version = metadata.get("lintdb_version", "0.0.0").asString();
     config.lintdb_version = Version(version);

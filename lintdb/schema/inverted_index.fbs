@@ -1,8 +1,0 @@
-namespace lintdb;
-
-// flatbuffers use uint32 internally for positions and are limited to 2gb in size.
-table InvertedIndexDocument {
-    codes:[int64]; // will have num_tokens amount of codes. one float per token.
-}
-
-root_type InvertedIndexDocument;

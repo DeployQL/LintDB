@@ -1,17 +1,12 @@
 #ifndef LINTDB_SEARCH_OPTIONS_H
 #define LINTDB_SEARCH_OPTIONS_H
 
-#include <stddef.h>
+#include <cstddef>
+#include <string>
 #include <vector>
 #include "lintdb/api.h"
 
 namespace lintdb {
-enum class IndexEncoding {
-    NONE,
-    BINARIZER,
-    PRODUCT_QUANTIZER,
-    XTR,
-};
 
 /**
  * SearchOptions enables custom searching behavior.
@@ -38,6 +33,7 @@ struct SearchOptions {
     size_t n_probe = 32; /// the number of centroids to search overall.
     size_t nearest_tokens_to_fetch =
             100; /// the number of nearest tokens to fetch in XTR.
+    std::string colbert_field = "colbert";
 
     SearchOptions() : expected_id(-1){};
 };

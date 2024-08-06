@@ -37,7 +37,6 @@ def colbert(dataset, experiment, split='dev', k: int=5, checkpoint: str = "colbe
         searcher = Searcher(index=experiment, config=config, collection=d.collection)
 
         mapped_queries = {id: q for id, q in zip(d.qids, d.queries)}
-        print(mapped_queries)
         queries = Queries(data = mapped_queries)
         ranking = searcher.search_all(queries, k=100)
         ranking.save(f"{experiment}.ranking.tsv")

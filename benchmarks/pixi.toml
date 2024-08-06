@@ -17,7 +17,7 @@ typer = "*"
 colbert-ai = "*"
 jsonlines = "*"
 tqdm = "*"
-lintdb = { path = "../builds/python/lintdb/python", editable = true }
+#lintdb = { path = "../.", editable = false }
 setuptools = "*"
 numpy = { version = "==1.26.4" }
 torch = "*"

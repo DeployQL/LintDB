@@ -3,14 +3,14 @@
 LintDB
 =========
 
-**LintDB** is a multi-vector database meant for Gen AI. LintDB natively supports late interaction like colBERT and PLAID.
+**LintDB** is a multi-vector database meant for Gen AI. LintDB natively supports late interaction like ColBERT and PLAID.
 
 # Key Features
 - **Multi vector support**: LintDB stores multiple vectors per document id and calculates the max similarity across vectors to determine relevance. 
 - **Bit-level Compression**: LintDB fully implements PLAID's bit compression, storing 128 dimension embeddings in as low as 16 bytes.  
 - **Embedded**: LintDB can be embedded directly into your Python application. No need to setup a separate database.  
-- **Full Support for PLAID and ColBERT**: LintDB is built around PLAID and colbert
-for efficient storage and lookup of token level embeddings.
+- **Full Support for PLAID and ColBERT**: LintDB is built around PLAID and ColBERT.
+- **Filtering**: LintDB supports filtering on any field in the schema.
 
 # Installation
 LintDB relies on OpenBLAS for accerlated matrix multiplication. To smooth the process of installation, we only support conda.
@@ -22,47 +22,70 @@ conda install lintdb -c deployql -c conda-forge
 ## Usage
 LintDB makes it easy to upload data, even if you have multiple tenants.
 
+Below shows creating a database. LintDB defines a schema for a given database that can be used
+to index embeddings, floats, strings, even dates. Fields can be indexed, stored, or used as a filter.
 ```python
-tenant_id = 1
-index = ldb.IndexIVF(index_path)
-
-collection_options = lintdb.CollectionOptions()
-collection_options.model_file = "model.onnx"
-collection_options.tokenizer_file = "colbert_tokenizer.json"
-collection = lintdb.Collection(index, collection_options)
-...
-# we use an IVF index, so we need to train the centroids.
-index.train(training_data)
-...
-# add documents to the collection.
-collection.add(tenant_id, [{'id': 1, 'text': 'hello world', 'metadata': {'doc_id': 'abc123'}}])
-
-opts = ldb.SearchOptions()
-opts.k_top_centroids = 2 # number of centroids to search per query token.
-
-results = collection.search(
-    tenant_id,
-    embeddings, 
-    100, # k to return
-    opts
+from lintdb.core import (
+  Schema,
+  ColbertField,
+  QuantizerType,
+  Configuration,
+  IndexIVF
 )
+
+schema = Schema(
+  [
+    ColbertField('colbert', DataType.TENSOR, {
+      'dimensions': 128,
+      'quantization': QuantizerType.BINARIZER,
+      "num_centroids": 32768,
+      "num_iterations": 10,
+    })
+  ]
+)
+config = Configuration()
+index = IndexIVF(index_path, schema, config)
+)
+```
+
+And querying the database. We can query any of the data fields we indexed.
+```python
+
+from lintdb.core import (
+Query,
+VectorQueryNode
+)
+for id, query in zip(data.qids, data.queries):
+  embedding = checkpoint.queryFromText(query)
+e = np.squeeze(embedding.cpu().numpy().astype('float32'))
+
+query = Query(
+  VectorQueryNode(
+    TensorFieldValue('colbert', e)
+  )
+)
+results = index.search(0, query, 10)
+print(results)
 ```
 
 ## Late Interaction Model Support
 LintDB aims to support late interaction and more advanced retrieval models. 
 
 - [x] ColBERTv2 with PLAID
-- [x] XTR (experimental)
+- [ ] XTR
 
 # Roadmap
 
-LintDB aims to be a full retrieval platform. 
+LintDB aims to be a retrieval platform for Gen AI.
+We believe that to do this, we must support flexible retrieval and scoring methods while
+maintaining a high level of performance.
 
-We want to extend LintDB's features to include:
-- Snippet highlighting and explainability features.
-- Support for more algorithms for retrieval and ranking.
-    - Fine tuning and pretraining, like [PreFLMR](https://arxiv.org/pdf/2402.08327.pdf)
-- Increased support for document filtering.
+- Improving performance and scalability
+- Improved benchmarks
+- Support CITADEL for scalable late interaction
+- Support learnable query adapters in the retrieval pipeline
+- Enhance support for arbitrary retrieval and ranking functions
+- Support learnable ranking functions
 
 # Comparison with other Vector Databases
 LintDB is one of two databases that support token level embeddings. The other being Vespa.

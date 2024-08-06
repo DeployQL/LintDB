@@ -1,5 +1,30 @@
-import lintdb as ldb
-
+from lintdb.core import (
+    Schema,
+    ColbertField,
+    StoredField,
+    IndexedField,
+    ContextField,
+    QuantizerType,
+    Binarizer,
+    Configuration,
+    CoarseQuantizer,
+    SearchOptions,
+    DataType,
+    FieldValue,
+    TensorFieldValue,
+    QuantizedTensorFieldValue,
+    IntFieldValue,
+    FloatFieldValue,
+    TextFieldValue,
+    DateFieldValue,
+    Document,
+    IndexIVF,
+    Version,
+    TermQueryNode,
+    VectorQueryNode,
+    AndQueryNode,
+    Query
+)
 import time
 import numpy as np
 import typer
@@ -74,27 +99,43 @@ def single_search(dataset:str='lifestyle', split:str='dev',profile=False, checkp
 
 
 @app.command()
-def collection(dataset:str='lifestyle', split:str='dev',profile=False, checkpoint:str='colbert-ir/colbertv2.0', index_path:str='experiments/py_index_bench_colbert-lifestyle-2024-04-03'):
+def index(dataset:str='lifestyle', split:str='dev',profile=False, checkpoint:str='colbert-ir/colbertv2.0', index_path:str='experiments/py_index_bench_colbert-lifestyle-2024-04-03'):
     latencies = []
-    memory = []
+    num_docs=1000
 
     with tempfile.TemporaryDirectory(prefix="lintdb_bench_collection") as dir_one:
-        index = ldb.IndexIVF(index_path, 32768, 128, 2, 6, 16, ldb.IndexEncoding_BINARIZER)
-        opts = ldb.CollectionOptions()
-        opts.model_file = 'assets/model.onnx'
-        opts.tokenizer_file = 'assets/colbert_tokenizer.json'
-        collection = ldb.Collection(index, opts)
-        collection.train(['hello world!'] * 35000)
-        rankings = {}
+        schema = Schema(
+            [
+                ColbertField('colbert', DataType.TENSOR, {
+                    'dimensions': 128,
+                    'quantization': QuantizerType.BINARIZER,
+                    "num_centroids": 2,
+                    "num_iterations": 12,
+                })
+            ]
+        )
+        config = Configuration()
+        index = IndexIVF(dir_one, schema, config)
+
+        # create random embeddings
+        embeddings = np.ones((120 * num_docs, 128)).astype('float32')
+
+        training_docs = []
+        for i in range(num_docs):
+            embeds = embeddings[i*120:(i+1)*120]
+            doc = Document(i, [TensorFieldValue('colbert', embeds)])
+            training_docs.append(doc)
+
+        index.train(training_docs)
 
         count=0
         for id in range(1000):
             
             start = time.perf_counter()
-            collection.add(0, id, "hello world!", {"title": "metadata"})
-            latencies.append((time.perf_counter() - start)*1000)
 
-            memory.append(get_memory_usage())
+            index.add(0, [training_docs[id]])
+
+            latencies.append((time.perf_counter() - start)*1000)
 
             if count == 212:
                 break

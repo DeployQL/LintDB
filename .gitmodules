@@ -5,3 +5,9 @@
 [submodule "third_party/tokenizers-cpp"]
 	path = third_party/tokenizers-cpp
 	url = https://github.com/DeployQL/tokenizers-cpp.git
+[submodule "third_party/nanobind"]
+	path = third_party/nanobind
+	url = https://github.com/wjakob/nanobind
+[submodule "third_party/dkm"]
+	path = third_party/dkm
+	url = https://github.com/genbattle/dkm.git

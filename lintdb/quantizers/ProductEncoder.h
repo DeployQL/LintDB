@@ -23,6 +23,15 @@ struct ProductEncoder : public Quantizer {
 
     ProductEncoder(size_t dim, size_t nbits, size_t num_subquantizers);
 
+    ProductEncoder(const ProductEncoder& other);
+
+    friend void swap(ProductEncoder& lhs, ProductEncoder& rhs);
+
+    ProductEncoder& operator=(ProductEncoder& other) {
+        swap(*this, other);
+        return *this;
+    }
+
     bool is_trained = false;
 
     void sa_encode(size_t n, const float* x, residual_t* codes) override;

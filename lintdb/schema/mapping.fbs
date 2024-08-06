@@ -1,9 +1,0 @@
-namespace lintdb;
-
-// flatbuffers use uint32 internally and are limited to 2gb in size.
-// DocumentClusterMapping maps from document id to the ivf centroids the document is located in.
-table DocumentClusterMapping {
-    centroids:[int64];
-}
-
-root_type DocumentClusterMapping;

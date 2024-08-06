@@ -3,94 +3,93 @@
 #include <rocksdb/slice.h>
 #include <rocksdb/utilities/transaction.h>
 #include <iostream>
-#include <unordered_set>
+#include "InvertedIterator.h"
 #include "lintdb/assert.h"
 #include "lintdb/constants.h"
 #include "lintdb/exception.h"
+#include "lintdb/invlists/ContextIterator.h"
 #include "lintdb/invlists/RocksdbForwardIndex.h"
-#include "lintdb/schema/forward_index_generated.h"
-#include "lintdb/schema/util.h"
+#include "lintdb/schema/DocEncoder.h"
 
 namespace lintdb {
-
-RocksDBIterator::RocksDBIterator(
-        shared_ptr<rocksdb::DB> db,
-        rocksdb::ColumnFamilyHandle* column_family,
-        const uint64_t tenant,
-        const idx_t inverted_list)
-        : lintdb::Iterator(), tenant(tenant), inverted_index(inverted_list) {
-    cf = column_family->GetID();
-    prefix = lintdb::TokenKey{tenant, inverted_list, 0, 0, true}.serialize();
-
-    prefix_slice = rocksdb::Slice(this->prefix);
-    auto options = rocksdb::ReadOptions();
-
-    this->it = std::unique_ptr<rocksdb::Iterator>(
-            db->NewIterator(options, column_family));
-    it->Seek(this->prefix);
-}
 
 RocksdbInvertedList::RocksdbInvertedList(
         std::shared_ptr<rocksdb::DB> db,
         std::vector<rocksdb::ColumnFamilyHandle*>& column_families,
-        Version& version)
-        : db_(db), column_families(column_families), version(version) {}
-
-void RocksdbInvertedList::add(const uint64_t tenant, EncodedDocument* doc) {
-    rocksdb::WriteOptions wo;
-    std::unordered_set<idx_t> unique_coarse_idx(
-            doc->codes.begin(), doc->codes.end());
-    VLOG(100) << "Unique coarse indexes: " << unique_coarse_idx.size();
-    // store ivf -> doc mapping.
-    for (const code_t& idx : unique_coarse_idx) {
-        Key key = Key{tenant, idx, doc->id};
-        std::string k_string = key.serialize();
-        rocksdb::Status status = db_->Put(
-                wo,
-                column_families[kIndexColumnIndex],
-                rocksdb::Slice(k_string),
-                rocksdb::Slice() // store nothing. we only need the key
-                                 // to tell us what documents exist.
-        );
-        assert(status.ok());
-        VLOG(100) << "Added document with id: " << doc->id
-                  << " to inverted list " << idx;
-    }
-
-    // store forward doc id -> coarse idx mapping.
-    ForwardIndexKey forward_key = ForwardIndexKey{tenant, doc->id};
-    auto fks = forward_key.serialize();
-    std::vector<idx_t> unique_coarse_idx_vec(
-            unique_coarse_idx.begin(), unique_coarse_idx.end());
-    auto mapping_ptr = create_doc_mapping(
-            unique_coarse_idx_vec.data(), unique_coarse_idx_vec.size());
-    auto mapping_status = db_->Put(
-            wo,
-            column_families[kMappingColumnIndex],
-            rocksdb::Slice(fks),
-            rocksdb::Slice(
-                    reinterpret_cast<const char*>(
-                            mapping_ptr->GetBufferPointer()),
-                    mapping_ptr->GetSize()));
-    LINTDB_THROW_IF_NOT(mapping_status.ok());
-}
+        const Version& version)
+        : version(version), db_(db), column_families(column_families) {}
 
 void RocksdbInvertedList::remove(
         const uint64_t tenant,
-        std::vector<idx_t> ids) {
-    for (idx_t id : ids) {
-        auto id_map = this->get_mapping(tenant, id);
-        // delete from the inverse index.
-        rocksdb::ReadOptions ro;
-        for (auto idx : id_map) {
-            Key key = Key{tenant, idx, id};
-            std::string k_string = key.serialize();
-            rocksdb::WriteOptions wo;
-            rocksdb::Status status = db_->Delete(
-                    wo,
-                    column_families[kIndexColumnIndex],
-                    rocksdb::Slice(k_string));
-            assert(status.ok());
+        std::vector<idx_t> ids,
+        const uint8_t field,
+        const DataType data_type,
+        const std::vector<FieldType> field_types) {
+    for (auto field_type : field_types) {
+        switch (field_type) {
+            case FieldType::Indexed: {
+                for (idx_t id : ids) {
+                    LOG(INFO) << "deleting from index: " << id;
+                    auto id_map = this->get_mapping(tenant, id);
+                    // delete from the inverse index.
+                    rocksdb::ReadOptions ro;
+                    for (auto idx : id_map) {
+                        std::string key = create_index_id(
+                                tenant, field, data_type, idx, id);
+                        rocksdb::WriteOptions wo;
+                        rocksdb::Status status = db_->Delete(
+                                wo,
+                                column_families[kIndexColumnIndex],
+                                rocksdb::Slice(key));
+                        assert(status.ok());
+                    }
+                }
+                break;
+            }
+            case FieldType::Context: {
+                for (idx_t id : ids) {
+                    std::string key = create_context_id(tenant, field, id);
+                    rocksdb::WriteOptions wo;
+                    rocksdb::Status status = db_->Delete(
+                            wo,
+                            column_families[kCodesColumnIndex],
+                            rocksdb::Slice(key));
+                    assert(status.ok());
+                }
+                break;
+            }
+            case FieldType::Colbert: {
+                for (idx_t id : ids) {
+                    auto id_map = this->get_mapping(tenant, id);
+                    // delete from the inverse index.
+                    rocksdb::ReadOptions ro;
+                    for (auto idx : id_map) {
+                        LOG(INFO) << "deleting from index: " << idx;
+                        // colbert fields are always tensors, and tensors are
+                        // always quantized in the index.
+                        std::string key = create_index_id(
+                                tenant,
+                                field,
+                                DataType::QUANTIZED_TENSOR,
+                                idx,
+                                id);
+                        rocksdb::WriteOptions wo;
+                        rocksdb::Status status = db_->Delete(
+                                wo,
+                                column_families[kIndexColumnIndex],
+                                rocksdb::Slice(key));
+                        assert(status.ok());
+                    }
+
+                    std::string key = create_context_id(tenant, field, id);
+                    rocksdb::WriteOptions wo;
+                    rocksdb::Status status = db_->Delete(
+                            wo,
+                            column_families[kCodesColumnIndex],
+                            rocksdb::Slice(key));
+                    assert(status.ok());
+                }
+            }
         }
     }
 }
@@ -98,8 +97,9 @@ void RocksdbInvertedList::remove(
 std::vector<idx_t> RocksdbInvertedList::get_mapping(
         const uint64_t tenant,
         idx_t id) const {
-    auto key = ForwardIndexKey{tenant, id};
-    auto serialized_key = key.serialize();
+    KeyBuilder kb;
+    std::string serialized_key = kb.add(tenant).add(id).build();
+
     rocksdb::ReadOptions ro;
     std::string value;
     rocksdb::Status status = db_->Get(
@@ -109,12 +109,7 @@ std::vector<idx_t> RocksdbInvertedList::get_mapping(
             &value);
 
     if (status.ok()) {
-        auto mapping = GetDocumentClusterMapping(value.data());
-        std::vector<idx_t> idxs;
-        for (size_t i = 0; i < mapping->centroids()->size(); i++) {
-            idxs.push_back(mapping->centroids()->Get(i));
-        }
-        return idxs;
+        return DocEncoder::decode_inverted_mapping_data(value);
     } else {
         LOG(WARNING) << "Could not find mapping for doc id: " << id;
         return {};
@@ -155,10 +150,16 @@ void RocksdbInvertedList::merge(
     }
 }
 
-unique_ptr<Iterator> RocksdbInvertedList::get_iterator(
+std::unique_ptr<Iterator> RocksdbInvertedList::get_iterator(
+        const std::string& prefix) const {
+    return std::make_unique<RocksDBIterator>(
+            db_, column_families[kIndexColumnIndex], prefix);
+}
+
+std::unique_ptr<ContextIterator> RocksdbInvertedList::get_context_iterator(
         const uint64_t tenant,
-        const idx_t inverted_list) const {
-    return std::make_unique<RocksDBIterator>(RocksDBIterator(
-            db_, column_families[kIndexColumnIndex], tenant, inverted_list));
+        const uint8_t field_id) const {
+    return std::make_unique<ContextIterator>(
+            db_, column_families[kCodesColumnIndex], tenant, field_id);
 }
 } // namespace lintdb
