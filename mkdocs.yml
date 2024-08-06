@@ -1,7 +1,7 @@
-site_name: ""
+site_name: "LintDB"
 site_description: "A vector database for multi vector representations and late interaction scoring."
-sire_url: "https://lintdb.com"
-repo:url: "https://github.com/DeployQL/lintdb"
+site_url: "https://lintdb.com"
+repo_url: "https://github.com/DeployQL/lintdb"
 repo_name: "DeployQL/lintdb"
 edit_uri: "edit/main/docs/"
 
