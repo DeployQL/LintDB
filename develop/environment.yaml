@@ -1,0 +1,10 @@
+name: lintdb-docs
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - mkdocs-material
+  - mike
+  - mkdocstrings[python]
+  - markdown-callouts
+  - mkdocs-literate-nav
