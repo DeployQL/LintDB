@@ -72,7 +72,7 @@ print(results)
 LintDB aims to support late interaction and more advanced retrieval models. 
 
 - [x] ColBERTv2 with PLAID
-- [x] XTR (experimental)
+- [ ] XTR
 
 # Roadmap
 
