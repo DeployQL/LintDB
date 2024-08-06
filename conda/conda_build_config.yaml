@@ -1,8 +1,8 @@
 python:
-#  - 3.9
-#  - 3.10
+  - 3.9
+  - 3.10
   - 3.11
-#  - 3.12
+  - 3.12
 MACOSX_SDK_VERSION:         # [osx and x86_64]
   - "10.13"                 # [osx and x86_64]
 MACOSX_DEPLOYMENT_TARGET:   # [osx and x86_64]
