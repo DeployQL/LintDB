@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cstdlib>
 #include <vector>
-#include "lintdb/EmbeddingBlock.h"
 #include "lintdb/index.h"
 #include "lintdb/scoring/plaid.h"
 #include "lintdb/util.h"

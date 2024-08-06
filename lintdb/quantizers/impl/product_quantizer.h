@@ -58,7 +58,7 @@ class ProductQuantizer {
                         subvector_data.begin() + j * subvector_dim);
             }
             auto centroids = kmeans(
-                    subvector_data, data.size(), subvector_dim, k, metric);
+                    subvector_data.data(), data.size(), subvector_dim, k, metric);
             std::copy(
                     centroids.begin(),
                     centroids.end(),

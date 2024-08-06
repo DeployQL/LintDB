@@ -9,14 +9,12 @@ set(
         #    xtr_test.cpp
         doc_encoder_test.cpp
         colbert_test.cpp
-        #    plaid_test.cpp
+            plaid_test.cpp
 
         binarizer_test.cpp
-#        index_builder_test.cpp
         inverted_list_test.cpp
         doc_processor_test.cpp
-        #        product_quantizer_test.cpp
-#        kmeans_test.cpp
+        product_quantizer_test.cpp
 )
 
 add_executable(
