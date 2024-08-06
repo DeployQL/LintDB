@@ -29,6 +29,7 @@ outputs:
     requirements:
       build:
         - {{ compiler('cxx') }}
+        - {{ compiler('fortran')}}
         - llvm-openmp
         - sysroot_linux-64 =2.17 # [linux64]
         - numpy==1.26.4
