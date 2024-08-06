@@ -27,6 +27,12 @@ set(CMAKE_CXX_FLAGS
     "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -fopenmp -O3 -D_LIBCPP_DISABLE_AVAILABILITY"
 )
 
+if(MSVC OR LINUX)
+  set(BLA_VENDOR "Intel10_64lp")
+else()
+    set(BLA_VENDOR "OpenBLAS")
+endif()
+
 # the below is caused by github actions failing to build flatbuffers. therefore,
 # we set this value so that we use a higher sdk version to build it.
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.13)
