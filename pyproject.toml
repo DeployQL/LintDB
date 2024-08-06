@@ -45,7 +45,6 @@ wheel.packages = ["lintdb/python"]
 cmake.targets = ['lintdb_lib', 'core']
 
 [tool.scikit-build.cmake.define]
-CMAKE_CXX_COMPILER = "clang++-18"
 OpenMP_CXX_FLAGS = "-fopenmp=libiomp5"
 OpenMP_CXX_LIB_NAMES = "libiomp5"
 # to use a shared library, we need to jump through some hoops for python: https://github.com/scikit-build/scikit-build/issues/272
