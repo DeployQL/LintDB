@@ -8,7 +8,7 @@ version = "0.5.0"
 description = "Python library for LintDB, a vector database for token embeddings and late interaction."
 readme = "README.md"
 license = {text = "Apache-2.0 License"}
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 authors = [
     { name = "Matt Barta", email = "matt@deployql.com" },
 ]
