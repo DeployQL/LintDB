@@ -12,7 +12,7 @@
     "ms-gsl",
     "benchmark",
     "intel-mkl",
-    "onnxruntime",
+    "openblas",
     "bitsery"
   ]
 }

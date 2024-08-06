@@ -36,6 +36,7 @@ outputs:
         - cmake >=3.25
         - make  # [not win]
         - mkl-devel =2023.0.0  # [x86_64]
+        - openblas  # [not x86_64]
         - python {{ python }}
       host:
         - python {{ python }}
