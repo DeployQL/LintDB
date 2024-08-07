@@ -48,6 +48,8 @@ outputs:
       run:
         - python {{ python }}
         - numpy==1.26.4
+        - mkl =2023.0.0  # [x86_64]
+        - openblas  # [not x86_64]
         - packaging
         - __osx >={{ MACOSX_DEPLOYMENT_TARGET|default("10.13") }}  # [osx and x86_64]
     test:
