@@ -36,7 +36,7 @@ minimum-version = "0.4"
 build-dir = "builds/{wheel_tag}"
 
 # Build stable ABI wheels for CPython 3.12+
-wheel.py-api = "cp310"
+#wheel.py-api = "cp310"
 
 cmake.build-type = "Release"
 
