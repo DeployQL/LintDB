@@ -91,9 +91,14 @@ if(${finteger_idx} EQUAL -1)
   target_compile_definitions(lintdb_lib PRIVATE FINTEGER=int)
 endif()
 
+if(MSVC OR LINUX)
+  set(OpenMP_CXX_FLAGS "-fopenmp=libiomp5")
+  set(OpenMP_CXX_LIB_NAMES "libomp5")
+endif()
+
 find_package(OpenMP REQUIRED)
 if(OpenMP_CXX_FOUND)
-  message(STATUS "found openMP")
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
   target_link_libraries(lintdb_lib PUBLIC OpenMP::OpenMP_CXX)
 endif()
 
