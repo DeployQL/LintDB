@@ -6,6 +6,7 @@
 #include "lintdb/invlists/PostingData.h"
 #include "lintdb/schema/DataTypes.h"
 #include "lintdb/schema/ProcessedData.h"
+#include "lintdb/api.h"
 
 namespace lintdb {
 

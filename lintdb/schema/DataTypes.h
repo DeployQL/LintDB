@@ -17,6 +17,7 @@
 #include <vector>
 #include "lintdb/api.h"
 #include "lintdb/assert.h"
+#include "lintdb/api.h"
 
 #define MAX_TENSOR_SIZE 10000
 #define MAX_CENTROIDS_TO_STORE 40000000
