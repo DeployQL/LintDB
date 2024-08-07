@@ -29,7 +29,6 @@ find_package(nanobind CONFIG REQUIRED)
 
 nanobind_add_module(
         core
-        LTO
         STABLE_ABI
         pylintdb.cpp
 )

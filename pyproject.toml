@@ -48,6 +48,7 @@ cmake.targets = ['lintdb_lib', 'core']
 # to use a shared library, we need to jump through some hoops for python: https://github.com/scikit-build/scikit-build/issues/272
 # SO link: https://stackoverflow.com/questions/70044257/packaging-executable-shared-library-and-python-bindings-not-finding-library
 BUILD_SHARED_LIBS = "OFF"
+CMAKE_CXX_COMPILER = "clang++"
 #CMAKE_INSTALL_LIBDIR = "lib"
 CMAKE_VERBOSE_MAKEFILE = "OFF"
 ENABLE_PYTHON = "ON"
