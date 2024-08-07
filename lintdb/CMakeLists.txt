@@ -106,8 +106,8 @@ else()
   find_package(OpenBLAS CONFIG REQUIRED)
   target_link_libraries(lintdb_lib PRIVATE OpenBLAS::OpenBLAS)
 
-  find_package(LAPACK CONFIG REQUIRED)
-  target_link_libraries(lintdb_lib PRIVATE LAPACK::LAPACK)
+#  find_package(LAPACK CONFIG REQUIRED)
+#  target_link_libraries(lintdb_lib PRIVATE LAPACK::LAPACK)
 endif()
 
 # this is heuristically generated, and may not be correct

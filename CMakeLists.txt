@@ -57,7 +57,7 @@ endif()
 set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
 
 option(ENABLE_PYTHON "Build Python extension." ON)
-option(ENABLE_BENCHMARKS "Build benchmarks." ON)
+option(ENABLE_BENCHMARKS "Build benchmarks." OFF)
 
 add_subdirectory(lintdb)
 
