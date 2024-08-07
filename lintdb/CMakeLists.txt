@@ -93,7 +93,7 @@ endif()
 
 if(MSVC OR LINUX)
   set(OpenMP_CXX_FLAGS "-fopenmp=libiomp5")
-  set(OpenMP_CXX_LIB_NAMES "libiomp5")
+  set(OpenMP_CXX_LIB_NAMES "libomp5")
 endif()
 
 find_package(OpenMP REQUIRED)
