@@ -1,4 +1,4 @@
-name: Build/Publish Develop Docs
+name: Build/Publish Release Docs
 on:
   release:
     types: [published]
@@ -32,6 +32,10 @@ jobs:
         run: |
           pip install mkdocs-material
           pip install mkdocstrings[python] markdown-callouts mkdocs-literate-nav mike
+          
+          sudo apt-get remove clang-14 clang-15
+          sudo rm /usr/bin/clang++
+          sudo ln -s /usr/bin/clang++-18 /usr/bin/clang++
           pip install .
       - name: Setup Docs Deploy
         run: |
