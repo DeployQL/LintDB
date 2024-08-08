@@ -59,6 +59,7 @@ jobs:
           python-version: 3.10.6
       - name: Install Dependencies
         run: |
+          sudo apt-get install libomp-18-dev
           pip install pytest numpy
           pip install .
       - name: Run Tests
