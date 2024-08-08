@@ -46,10 +46,11 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 if(SKBUILD)
   message("Building with scikit-build")
+  cmake_path(GET CMAKE_CURRENT_BINARY_DIR PARENT_PATH BUILD_PARENT_DIR)
   set(ENV{MKLROOT}
-      "${CMAKE_CURRENT_BINARY_DIR}/vcpkg_installed/x64-linux/lib/intel64")
+      "${BUILD_PARENT_DIR}/vcpkg_installed/x64-linux/lib/intel64")
   set(OpenMP_libiomp5_LIBRARY
-      "${CMAKE_CURRENT_BINARY_DIR}/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so"
+      "${BUILD_PARENT_DIR}/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so"
   )
   set(CMAKE_BUILD_TYPE Release)
 endif()
