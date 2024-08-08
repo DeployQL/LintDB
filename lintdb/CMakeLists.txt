@@ -97,6 +97,11 @@ if(MSVC OR LINUX)
   # the below is necessary in github actions when calling pip install .
   cmake_path(GET CMAKE_CURRENT_BINARY_DIR PARENT_PATH BUILD_PARENT_DIR)
   set(OpenMP_libiomp5_LIBRARY "${BUILD_PARENT_DIR}/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so")
+  message(STATUS "OpenMP_libiomp5_LIBRARY: ${OpenMP_libiomp5_LIBRARY}")
+  if(EXISTS ${OpenMP_libiomp5_LIBRARY})
+    message(STATUS "OpenMP_libiomp5_LIBRARY exists")
+  else()
+    message(STATUS "OpenMP_libiomp5_LIBRARY does not exist"
 endif()
 
 find_package(OpenMP REQUIRED)
