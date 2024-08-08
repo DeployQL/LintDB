@@ -59,6 +59,11 @@ jobs:
           python-version: 3.10.6
 
       - name: Install Dependencies
+        env:
+          CC: clang-18
+          CXX: clang++-18
+          CMAKE_C_COMPILER: clang-18
+          CMAKE_CXX_COMPILER: clang++-18
         run: |
           pip install pytest numpy
           pip install .
