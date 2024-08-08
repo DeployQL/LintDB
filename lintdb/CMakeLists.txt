@@ -94,6 +94,9 @@ endif()
 if(MSVC OR LINUX)
   set(OpenMP_CXX_FLAGS "-fopenmp=libiomp5")
   set(OpenMP_CXX_LIB_NAMES "libiomp5")
+  # the below is necessary in github actions when calling pip install .
+  cmake_path(GET CMAKE_CURRENT_BINARY_DIR PARENT_PATH BUILD_PARENT_DIR)
+  set(OpenMP_libiomp5_LIBRARY "${BUILD_PARENT_DIR}/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so")
 endif()
 
 find_package(OpenMP REQUIRED)
