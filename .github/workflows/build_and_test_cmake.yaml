@@ -67,8 +67,9 @@ jobs:
         run: |
           echo "CXX=${CXX}"
           pip install pytest numpy
-          
+        
           sudo apt-get remove clang-14 clang-15
+          sudo ln -s /usr/bin/clang++-18 /usr/bin/clang++
           pip install .
       - name: Run Tests
         run: |
