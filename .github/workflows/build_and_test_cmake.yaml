@@ -65,8 +65,13 @@ jobs:
           CMAKE_C_COMPILER: clang-18
           CMAKE_CXX_COMPILER: clang++-18
         run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 18 all
+          
+          echo "CXX=${CXX}"
           pip install pytest numpy
-          CXX=clang++-18 pip install .
+          pip install .
       - name: Run Tests
         run: |
           pytest lintdb/python/tests  
