@@ -1,9 +1,13 @@
 site_name: "LintDB"
 site_description: "A vector database for multi vector representations and late interaction scoring."
-site_url: "https://lintdb.com"
+site_url: "https://deployql.github.io/LintDB/"
 repo_url: "https://github.com/DeployQL/lintdb"
 repo_name: "DeployQL/lintdb"
 edit_uri: "edit/main/docs/"
+
+extra:
+  version:
+    provider: mike
 
 theme:
   name: "material"
@@ -93,3 +97,12 @@ plugins:
             show_symbol_type_toc: true
             signature_crossrefs: true
             summary: true
+  - mike:
+      # These fields are all optional; the defaults are as below...
+      alias_type: symlink
+      redirect_template: null
+      deploy_prefix: ''
+      canonical_version: latest
+      version_selector: true
+      css_dir: css
+      javascript_dir: js
