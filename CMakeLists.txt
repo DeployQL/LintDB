@@ -24,8 +24,14 @@ include(GNUInstallDirs)
 set(CMAKE_CXX_STANDARD 17)
 
 set(CMAKE_CXX_FLAGS
-    "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -fopenmp -O3 -D_LIBCPP_DISABLE_AVAILABILITY"
+    "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -O3 -D_LIBCPP_DISABLE_AVAILABILITY"
 )
+
+if(MSVC OR LINUX)
+  set(BLA_VENDOR "Intel10_64lp")
+else()
+    set(BLA_VENDOR "OpenBLAS")
+endif()
 
 # the below is caused by github actions failing to build flatbuffers. therefore,
 # we set this value so that we use a higher sdk version to build it.
@@ -40,10 +46,11 @@ list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 if(SKBUILD)
   message("Building with scikit-build")
+  cmake_path(GET CMAKE_CURRENT_BINARY_DIR PARENT_PATH BUILD_PARENT_DIR)
   set(ENV{MKLROOT}
-      "${CMAKE_CURRENT_BINARY_DIR}/vcpkg_installed/x64-linux/lib/intel64")
+      "${BUILD_PARENT_DIR}/vcpkg_installed/x64-linux/lib/intel64")
   set(OpenMP_libiomp5_LIBRARY
-      "${CMAKE_CURRENT_BINARY_DIR}/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so"
+      "${BUILD_PARENT_DIR}/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so"
   )
   set(CMAKE_BUILD_TYPE Release)
 endif()
@@ -51,7 +58,7 @@ endif()
 set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
 
 option(ENABLE_PYTHON "Build Python extension." ON)
-option(ENABLE_BENCHMARKS "Build benchmarks." ON)
+option(ENABLE_BENCHMARKS "Build benchmarks." OFF)
 
 add_subdirectory(lintdb)
 

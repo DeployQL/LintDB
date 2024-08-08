@@ -42,12 +42,14 @@ outputs:
         - python {{ python }}
         - numpy==1.26.4
         - scikit-build-core
-        - intel::intel-openmp =2023.0.0 #[linux]
+        - conda-forge::llvm-openmp # [x86_64]
         - mkl =2023.0.0  # [x86_64]
         - openblas  # [not x86_64]
       run:
         - python {{ python }}
         - numpy==1.26.4
+        - mkl =2023.0.0  # [x86_64]
+        - openblas  # [not x86_64]
         - packaging
         - __osx >={{ MACOSX_DEPLOYMENT_TARGET|default("10.13") }}  # [osx and x86_64]
     test:

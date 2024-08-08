@@ -91,9 +91,23 @@ if(${finteger_idx} EQUAL -1)
   target_compile_definitions(lintdb_lib PRIVATE FINTEGER=int)
 endif()
 
+if(MSVC OR LINUX)
+  set(OpenMP_CXX_FLAGS "-fopenmp=libiomp5")
+  set(OpenMP_CXX_LIB_NAMES "libiomp5")
+  # the below is necessary in github actions when calling pip install .
+  cmake_path(GET CMAKE_CURRENT_BINARY_DIR PARENT_PATH BUILD_PARENT_DIR)
+  set(OpenMP_libiomp5_LIBRARY "${BUILD_PARENT_DIR}/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so")
+  message(STATUS "OpenMP_libiomp5_LIBRARY: ${OpenMP_libiomp5_LIBRARY}")
+  if(EXISTS ${OpenMP_libiomp5_LIBRARY})
+    message(STATUS "OpenMP_libiomp5_LIBRARY exists")
+  else()
+    message(STATUS "OpenMP_libiomp5_LIBRARY does not exist")
+  endif()
+endif()
+
 find_package(OpenMP REQUIRED)
 if(OpenMP_CXX_FOUND)
-  message(STATUS "found openMP")
+  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
   target_link_libraries(lintdb_lib PUBLIC OpenMP::OpenMP_CXX)
 endif()
 
@@ -106,8 +120,9 @@ else()
   find_package(OpenBLAS CONFIG REQUIRED)
   target_link_libraries(lintdb_lib PRIVATE OpenBLAS::OpenBLAS)
 
-  find_package(LAPACK CONFIG REQUIRED)
-  target_link_libraries(lintdb_lib PRIVATE LAPACK::LAPACK)
+
+#  find_package(LAPACK CONFIG REQUIRED)
+#  target_link_libraries(lintdb_lib PRIVATE LAPACK::LAPACK)
 endif()
 
 # this is heuristically generated, and may not be correct

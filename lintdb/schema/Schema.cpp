@@ -13,13 +13,13 @@ Json::Value Field::toJson() const {
     json["field_types"] = fieldTypesJson;
 
     Json::Value params;
-    params["dimensions"] = parameters.dimensions;
+    params["dimensions"] = static_cast<Json::Value::UInt64>(parameters.dimensions);
     params["analyzer"] = parameters.analyzer;
     params["quantization"] = static_cast<int>(parameters.quantization);
-    params["num_centroids"] = parameters.num_centroids;
-    params["num_iterations"] = parameters.num_iterations;
-    params["num_subquantizers"] = parameters.num_subquantizers;
-    params["nbits"] = parameters.nbits;
+    params["num_centroids"] = static_cast<Json::Value::UInt64>(parameters.num_centroids);
+    params["num_iterations"] = static_cast<Json::Value::UInt64>(parameters.num_iterations);
+    params["num_subquantizers"] = static_cast<Json::Value::UInt64>(parameters.num_subquantizers);
+    params["nbits"] = static_cast<Json::Value::UInt64>(parameters.nbits);
     json["parameters"] = params;
 
     return json;
