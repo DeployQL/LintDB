@@ -101,7 +101,7 @@ if(MSVC OR LINUX)
   if(EXISTS ${OpenMP_libiomp5_LIBRARY})
     message(STATUS "OpenMP_libiomp5_LIBRARY exists")
   else()
-    message(STATUS "OpenMP_libiomp5_LIBRARY does not exist"
+    message(STATUS "OpenMP_libiomp5_LIBRARY does not exist")
 endif()
 
 find_package(OpenMP REQUIRED)
