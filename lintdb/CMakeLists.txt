@@ -26,7 +26,9 @@ set(LINT_DB_SRC
     query/KnnNearestCentroids.cpp
     quantizers/IdentityQuantizer.cpp
     scoring/plaid.cpp
-    query/decode.cpp)
+    query/decode.cpp
+        scoring/ContextCollector.cpp
+)
 
 set(LINT_DB_HEADERS
     index.h
@@ -71,6 +73,7 @@ set(LINT_DB_HEADERS
     schema/ProcessedData.h
     query/QueryContext.h
     query/QueryExecutor.h
+    scoring/ContextCollector.h
     scoring/Scorer.h
     scoring/plaid.h
     query/KnnNearestCentroids.h

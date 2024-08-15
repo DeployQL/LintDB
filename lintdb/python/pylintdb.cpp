@@ -554,9 +554,6 @@ NB_MODULE(core, m) {
             .def_rw("metadata",
                     &SearchResult::metadata,
                     "Metadata for the document")
-            .def_rw("token_scores",
-                    &SearchResult::token_scores,
-                    "Document token scores")
             .def("__lt__",
                  &SearchResult::operator<,
                  "Less than comparison operator")

@@ -7,6 +7,8 @@
 #include "lintdb/schema/DataTypes.h"
 #include "lintdb/schema/Schema.h"
 #include "lintdb/quantizers/Quantizer.h"
+#include "lintdb/query/Query.h"
+#include "lintdb/query/QueryNode.h"
 
 lintdb::Document create_document(size_t num_tokens, size_t dim){
     std::vector<float> vector;
@@ -80,9 +82,25 @@ static void BM_lintdb_add(benchmark::State& state) {
     for(auto _ : state) {
         index.add(0, {doc});
     }
-
 }
 
-BENCHMARK(BM_lintdb_add)->Unit(benchmark::kMillisecond);
+static void BM_lintdb_search(benchmark::State& state) {
+    lintdb::IndexIVF index = lintdb::IndexIVF("/home/matt/deployql/LintDB/benchmarks/lintdb-lifestyle-40k");
+
+    lintdb::FieldValue fv("colbert", std::vector<float>(1280, 1), 10);
+    std::unique_ptr<lintdb::VectorQueryNode> root = std::make_unique<lintdb::VectorQueryNode>(fv);
+    lintdb::Query query(std::move(root));
+
+    lintdb::SearchOptions opts;
+    opts.n_probe = 64;
+    opts.k_top_centroids = 64;
+
+    for(auto _ : state) {
+        index.search(0, query, 10, opts);
+    }
+}
+
+//BENCHMARK(BM_lintdb_add)->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_lintdb_search)->Unit(benchmark::kMillisecond);
 
 BENCHMARK_MAIN();

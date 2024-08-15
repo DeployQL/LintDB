@@ -41,7 +41,6 @@ TEST(ColBertTests, ScoresCorrectly) {
             embeddings.push_back(f);
         }
     }
-    std::cout << embeddings[embeddings.size()-1] << std::endl;
     // we save a padded query, which should be 32 tokens long.
     ASSERT_EQ(embeddings.size(), 32 * 128);
 

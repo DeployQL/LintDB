@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include "lintdb/api.h"
+#include "lintdb/schema/DataTypes.h"
 
 namespace lintdb {
 
@@ -15,10 +16,9 @@ namespace lintdb {
 struct SearchResult {
     idx_t id;    /// the document's id.
     float score; /// the final score as determined by the database.
-    std::map<std::string, std::string>
+    std::map<std::string, SupportedTypes>
             metadata; /// Optionally, metadata that was indexed for the
                       /// document.
-    std::vector<float> token_scores; /// Document token scores.
 
     SearchResult() = default;
 

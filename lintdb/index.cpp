@@ -126,6 +126,7 @@ void IndexIVF::load_retrieval(
         const Configuration& config) {
     // load coarse quantizers
     for (const auto& field : this->schema.fields) {
+        LOG(INFO) << "loading coarse quantizer for field: " << field.name;
         if (field.data_type != DataType::TENSOR &&
             field.data_type != DataType::QUANTIZED_TENSOR) {
             continue;
@@ -152,7 +153,6 @@ void IndexIVF::load_retrieval(
         std::shared_ptr<Quantizer> quantizer =
                 load_quantizer(qp, field.parameters.quantization, qc);
         this->quantizer_map[field.name] = std::move(quantizer);
-        LOG(INFO) << "done loading quantizer for field: " << field.name;
     }
 }
 
@@ -369,11 +369,12 @@ std::vector<SearchResult> IndexIVF::search(
         const Query& query,
         const size_t k,
         const SearchOptions& opts) const {
-    uint8_t colbert_field_id =
-            this->field_mapper->getFieldID(opts.colbert_field);
-    size_t colbert_code_size =
-            this->quantizer_map.at(opts.colbert_field)->code_size();
+//    uint8_t colbert_field_id =
+//            this->field_mapper->getFieldID(opts.colbert_field);
+//    size_t colbert_code_size =
+//            this->quantizer_map.at(opts.colbert_field)->code_size();
 
+    VLOG(10) << "preparing search";
     auto fm = field_mapper;
     QueryContext context(
             tenant,
@@ -386,6 +387,7 @@ std::vector<SearchResult> IndexIVF::search(
     ColBERTScorer ranker(context);
     QueryExecutor executor(scorer, ranker);
 
+    VLOG(10) << "executing search";
     std::vector<ScoredDocument> results =
             executor.execute(context, query, k, opts);
 
@@ -399,11 +401,47 @@ std::vector<SearchResult> IndexIVF::search(
         }
     }
 
+    bool should_get_metadata = false;
+    for (const auto& field : schema.fields) {
+        if (std::find(
+                    field.field_types.begin(),
+                    field.field_types.end(),
+                    FieldType::Stored) != field.field_types.end()) {
+            should_get_metadata = true;
+            break;
+        }
+    }
+
+    std::vector<std::map<uint8_t, SupportedTypes>> metadata;
+    if(should_get_metadata) {
+        std::vector<idx_t> doc_ids;
+        for (const auto& result : results) {
+            doc_ids.push_back(result.doc_id);
+        }
+
+        // get metadata for the results.
+        metadata = index_->get_metadata(tenant, doc_ids);
+    }
+
+    VLOG(10) << "returning results";
     std::vector<SearchResult> search_results;
-    for (const auto& result : results) {
+    for (int i = 0; i < results.size(); i++) {
+        auto result = results[i];
+
+        std::map<std::string, SupportedTypes> metadata_map_str;
+        if (should_get_metadata) {
+            auto metadata_map = metadata[i];
+
+            for (const auto& [field_id, value] : metadata_map) {
+                std::string field_name = field_mapper->getFieldName(field_id);
+                metadata_map_str[field_name] = value;
+            }
+        }
+
         SearchResult sr;
         sr.id = result.doc_id;
         sr.score = result.score;
+        sr.metadata = metadata_map_str;
         search_results.push_back(sr);
     }
 
