@@ -14,8 +14,8 @@
 namespace lintdb {
 
 struct ScoredDocument {
-    float score;
-    idx_t doc_id;
+    float score = 0;
+    idx_t doc_id = -1;
     std::vector<DocValue>
             values; /// ScoredDocument takes ownership of the values, because
     /// we assume we are iterating over a DocIterator and the values are only
@@ -64,8 +64,6 @@ class PlaidScorer : public Scorer {
             std::vector<DocValue>& fvs) const override;
     ~PlaidScorer() override = default;
 
-   private:
-    std::unique_ptr<ContextIterator> colbert_it;
 };
 
 class ColBERTScorer : public Scorer {
@@ -77,8 +75,6 @@ class ColBERTScorer : public Scorer {
             std::vector<DocValue>& fvs) const override;
     ~ColBERTScorer() override = default;
 
-   private:
-    std::unique_ptr<ContextIterator> colbert_it;
 };
 
 // class XTRScorer: public Scorer {

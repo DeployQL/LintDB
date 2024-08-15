@@ -1,0 +1,198 @@
+openapi: 3.0.0
+info:
+  title: LintDB Index API
+  version: 0.5.1
+  description: |
+    LintDB is a late interaction vector database. This API enables the querying and updating of vector information
+    while using the PLAID ColBERT scoring mechanism.
+    
+    You must create and train your index using Python.
+
+
+paths:
+  /Index/search/{index_id}:
+    post:
+      summary: Search the index.
+      parameters:
+        - name: index_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      enum: [TENSOR, QUANTIZED_TENSOR, INTEGER, FLOAT, TEXT, DATETIME]
+                    name:
+                      type: string
+                    value:
+                      type: array
+                      items:
+                        type: number
+                    num_tensors:
+                      type: integer
+                options:
+                  type: object
+                  properties:
+                    colbert_field:
+                      type: string
+                k:
+                  type: integer
+      responses:
+        '200':
+          description: Successful search operation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: integer
+                        score:
+                          type: number
+                        metadata:
+                          type: object
+                          additionalProperties:
+                            type: string
+                        token_scores:
+                          type: array
+                          items:
+                            type: number
+  /Index/add/{index_id}:
+    post:
+      summary: Add documents to the index.
+      parameters:
+        - name: index_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                documents:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      fields:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            data_type:
+                              type: string
+                              enum: [TENSOR, QUANTIZED_TENSOR, INTEGER, FLOAT, TEXT, DATETIME]
+                            value:
+                              type: array
+                              items:
+                                type: number
+      responses:
+        '200':
+          description: Documents successfully added.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+  /Index/update/{index_id}:
+    post:
+      summary: Update documents in the index.
+      parameters:
+        - name: index_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                documents:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      fields:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            data_type:
+                              type: string
+                              enum: [TENSOR, QUANTIZED_TENSOR, INTEGER, FLOAT, TEXT, DATETIME]
+                            value:
+                              type: array
+                              items:
+                                type: number
+      responses:
+        '200':
+          description: Documents successfully updated.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+  /Index/remove/{index_id}:
+    post:
+      summary: Remove documents from the index.
+      parameters:
+        - name: index_id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: integer
+      responses:
+        '200':
+          description: Documents successfully removed.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean

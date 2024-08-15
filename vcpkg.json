@@ -13,6 +13,8 @@
     "benchmark",
     "intel-mkl",
     "openblas",
-    "bitsery"
+    "bitsery",
+    "drogon",
+    "args"
   ]
 }

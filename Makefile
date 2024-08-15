@@ -34,6 +34,28 @@ build-python:
 	cmake --build --preset python -j12
 	cd builds/python/lintdb/python
 
+build-server:
+	MKLROOT=${ROOT_DIR}/builds/server/vcpkg_installed/x64-linux/lib/intel64 cmake \
+	--preset server \
+	-DCMAKE_CXX_COMPILER=clang++-18 \
+	-DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
+	-DOpenMP_CXX_LIB_NAMES=libiomp5 \
+	-DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/builds/server/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
+	.
+
+	cmake --build --preset server -j12
+
+build-benchmarks:
+	MKLROOT=${ROOT_DIR}/builds/benchmarks/vcpkg_installed/x64-linux/lib/intel64 cmake \
+	--preset benchmarks \
+	-DCMAKE_CXX_COMPILER=clang++-18 \
+	-DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
+	-DOpenMP_CXX_LIB_NAMES=libiomp5 \
+	-DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/builds/benchmarks/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
+	.
+
+	cmake --build --preset benchmarks -j12 --target bench_lintdb
+
 test:
 	cd builds/debug && cmake -E env GLOG_v=5 GLOG_logtostderr=1 ctest --output-on-failure
 
@@ -45,6 +67,16 @@ valgrind:
 
 callgrind:
 	OMP_MAX_ACTIVE_LEVELS=2 OMP_THREAD_LIMIT=6 OMP_NUM_THREADS=6 valgrind --tool=callgrind --suppressions=debug/valgrind-python.supp --instr-atstart=yes --dump-instr=yes --collect-jumps=yes python ./benchmarks/bench_lintdb.py index
+	python -m gprof2dot --format=callgrind --output=out.dot callgrind.out.*
+	dot -Tsvg out.dot -o graph.svg
+
+callgrind-py:
+	OMP_MAX_ACTIVE_LEVELS=2 OMP_THREAD_LIMIT=6 OMP_NUM_THREADS=6 valgrind --tool=callgrind --suppressions=debug/valgrind-python.supp --instr-atstart=yes --dump-instr=yes --collect-jumps=yes python ./benchmarks/lotte/indexing_two.py eval --index-path=benchmarks/lintdb-lifestyle-40k --stop=40000
+	python -m gprof2dot --format=callgrind --output=out.dot callgrind.out.*
+	dot -Tsvg out.dot -o graph.svg
+
+callgrind-cpp: build-benchmarks
+	GLOG_v=100 valgrind --tool=callgrind --instr-atstart=yes --dump-instr=yes --collect-jumps=yes ./builds/benchmarks/benchmarks/Release/bench_lintdb
 	python -m gprof2dot --format=callgrind --output=out.dot callgrind.out.*
 	dot -Tsvg out.dot -o graph.svg
 

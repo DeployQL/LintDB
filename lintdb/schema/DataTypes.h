@@ -18,6 +18,8 @@
 #include "lintdb/api.h"
 #include "lintdb/assert.h"
 #include "lintdb/api.h"
+#include <json/reader.h>
+#include <json/writer.h>
 
 #define MAX_TENSOR_SIZE 10000
 #define MAX_CENTROIDS_TO_STORE 40000000
@@ -35,21 +37,46 @@ enum DataType {
             // includes the residual codes and indexes.
 };
 
-const std::unordered_map<int, DataType> IntToDataType = {
-        {0, DataType::TENSOR},
-        {1, DataType::QUANTIZED_TENSOR},
-        {2, DataType::INTEGER},
-        {3, DataType::FLOAT},
-        {4, DataType::TEXT},
-        {5, DataType::DATETIME}};
+inline std::string dataTypeToString(DataType type) {
+    switch (type) {
+        case TENSOR:
+            return "TENSOR";
+        case QUANTIZED_TENSOR:
+            return "QUANTIZED_TENSOR";
+        case INTEGER:
+            return "INTEGER";
+        case FLOAT:
+            return "FLOAT";
+        case TEXT:
+            return "TEXT";
+        case DATETIME:
+            return "DATETIME";
+        case COLBERT:
+            return "COLBERT";
+        default:
+            throw std::invalid_argument("Unknown DataType");
+    }
+}
 
-const std::unordered_map<DataType, int> DataTypeToInt = {
-        {DataType::TENSOR, 0},
-        {DataType::QUANTIZED_TENSOR, 1},
-        {DataType::INTEGER, 2},
-        {DataType::FLOAT, 3},
-        {DataType::TEXT, 4},
-        {DataType::DATETIME, 5}};
+inline DataType stringToDataType(const std::string& str) {
+    if (str == "TENSOR") {
+        return TENSOR;
+    } else if (str == "QUANTIZED_TENSOR") {
+        return QUANTIZED_TENSOR;
+    } else if (str == "INTEGER") {
+        return INTEGER;
+    } else if (str == "FLOAT") {
+        return FLOAT;
+    } else if (str == "TEXT") {
+        return TEXT;
+    } else if (str == "DATETIME") {
+        return DATETIME;
+    } else if (str == "COLBERT") {
+        return COLBERT;
+    } else {
+        throw std::invalid_argument("Unknown DataType string: " + str);
+    }
+}
 
 using Tensor = std::vector<float>;
 using QuantizedTensor = std::vector<uint8_t>;
@@ -68,7 +95,105 @@ using SupportedTypes = std::variant<
         lintdb::Tensor,
         lintdb::QuantizedTensor,
         std::string,
-        ColBERTContextData>;
+        ColBERTContextData // colbert is our internal representation of colbert
+                           // data. it includes the residual codes and indexes.
+        >;
+
+inline Json::Value supportedTypeToJSON(const SupportedTypes& st) {
+    if(const auto st_float = std::get_if<float>(&st)) {
+        return Json::Value(*st_float);
+    } else if(const auto st_idx_t = std::get_if<idx_t>(&st)) {
+        return Json::Value(*st_idx_t);
+    } else if(const auto st_string = std::get_if<std::string>(&st)) {
+        return Json::Value(*st_string);
+    } else if(const auto st_tensor = std::get_if<Tensor>(&st)) {
+        Json::Value v;
+        for(auto& t : *st_tensor) {
+            v.append(t);
+        }
+        return v;
+    } else if(const auto st_quantized_tensor = std::get_if<QuantizedTensor>(&st)) {
+        Json::Value v;
+        for(auto& t : *st_quantized_tensor) {
+            v.append(t);
+        }
+        return v;
+    } else if(const auto st_datetime = std::get_if<DateTime>(&st)) {
+        auto time = st_datetime->time_since_epoch();
+        auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(time).count();
+        return Json::Value(millis);
+    } else if(const auto st_colbert = std::get_if<ColBERTContextData>(&st)) {
+        Json::Value v;
+
+        // Serialize doc_codes array
+        Json::Value doc_codes(Json::arrayValue);
+        for (auto& code : st_colbert->doc_codes) {
+            doc_codes.append(code);
+        }
+        v["doc_codes"] = doc_codes;
+
+        // Serialize doc_residuals array
+        Json::Value doc_residuals(Json::arrayValue);
+        for (auto& residual : st_colbert->doc_residuals) {
+            doc_residuals.append(residual);
+        }
+        v["doc_residuals"] = doc_residuals;
+
+        return v;
+    }
+
+    throw std::runtime_error("Unsupported type");
+}
+
+inline SupportedTypes jsonToSupportedType(const Json::Value& jsonValue) {
+    if (jsonValue.isDouble()) {
+        return SupportedTypes(static_cast<float>(jsonValue.asDouble()));
+    } else if (jsonValue.isInt64()) {
+        return SupportedTypes(static_cast<idx_t>(jsonValue.asInt64()));
+    } else if (jsonValue.isString()) {
+        return SupportedTypes(jsonValue.asString());
+    } else if (jsonValue.isArray() && jsonValue.size() > 0 && jsonValue[0].isDouble()) {
+        Tensor tensor;
+        for (const auto& val : jsonValue) {
+            tensor.push_back(static_cast<float>(val.asDouble()));
+        }
+        return SupportedTypes(tensor);
+    } else if (jsonValue.isArray() && jsonValue.size() > 0 && jsonValue[0].isInt()) {
+        QuantizedTensor quantizedTensor;
+        for (const auto& val : jsonValue) {
+            quantizedTensor.push_back(val.asInt());
+        }
+        return SupportedTypes(quantizedTensor);
+    } else if (jsonValue.isInt64()) {
+        auto millis = jsonValue.asInt64();
+        auto time_point = std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds>(
+                std::chrono::milliseconds(millis));
+        return SupportedTypes(DateTime(time_point));
+    } else if (jsonValue.isObject()) {
+        ColBERTContextData colbertData;
+
+        // Deserialize doc_codes
+        const Json::Value& doc_codes = jsonValue["doc_codes"];
+        if (doc_codes.isArray()) {
+            for (const auto& code : doc_codes) {
+                colbertData.doc_codes.push_back(code.asInt());
+            }
+        }
+
+        // Deserialize doc_residuals
+        const Json::Value& doc_residuals = jsonValue["doc_residuals"];
+        if (doc_residuals.isArray()) {
+            for (const auto& residual : doc_residuals) {
+                colbertData.doc_residuals.push_back(residual.asInt());
+            }
+        }
+
+        return SupportedTypes(colbertData);
+    }
+
+    throw std::runtime_error("Unsupported JSON type");
+}
+
 
 struct FieldValue {
     std::string name;
@@ -106,6 +231,105 @@ struct FieldValue {
               data_type(DataType::COLBERT),
               num_tensors(num_tensors),
               value(v) {}
+
+    Json::Value toJson() const {
+        Json::Value root;
+        root["name"] = name;
+        root["data_type"] = dataTypeToString(data_type);
+        root["num_tensors"] = static_cast<Json::UInt64>(num_tensors);
+
+        // Serialize the SupportedTypes variant
+        switch (data_type) {
+            case DataType::INTEGER:
+                root["value"] = std::get<int64_t>(value);
+                break;
+            case DataType::FLOAT:
+                root["value"] = std::get<float>(value);
+                break;
+            case DataType::TEXT:
+                root["value"] = std::get<std::string>(value);
+                break;
+            case DataType::DATETIME: {
+                auto time = std::get<DateTime>(value).time_since_epoch();
+                auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(time).count();
+
+                root["value"] = millis;
+                break;
+            }
+            case DataType::TENSOR: {
+                Json::Value v;
+                auto tensor = std::get<Tensor>(value);
+                for( auto& t : tensor ) {
+                    v.append(t);
+                }
+                root["value"] = v;
+                break;
+            }
+            case DataType::QUANTIZED_TENSOR: {
+                Json::Value v;
+                auto tensor = std::get<QuantizedTensor>(value);
+                for( auto& t : tensor ) {
+                    v.append(t);
+                }
+                root["value"] = v;
+                break;
+            }
+            default:
+                // Handle unknown data type if necessary
+                break;
+        }
+
+        return root;
+    }
+
+    static FieldValue fromJson(const Json::Value &root) {
+        FieldValue fieldValue;
+        fieldValue.name = root["name"].asString();
+        // convert a string data type to an enum
+        fieldValue.data_type = stringToDataType(root["data_type"].asString());
+        fieldValue.num_tensors = root["num_tensors"].asUInt64();
+
+        // Deserialize the SupportedTypes variant
+        switch (fieldValue.data_type) {
+            case DataType::INTEGER:
+                fieldValue.value = root["value"].asInt64();
+                break;
+            case DataType::FLOAT:
+                fieldValue.value = root["value"].asFloat();
+                break;
+            case DataType::TEXT:
+                fieldValue.value = root["value"].asString();
+                break;
+            case DataType::DATETIME: {
+                auto millis = root["value"].asInt64();
+                auto time_point = std::chrono::time_point<std::chrono::system_clock, std::chrono::milliseconds>(
+                        std::chrono::milliseconds(millis));
+                fieldValue.value = DateTime(time_point);
+                break;
+            }
+            case DataType::TENSOR: {
+                Tensor tensor;
+                for (const auto &v : root["value"]) {
+                    tensor.push_back(v.asFloat());  // Assuming tensor is a vector of floats
+                }
+                fieldValue.value = tensor;
+                break;
+            }
+            case DataType::QUANTIZED_TENSOR: {
+                QuantizedTensor tensor;
+                for (const auto &v : root["value"]) {
+                    tensor.push_back(v.asInt());  // Assuming quantized tensor is a vector of ints
+                }
+                fieldValue.value = tensor;
+                break;
+            }
+            default:
+                // Handle unknown data type if necessary
+                break;
+        }
+
+        return fieldValue;
+    }
 };
 
 } // namespace lintdb

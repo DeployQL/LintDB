@@ -8,6 +8,7 @@
 #include "lintdb/query/KnnNearestCentroids.h"
 #include "lintdb/schema/DataTypes.h"
 #include "lintdb/schema/DocEncoder.h"
+#include "lintdb/scoring/ContextCollector.h"
 
 namespace lintdb {
 QueryExecutor::QueryExecutor(Scorer& retriever, Scorer& ranker)
@@ -20,50 +21,54 @@ std::vector<ScoredDocument> QueryExecutor::execute(
         const SearchOptions& opts) {
     std::unique_ptr<DocIterator> doc_it = query.root->process(context, opts);
 
-    std::priority_queue<
-            ScoredDocument,
-            std::vector<ScoredDocument>,
-            std::less<>>
-            results;
-    for (; doc_it->is_valid(); doc_it->advance()) {
-        if (opts.expected_id != -1 && doc_it->doc_id() == opts.expected_id) {
-            LOG(INFO) << "expected document found";
-        }
+    ContextCollector collector;
+    collector.add_field(context, context.colbert_context);
+
+    std::vector<std::pair<idx_t, std::vector<DocValue>>> documents;
+    for(; doc_it->is_valid(); doc_it->advance()) {
         std::vector<DocValue> dvs = doc_it->fields();
-        // optionally decode quantized tensors from fields.
-        for (auto& dv : dvs) {
+        std::vector<DocValue> added_context = collector.get_context_values(doc_it->doc_id());
+
+        for (auto& dv : added_context) {
+            dvs.push_back(dv);
+        }
+        documents.emplace_back(doc_it->doc_id(), dvs);
+    }
+
+    std::vector<ScoredDocument> results(documents.size());
+#pragma omp parallel for if(documents.size() > 100)
+    for(int i = 0; i < documents.size(); i++) {
+        auto doc = documents[i];
+        for (auto& dv : doc.second) {
             // ColBERT is a special case where we don't have a value to decode.
             if (dv.unread_value) {
                 continue;
             }
             dv = decode_vectors(context, dv);
         }
+        ScoredDocument scored = retriever.score(context, doc.first, doc.second);
 
-        ScoredDocument scored = retriever.score(context, doc_it->doc_id(), dvs);
-        if (opts.expected_id != -1 && doc_it->doc_id() == opts.expected_id) {
+        if (opts.expected_id != -1 && doc.first == opts.expected_id) {
             LOG(INFO) << "\tscore: " << scored.score;
         }
-        results.push(scored);
+
+        results[i] = scored;
     }
 
-    std::vector<ScoredDocument> top_results;
-    while (!results.empty() && top_results.size() < opts.num_second_pass) {
-        top_results.push_back(results.top());
-        results.pop();
-    }
+    std::sort(results.begin(), results.end(), std::greater<>());
 
-    std::vector<ScoredDocument> top_results_ranked(top_results.size());
-    for (size_t i = 0; i < top_results.size(); i++) {
+    size_t num_to_rank = std::min(results.size(), opts.num_second_pass);
+
+    std::vector<ScoredDocument> top_results_ranked(num_to_rank);
+    for (size_t i = 0; i < num_to_rank; i++) {
         top_results_ranked[i] = ranker.score(
-                context, top_results[i].doc_id, top_results[i].values);
+                context, results[i].doc_id, results[i].values);
     }
 
     std::sort(
             top_results_ranked.begin(),
             top_results_ranked.end(),
-            [](const ScoredDocument& a, const ScoredDocument& b) {
-                return a.score > b.score;
-            });
+            std::greater<>());
 
     // return num_results from top_results_ranked
     std::vector<ScoredDocument> final_results;

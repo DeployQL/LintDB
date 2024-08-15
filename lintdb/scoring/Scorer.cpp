@@ -3,6 +3,7 @@
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/query/decode.h"
 #include "lintdb/schema/DocEncoder.h"
+#include <algorithm>
 
 namespace lintdb {
 ColBERTScorer::ColBERTScorer(const lintdb::QueryContext& context) {}
@@ -60,18 +61,22 @@ ScoredDocument ColBERTScorer::score(
 }
 
 PlaidScorer::PlaidScorer(const QueryContext& context) {
-    uint8_t colbert_field_id =
-            context.getFieldMapper()->getFieldID(context.colbert_context);
-    colbert_it = context.getIndex()->get_context_iterator(
-            context.getTenant(), colbert_field_id);
 }
 
 ScoredDocument PlaidScorer::score(
         QueryContext& context,
         idx_t doc_id,
         std::vector<DocValue>& fvs) const {
-    colbert_it->advance(doc_id);
-    if (!colbert_it->is_valid() || colbert_it->get_key().doc_id() != doc_id) {
+
+    int colbert_idx = -1;
+    for (size_t i = 0; i < fvs.size(); i++) {
+        if (fvs[i].type == DataType::COLBERT) {
+            colbert_idx = i;
+            break;
+        }
+    }
+
+    if (colbert_idx == -1) {
         LOG(WARNING) << "plaid context field not found for doc_id: " << doc_id;
         return {0.0, doc_id, fvs};
     }
@@ -88,18 +93,10 @@ ScoredDocument PlaidScorer::score(
     std::shared_ptr<Quantizer> quantizer =
             context.getQuantizer(context.colbert_context);
 
-    auto context_str = colbert_it->get_value();
-
     // gives us a potentially quantized vector
-    SupportedTypes colbert_context =
-            DocEncoder::decode_supported_types(context_str);
+    SupportedTypes colbert_context = fvs[colbert_idx].value;
     ColBERTContextData codes = std::get<ColBERTContextData>(colbert_context);
     size_t num_tensors = codes.doc_codes.size();
-
-    // create DocValues for the context info.
-    uint8_t colbert_field_id =
-            context.getFieldMapper()->getFieldID(context.colbert_context);
-    fvs.emplace_back(colbert_context, colbert_field_id, DataType::COLBERT);
 
     QueryTensor query =
             context.getOrCreateNearestCentroids(context.colbert_context)

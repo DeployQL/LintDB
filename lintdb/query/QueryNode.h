@@ -10,6 +10,8 @@
 #include "lintdb/query/DocIterator.h"
 #include "lintdb/schema/DataTypes.h"
 #include "lintdb/SearchOptions.h"
+#include <json/reader.h>
+#include <json/writer.h>
 
 namespace lintdb {
 class QueryContext;

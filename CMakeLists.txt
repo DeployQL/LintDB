@@ -58,7 +58,8 @@ endif()
 set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
 
 option(ENABLE_PYTHON "Build Python extension." ON)
-option(ENABLE_BENCHMARKS "Build benchmarks." OFF)
+option(ENABLE_BENCHMARKS "Build benchmarks." ON)
+option(ENABLE_SERVER "Build the server." OFF)
 
 add_subdirectory(lintdb)
 
@@ -66,10 +67,15 @@ if(ENABLE_PYTHON)
   add_subdirectory(lintdb/python)
 endif()
 
+IF(ENABLE_SERVER)
+  add_subdirectory(lintdb/server)
+endif()
+
 include(CTest)
 if(BUILD_TESTING)
   add_subdirectory(tests)
 endif()
+
 
 if(ENABLE_BENCHMARKS)
   add_subdirectory(benchmarks)
