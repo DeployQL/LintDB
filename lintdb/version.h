@@ -2,7 +2,7 @@
 
 #include <string>
 
-#define LINTDB_VERSION_STRING "0.5.0"
+#define LINTDB_VERSION_STRING "0.5.1"
 
 namespace lintdb {
 struct Version {
