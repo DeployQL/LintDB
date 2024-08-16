@@ -1,5 +1,6 @@
 * [Introduction](index.md)
 * [Getting Started](getting-started.md)
 * [Installation](installation.md)
+* [Examples](examples.md)
 * [Development](development.md)
 * [Reference](reference.md)
