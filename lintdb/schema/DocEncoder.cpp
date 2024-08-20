@@ -20,6 +20,7 @@ std::vector<PostingData> DocEncoder::encode_inverted_data(
 
     std::vector<std::string> values;
     switch (data.value.data_type) {
+        case DataType::TENSOR_FLOAT16:
         case DataType::TENSOR: {
             // a raw tensor should never be here. it means that it skipped
             // quantization. all tensors should look like QuantizedTensor going
@@ -153,6 +154,25 @@ std::vector<PostingData> DocEncoder::encode_inverted_data(
                     data.tenant,
                     data.field,
                     DataType::FLOAT,
+                    data.value.value,
+                    data.doc_id);
+
+            keys.push_back(key);
+
+            Buffer buf;
+            size_t written = bitsery::quickSerialization(
+                    OutputAdapter{buf}, data.value.value);
+
+            auto st = std::string(buf.begin(), buf.begin() + written);
+            values.push_back(st);
+
+            break;
+        }
+        case DataType::FLOAT16: {
+            std::string key = create_index_id(
+                    data.tenant,
+                    data.field,
+                    DataType::FLOAT16,
                     data.value.value,
                     data.doc_id);
 

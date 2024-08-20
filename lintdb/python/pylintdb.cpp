@@ -52,6 +52,10 @@ FieldValue FloatFieldValue(std::string name, float value) {
     return FieldValue(name, value);
 }
 
+FieldValue Float16FieldValue(std::string name, float16 value) {
+    return FieldValue(name, value);
+}
+
 FieldValue TextFieldValue(std::string name, const std::string& value) {
     return FieldValue(name, value);
 }
@@ -475,6 +479,7 @@ NB_MODULE(core, m) {
     // Wrapper functions
     m.def("IntFieldValue", &IntFieldValue, "Create FieldValue from integer");
     m.def("FloatFieldValue", &FloatFieldValue, "Create FieldValue from float");
+    m.def("Float16FieldValue", &Float16FieldValue, "Create FieldValue from float");
     m.def("TextFieldValue", &TextFieldValue, "Create FieldValue from string");
     m.def("TensorFieldValue",
           &TensorFieldValue,

@@ -11,4 +11,7 @@ typedef int64_t idx_t;
 typedef idx_t code_t;
 typedef uint8_t residual_t; // the residual codes saved for each token vector.
 
+typedef uint16_t float16;
+typedef uint16_t bfloat16;
+
 #endif

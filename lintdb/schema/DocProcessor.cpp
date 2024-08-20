@@ -52,7 +52,13 @@ void DocumentProcessor::processDocument(
         validateField(field, fv);
 
         ProcessedData processed_data;
-        processed_data.centroid_ids = assignIVFCentroids(field, fv);
+        static std::vector<FieldType> ivf_field_types = {FieldType::Colbert, FieldType::Indexed};
+
+        auto needs_ivf = std::find_first_of(field.field_types.begin(), field.field_types.end(), ivf_field_types.begin(), ivf_field_types.end());
+
+        if(needs_ivf != field.field_types.end()) {
+            processed_data.centroid_ids = assignIVFCentroids(field, fv);
+        }
 
         FieldValue quantizedValue = quantizeField(field, fv);
 
@@ -72,8 +78,6 @@ void DocumentProcessor::processDocument(
                     // quantized tensor to a ColBERTContextData.
                     ColBERTContextData cd;
                     cd.doc_codes = processed_data.centroid_ids;
-                    assert(processed_data.value.data_type ==
-                           DataType::QUANTIZED_TENSOR);
 
                     QuantizedTensor residuals = std::get<QuantizedTensor>(
                             processed_data.value.value);
@@ -179,7 +183,7 @@ void DocumentProcessor::processDocument(
 std::vector<idx_t> DocumentProcessor::assignIVFCentroids(
         const Field& field,
         const FieldValue& value) {
-    if (field.data_type == DataType::TENSOR) {
+    if (field.data_type == DataType::TENSOR || field.data_type == DataType::TENSOR_FLOAT16) {
         std::shared_ptr<ICoarseQuantizer> encoder =
                 coarse_quantizer_map.at(field.name);
         assert(encoder->is_trained());
@@ -205,8 +209,9 @@ void DocumentProcessor::validateField(
 FieldValue DocumentProcessor::quantizeField(
         const Field& field,
         const FieldValue& value) {
-    if (field.data_type == DataType::TENSOR ||
-        field.data_type == DataType::QUANTIZED_TENSOR) {
+    if ((field.data_type == DataType::TENSOR ||
+        field.data_type == DataType::QUANTIZED_TENSOR ||
+         field.data_type == DataType::TENSOR_FLOAT16)) {
         // Check if quantizer exists for the field
         LINTDB_THROW_IF_NOT(quantizer_map.count(field.name) > 0);
 

@@ -81,7 +81,8 @@ set(LINT_DB_HEADERS
     utils/endian.h
     query/decode.h
     utils/progress_bar.h
-    version.h)
+        utils/half.h
+        version.h)
 
 set(LINT_DB_HEADERS
     ${LINT_DB_HEADERS}
