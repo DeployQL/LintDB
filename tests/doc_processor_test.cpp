@@ -18,7 +18,7 @@ Schema createSampleSchema() {
     Schema schema;
     Field field1 = {"intField", DataType::INTEGER, {FieldType::Stored}, {0, "", QuantizerType::NONE}};
     Field field2 = {"floatField", DataType::FLOAT, {FieldType::Stored}, {0, "", QuantizerType::NONE}};
-    Field field3 = {"tensorField", DataType::TENSOR, {FieldType::Stored}, {2, "", QuantizerType::PRODUCT_ENCODER}};
+    Field field3 = {"float16Field", DataType::FLOAT16, {FieldType::Stored}, {0, "", QuantizerType::NONE}};
     schema.fields.push_back(field1);
     schema.fields.push_back(field2);
     schema.fields.push_back(field3);
@@ -30,9 +30,34 @@ Document createSampleDocument() {
     Document document(1, {
             FieldValue("intField", 42),
             FieldValue("floatField", 3.14f),
-            FieldValue("tensorField", Tensor{0.1f, 0.2f})
+            FieldValue("float16Field", float16(0.1f))
     });
     return document;
+}
+
+TEST(DocumentProcessor, DisableProcessFields) {
+    std::unique_ptr<MockIndexWriter> mockIndexWriter = std::make_unique<MockIndexWriter>();
+    auto mockQuantizer = std::make_shared<MockQuantizer>();
+    std::shared_ptr<lintdb::FieldMapper> fieldMapper = std::make_shared<lintdb::FieldMapper>();
+
+    auto schema = createSampleSchema();
+    fieldMapper->addSchema(schema);
+
+    std::unordered_map<std::string, std::shared_ptr<lintdb::Quantizer>> quantizerMap = {
+            {"intField", mockQuantizer},
+            {"floatField", mockQuantizer},
+            {"float16Field", mockQuantizer}
+    };
+    // as long as we don't use colbert or index fields, we don't need a coarse quantizer
+    std::unordered_map<std::string, std::shared_ptr<lintdb::ICoarseQuantizer>> coarseQuantizerMap;
+
+    lintdb::DocumentProcessor processor(schema, quantizerMap, coarseQuantizerMap, fieldMapper, std::move(mockIndexWriter));
+
+    auto document = createSampleDocument();
+
+    // quantizer does not get called for non-tensor fields
+    EXPECT_CALL(*mockQuantizer, sa_encode(_, _, _)).Times(0);
+    processor.processDocument(1, document);
 }
 
 

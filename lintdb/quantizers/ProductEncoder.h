@@ -9,7 +9,7 @@ struct IndexPQ;
 }
 
 namespace lintdb {
-struct ProductEncoder : public Quantizer {
+struct ProductEncoder : public Quantizer{
     std::shared_ptr<faiss::IndexPQ> pq;
     size_t nbits; // number of bits used in binarizing the residuals.
     size_t dim;   // number of dimensions per embedding.

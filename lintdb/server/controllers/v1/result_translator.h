@@ -23,18 +23,5 @@ class SearchResultJsonTranslator {
 
         return root;
     }
-
-    static lintdb::SearchResult fromJson(const Json::Value& json) {
-        lintdb::SearchResult result;
-        result.id = json["id"].asInt64();
-        result.score = json["score"].asFloat();
-
-        const Json::Value& metadataJson = json["metadata"];
-        for (const auto& key : metadataJson.getMemberNames()) {
-            result.metadata[key] = lintdb::jsonToSupportedType(metadataJson[key]);
-        }
-
-        return result;
-    }
 };
 }
