@@ -2,37 +2,37 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://deployql.github.io/LintDB/latest/</loc>
-         <lastmod>2024-08-16</lastmod>
+         <lastmod>2024-08-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://deployql.github.io/LintDB/latest/development/</loc>
-         <lastmod>2024-08-16</lastmod>
+         <lastmod>2024-08-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://deployql.github.io/LintDB/latest/examples/</loc>
-         <lastmod>2024-08-16</lastmod>
+         <lastmod>2024-08-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://deployql.github.io/LintDB/latest/getting-started/</loc>
-         <lastmod>2024-08-16</lastmod>
+         <lastmod>2024-08-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://deployql.github.io/LintDB/latest/installation/</loc>
-         <lastmod>2024-08-16</lastmod>
+         <lastmod>2024-08-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://deployql.github.io/LintDB/latest/nav/</loc>
-         <lastmod>2024-08-16</lastmod>
+         <lastmod>2024-08-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://deployql.github.io/LintDB/latest/reference/</loc>
-         <lastmod>2024-08-16</lastmod>
+         <lastmod>2024-08-21</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
