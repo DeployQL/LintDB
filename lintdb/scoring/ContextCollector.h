@@ -3,8 +3,8 @@
 #include <vector>
 #include <memory>
 #include <string>
-#include "lintdb/query/DocIterator.h"
 #include "lintdb/query/QueryContext.h"
+#include "lintdb/query/DocValue.h"
 #include "lintdb/invlists/ContextIterator.h"
 #include "lintdb/schema/DocEncoder.h"
 #include <glog/logging.h>
@@ -47,7 +47,7 @@ class ContextCollector {
         context_iterators.push_back(std::move(it));
     }
 
-    std::vector<DocValue> get_context_values(const idx_t doc_id) {
+    std::vector<DocValue> get_context_values(const idx_t doc_id) const {
         std::vector<DocValue> results;
         results.reserve(context_iterators.size());
 
@@ -77,6 +77,7 @@ class ContextCollector {
     std::vector<uint8_t> context_field_ids;
     std::vector<DataType> context_data_types;
     std::vector<std::unique_ptr<ContextIterator>> context_iterators;
+
 };
 
 } // namespace lintdb

@@ -9,6 +9,7 @@
 #include "lintdb/query/KnnNearestCentroids.h"
 #include "lintdb/query/QueryContext.h"
 #include "lintdb/schema/DataTypes.h"
+#include "lintdb/scoring/ContextCollector.h"
 
 namespace lintdb {
 std::unique_ptr<DocIterator> TermQueryNode::process(
@@ -21,7 +22,8 @@ std::unique_ptr<DocIterator> TermQueryNode::process(
             this->value.data_type,
             this->value.value);
     std::unique_ptr<Iterator> it = context.getIndex()->get_iterator(prefix);
-    return std::make_unique<TermIterator>(std::move(it), this->value.data_type);
+    return std::make_unique<TermIterator>(
+            std::move(it), this->value.data_type, score_method);
 }
 
 std::unique_ptr<DocIterator> VectorQueryNode::process(
@@ -70,7 +72,7 @@ std::unique_ptr<DocIterator> VectorQueryNode::process(
         auto field_types = context.getFieldMapper()->getFieldTypes(field_id);
 
         auto doc_it = std::make_unique<TermIterator>(
-                std::move(it), DataType::QUANTIZED_TENSOR, true);
+                std::move(it), DataType::QUANTIZED_TENSOR, UnaryScoringMethod::ONE, true);
         iterators.push_back(std::move(doc_it));
     }
     VLOG(5) << "Invalid centroids: " << invalid_centroids.size() << " out of "
@@ -88,7 +90,14 @@ std::unique_ptr<DocIterator> VectorQueryNode::process(
         VLOG(5) << "Valid centroid: " << valid_centroid;
     }
 
-    return std::make_unique<ANNIterator>(std::move(iterators));
+    // TODO (mbarta): We can improve how we encapsulate the context collection for scoring.
+    // TODO (mbarta): We can validate that the fields require context by checking the field.
+    ContextCollector context_collector;
+    if (score_method == EmbeddingScoringMethod::PLAID || score_method == EmbeddingScoringMethod::COLBERT) {
+       context_collector.add_field(context, this->value.name);
+    }
+
+    return std::make_unique<ANNIterator>(std::move(iterators), std::move(context_collector), std::move(nearest_centroids), score_method);
 }
 
 std::unique_ptr<DocIterator> AndQueryNode::process(
@@ -98,6 +107,16 @@ std::unique_ptr<DocIterator> AndQueryNode::process(
     for (const auto& child : children_) {
         iterators.emplace_back(child->process(context, opts));
     }
-    return std::make_unique<AndIterator>(std::move(iterators));
+    return std::make_unique<AndIterator>(std::move(iterators), score_method);
+}
+
+std::unique_ptr<DocIterator> OrQueryNode::process(
+        QueryContext& context,
+        const SearchOptions& opts) {
+    std::vector<std::unique_ptr<DocIterator>> iterators;
+    for (const auto& child : children_) {
+        iterators.emplace_back(child->process(context, opts));
+    }
+    return std::make_unique<OrIterator>(std::move(iterators), score_method);
 }
 } // namespace lintdb

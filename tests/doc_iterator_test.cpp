@@ -5,6 +5,9 @@
 #include "lintdb/invlists/Iterator.h"
 #include "lintdb/schema/DocEncoder.h"
 #include "lintdb/schema/DocProcessor.h"
+#include "lintdb/query/KnnNearestCentroids.h"
+#include "lintdb/scoring/scoring_methods.h"
+#include "lintdb/scoring/ContextCollector.h"
 
 using namespace lintdb;
 
@@ -68,7 +71,7 @@ TEST(DocIteratorTest, AdvanceAndHasNext) {
     EXPECT_CALL(*mock_it, is_valid()).WillOnce(testing::Return(true)).WillOnce(testing::Return(false));
     EXPECT_CALL(*mock_it, next()).Times(1);
 
-    TermIterator di(std::move(mock_it), lintdb::DataType::INTEGER);
+    TermIterator di(std::move(mock_it), lintdb::DataType::INTEGER, lintdb::UnaryScoringMethod::ONE);
     EXPECT_TRUE(di.is_valid());
     di.advance();
     EXPECT_FALSE(di.is_valid());
@@ -79,13 +82,15 @@ TEST_F(ANNIteratorTest, CorrectAggregation) {
     std::unique_ptr<VectorIterator> it1 = std::make_unique<VectorIterator>(std::vector<idx_t>({3, 4, 5}));
     std::unique_ptr<VectorIterator> it2 = std::make_unique<VectorIterator>(std::vector<idx_t>({1, 2, 6}));
 
-    auto dit1 = std::make_unique<TermIterator>(std::move(it1), lintdb::DataType::INTEGER);
-    auto dit2 = std::make_unique<TermIterator>(std::move(it2), lintdb::DataType::INTEGER);
+    auto dit1 = std::make_unique<TermIterator>(std::move(it1), lintdb::DataType::INTEGER, lintdb::UnaryScoringMethod::ONE);
+    auto dit2 = std::make_unique<TermIterator>(std::move(it2), lintdb::DataType::INTEGER, lintdb::UnaryScoringMethod::ONE);
     std::vector<std::unique_ptr<DocIterator>> iterators;
     iterators.push_back(std::move(dit1));
     iterators.push_back(std::move(dit2));
 
-    ANNIterator ann(std::move(iterators));
+    std::shared_ptr<KnnNearestCentroids> knn;
+    ContextCollector context;
+    ANNIterator ann(std::move(iterators), std::move(context), knn, lintdb::EmbeddingScoringMethod::PLAID);
     EXPECT_EQ(ann.doc_id(), 1);
     EXPECT_TRUE(ann.is_valid());
     ann.advance();
@@ -104,10 +109,11 @@ TEST_F(ANNIteratorTest, CorrectAggregation) {
 
 TEST_F(ANNIteratorTest, NoDuplicateDocumentIds) {
     std::vector<std::unique_ptr<DocIterator>> iterators;
-    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{1, 2, 3}), lintdb::DataType::TENSOR));
-    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{2, 3, 4}), lintdb::DataType::TENSOR));
-
-    ANNIterator ann_iter(std::move(iterators));
+    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{1, 2, 3}), lintdb::DataType::TENSOR, lintdb::UnaryScoringMethod::ONE));
+    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{2, 3, 4}), lintdb::DataType::TENSOR, lintdb::UnaryScoringMethod::ONE));
+    std::shared_ptr<KnnNearestCentroids> knn;
+    ContextCollector context;
+    ANNIterator ann_iter(std::move(iterators), std::move(context), knn, lintdb::EmbeddingScoringMethod::PLAID);
 
     std::unordered_set<idx_t> seen_ids;
     while (ann_iter.is_valid()) {
@@ -120,10 +126,12 @@ TEST_F(ANNIteratorTest, NoDuplicateDocumentIds) {
 
 TEST_F(ANNIteratorTest, AggregatesFieldsFromMultipleIterators) {
     std::vector<std::unique_ptr<DocIterator>> iterators;
-    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{1, 2, 3}), lintdb::DataType::TENSOR));
-    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{1, 2, 3}), lintdb::DataType::TENSOR));
+    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{1, 2, 3}), lintdb::DataType::TENSOR, lintdb::UnaryScoringMethod::ONE));
+    iterators.push_back(std::make_unique<TermIterator>(std::make_unique<VectorIterator>(std::vector<idx_t>{1, 2, 3}), lintdb::DataType::TENSOR, lintdb::UnaryScoringMethod::ONE));
 
-    ANNIterator ann_iter(std::move(iterators));
+    std::shared_ptr<KnnNearestCentroids> knn;
+    ContextCollector context;
+    ANNIterator ann_iter(std::move(iterators), std::move(context), knn, lintdb::EmbeddingScoringMethod::PLAID);
 
     size_t count = 0;
     while (ann_iter.is_valid()) {
@@ -141,13 +149,13 @@ TEST_F(AndIteratorTest, SynchronizedAdvancement) {
     std::unique_ptr<VectorIterator> it1 = std::make_unique<VectorIterator>(std::vector<idx_t>({3, 4, 5}));
     std::unique_ptr<VectorIterator> it2 = std::make_unique<VectorIterator>(std::vector<idx_t>({2, 3, 4}));
 
-    auto dit1 = std::make_unique<TermIterator>(std::move(it1), lintdb::DataType::INTEGER);
-    auto dit2 = std::make_unique<TermIterator>(std::move(it2), lintdb::DataType::INTEGER);
+    auto dit1 = std::make_unique<TermIterator>(std::move(it1), lintdb::DataType::INTEGER, lintdb::UnaryScoringMethod::ONE);
+    auto dit2 = std::make_unique<TermIterator>(std::move(it2), lintdb::DataType::INTEGER, lintdb::UnaryScoringMethod::ONE);
     std::vector<std::unique_ptr<DocIterator>> iterators;
     iterators.push_back(std::move(dit1));
     iterators.push_back(std::move(dit2));
 
-    AndIterator andIt(std::move(iterators));
+    AndIterator andIt(std::move(iterators), lintdb::NaryScoringMethod::SUM);
     EXPECT_EQ(andIt.doc_id(), 3);
     EXPECT_TRUE(andIt.is_valid());
     andIt.advance();
@@ -160,19 +168,21 @@ TEST_F(AndIteratorTest, SynchronizedAdvancement2) {
     std::unique_ptr<VectorIterator> it1 = std::make_unique<VectorIterator>(std::vector<idx_t>({1, 2, 3, 4}));
     std::unique_ptr<VectorIterator> it2 = std::make_unique<VectorIterator>(std::vector<idx_t>({5, 6, 7 ,8}));
 
-    auto dit1 = std::make_unique<TermIterator>(std::move(it1), lintdb::DataType::INTEGER);
-    auto dit2 = std::make_unique<TermIterator>(std::move(it2), lintdb::DataType::INTEGER);
+    auto dit1 = std::make_unique<TermIterator>(std::move(it1), lintdb::DataType::INTEGER, lintdb::UnaryScoringMethod::ONE);
+    auto dit2 = std::make_unique<TermIterator>(std::move(it2), lintdb::DataType::INTEGER, lintdb::UnaryScoringMethod::ONE);
     std::vector<std::unique_ptr<DocIterator>> iterators;
     iterators.push_back(std::move(dit1));
     iterators.push_back(std::move(dit2));
 
-    ANNIterator annIt(std::move(iterators));
+    std::shared_ptr<KnnNearestCentroids> knn;
+    ContextCollector context;
+    ANNIterator annIt(std::move(iterators), std::move(context), knn, lintdb::EmbeddingScoringMethod::PLAID);
 
     std::unique_ptr<VectorIterator> it3 = std::make_unique<VectorIterator>(std::vector<idx_t>({1, 3, 5, 7}));
     std::vector<std::unique_ptr<DocIterator>> iterators2;
     iterators2.push_back(std::make_unique<ANNIterator>(std::move(annIt)));
-    iterators2.push_back(std::make_unique<TermIterator>(std::move(it3), lintdb::DataType::INTEGER));
-    AndIterator andIt(std::move(iterators2));
+    iterators2.push_back(std::make_unique<TermIterator>(std::move(it3), lintdb::DataType::INTEGER, lintdb::UnaryScoringMethod::ONE));
+    AndIterator andIt(std::move(iterators2), lintdb::NaryScoringMethod::SUM);
 
     EXPECT_EQ(andIt.doc_id(), 1);
     EXPECT_TRUE(andIt.is_valid());

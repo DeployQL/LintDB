@@ -1,9 +1,10 @@
 #include "Scorer.h"
 #include <glog/logging.h>
+#include <algorithm>
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/query/decode.h"
 #include "lintdb/schema/DocEncoder.h"
-#include <algorithm>
+#include "ScoredDocument.h"
 
 namespace lintdb {
 ColBERTScorer::ColBERTScorer(const lintdb::QueryContext& context) {}

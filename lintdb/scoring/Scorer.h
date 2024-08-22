@@ -10,30 +10,9 @@
 #include "lintdb/query/QueryContext.h"
 #include "lintdb/schema/DataTypes.h"
 #include "lintdb/scoring/plaid.h"
+#include "ScoredDocument.h"
 
 namespace lintdb {
-
-struct ScoredDocument {
-    float score = 0;
-    idx_t doc_id = -1;
-    std::vector<DocValue>
-            values; /// ScoredDocument takes ownership of the values, because
-    /// we assume we are iterating over a DocIterator and the values are only
-    /// valid for the duration of the iteration.
-
-    ScoredDocument() = default;
-
-    ScoredDocument(float score, idx_t doc_id, std::vector<DocValue> values)
-            : score(score), doc_id(doc_id), values(std::move(values)) {}
-
-    bool operator<(const ScoredDocument& other) const {
-        return score < other.score;
-    }
-
-    bool operator>(const ScoredDocument& other) const {
-        return score > other.score;
-    }
-};
 
 /**
  * Scorer is an interface for scoring documents.

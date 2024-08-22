@@ -10,20 +10,28 @@
 #include "lintdb/query/DocIterator.h"
 #include "lintdb/schema/DataTypes.h"
 #include "lintdb/SearchOptions.h"
+#include "lintdb/scoring/scoring_methods.h"
 #include <json/reader.h>
 #include <json/writer.h>
 
 namespace lintdb {
 class QueryContext;
 
-enum class QueryNodeType { TERM, VECTOR, AND };
+enum class QueryNodeType {
+    TERM,
+    VECTOR,
+    AND,
+    OR,
+};
 
 class QueryNode {
    public:
     QueryNode() = delete;
-    explicit QueryNode(QueryNodeType op) : operator_(op){};
-    explicit QueryNode(QueryNodeType op, FieldValue& value)
-            : operator_(op), value(value){};
+    explicit QueryNode(QueryNodeType op,
+            UnaryScoringMethod method = UnaryScoringMethod::ONE) : operator_(op), score_method(method){};
+    explicit QueryNode(QueryNodeType op, FieldValue& value,
+            UnaryScoringMethod method = UnaryScoringMethod::ONE)
+            : operator_(op), value(value), score_method(method) {};
     virtual std::unique_ptr<DocIterator> process(
             QueryContext& context,
             const SearchOptions& opts) = 0;
@@ -33,29 +41,19 @@ class QueryNode {
    protected:
     QueryNodeType operator_;
     FieldValue value;
+    UnaryScoringMethod score_method = UnaryScoringMethod::ONE;
 };
 
 class TermQueryNode : public QueryNode {
    public:
     TermQueryNode() = delete;
 
-    TermQueryNode(FieldValue& value) : QueryNode(QueryNodeType::TERM, value){};
+    TermQueryNode(FieldValue& value,
+            UnaryScoringMethod method = UnaryScoringMethod::ONE) : QueryNode(QueryNodeType::TERM, value, method){};
 
     std::unique_ptr<DocIterator> process(
             QueryContext& context,
             const SearchOptions& opts) override;
-};
-
-class MultiQueryNode : public QueryNode {
-   public:
-    explicit MultiQueryNode(QueryNodeType op) : QueryNode(op){};
-
-    inline void add_child(std::unique_ptr<QueryNode> child) {
-        children_.push_back(std::move(child));
-    }
-
-   protected:
-    std::vector<std::unique_ptr<QueryNode>> children_ = {};
 };
 
 /**
@@ -67,18 +65,38 @@ class MultiQueryNode : public QueryNode {
 class VectorQueryNode : public QueryNode {
    public:
     VectorQueryNode() = delete;
-    VectorQueryNode(FieldValue& value)
+    VectorQueryNode(FieldValue& value,
+                    EmbeddingScoringMethod method = EmbeddingScoringMethod::PLAID)
             : QueryNode(QueryNodeType::VECTOR, value){};
     std::unique_ptr<DocIterator> process(
             QueryContext& context,
             const SearchOptions& opts) override;
+
+   private:
+    EmbeddingScoringMethod score_method = EmbeddingScoringMethod::PLAID;
+};
+
+
+class MultiQueryNode : public QueryNode {
+   public:
+    explicit MultiQueryNode(QueryNodeType op,
+            NaryScoringMethod method = NaryScoringMethod::SUM) : QueryNode(op){};
+
+    inline void add_child(std::unique_ptr<QueryNode> child) {
+        children_.push_back(std::move(child));
+    }
+
+   protected:
+    std::vector<std::unique_ptr<QueryNode>> children_ = {};
+    NaryScoringMethod score_method = NaryScoringMethod::SUM;
 };
 
 class AndQueryNode : public MultiQueryNode {
    public:
     AndQueryNode() = delete;
-    explicit AndQueryNode(std::vector<std::unique_ptr<QueryNode>> its)
-            : MultiQueryNode(QueryNodeType::AND) {
+    explicit AndQueryNode(std::vector<std::unique_ptr<QueryNode>> its,
+                          NaryScoringMethod method = NaryScoringMethod::SUM)
+            : MultiQueryNode(QueryNodeType::AND, method) {
         for (auto& child : its) {
             children_.push_back(std::move(child));
         }
@@ -90,6 +108,25 @@ class AndQueryNode : public MultiQueryNode {
    protected:
     std::vector<std::unique_ptr<QueryNode>> children_ = {};
 };
+
+class OrQueryNode : public MultiQueryNode {
+   public:
+    OrQueryNode() = delete;
+    explicit OrQueryNode(std::vector<std::unique_ptr<QueryNode>> its,
+                         NaryScoringMethod method = NaryScoringMethod::SUM)
+            : MultiQueryNode(QueryNodeType::OR, method) {
+        for (auto& child : its) {
+            children_.push_back(std::move(child));
+        }
+    };
+    std::unique_ptr<DocIterator> process(
+            QueryContext& context,
+            const SearchOptions& opts) override;
+
+   protected:
+    std::vector<std::unique_ptr<QueryNode>> children_ = {};
+};
+
 
 } // namespace lintdb
 
