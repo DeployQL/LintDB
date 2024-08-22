@@ -130,7 +130,7 @@ void ANNIterator::heapify(size_t idx) {
 ScoredDocument ANNIterator::score(std::vector<DocValue> fields) const {
     score_t score = lintdb::score_embeddings(this->scoring_method, fields, this->knn_);
 
-    return ScoredDocument(score, doc_id(), fields);
+    return ScoredDocument(score, 0, fields);
 }
 
 AndIterator::AndIterator(std::vector<std::unique_ptr<DocIterator>> iterators,
