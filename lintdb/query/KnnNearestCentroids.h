@@ -34,6 +34,10 @@ class KnnNearestCentroids {
         return coarse_idx;
     }
 
+    inline size_t get_num_centroids() const {
+        return num_centroids;
+    }
+
     /// Returns the top centroid id for the idx-th token.
     inline idx_t get_assigned_centroid(size_t idx) const {
         return coarse_idx[idx * total_centroids_to_calculate];

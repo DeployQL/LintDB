@@ -28,6 +28,8 @@ set(LINT_DB_SRC
     scoring/plaid.cpp
     query/decode.cpp
         scoring/ContextCollector.cpp
+        scoring/scoring_methods.h
+        scoring/scoring_methods.cpp
 )
 
 set(LINT_DB_HEADERS

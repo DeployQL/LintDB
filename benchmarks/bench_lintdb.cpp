@@ -92,8 +92,8 @@ static void BM_lintdb_search(benchmark::State& state) {
     lintdb::Query query(std::move(root));
 
     lintdb::SearchOptions opts;
-    opts.n_probe = 64;
-    opts.k_top_centroids = 64;
+    opts.n_probe = 32;
+    opts.k_top_centroids = 2;
 
     for(auto _ : state) {
         index.search(0, query, 10, opts);

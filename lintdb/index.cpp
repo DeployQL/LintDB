@@ -30,6 +30,7 @@
 #include "lintdb/scoring/Scorer.h"
 #include "lintdb/util.h"
 #include "lintdb/version.h"
+#include "lintdb/scoring/ScoredDocument.h"
 
 namespace lintdb {
 
@@ -376,6 +377,8 @@ std::vector<SearchResult> IndexIVF::search(
 
     VLOG(10) << "preparing search";
     auto fm = field_mapper;
+    // TODO (mbarta): QueryContext is a catch-all that is slowly being phased out.
+    // As we develop more of a query engine, passing around all of this information won't be needed.
     QueryContext context(
             tenant,
             opts.colbert_field,
@@ -383,9 +386,9 @@ std::vector<SearchResult> IndexIVF::search(
             fm,
             coarse_quantizer_map,
             quantizer_map);
-    PlaidScorer scorer(context);
+
     ColBERTScorer ranker(context);
-    QueryExecutor executor(scorer, ranker);
+    QueryExecutor executor(ranker);
 
     VLOG(10) << "executing search";
     std::vector<ScoredDocument> results =

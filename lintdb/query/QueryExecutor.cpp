@@ -1,18 +1,15 @@
 #include "QueryExecutor.h"
-#include <queue>
-#include <unordered_map>
 #include <vector>
 #include "decode.h"
 #include "DocIterator.h"
 #include "DocValue.h"
 #include "lintdb/query/KnnNearestCentroids.h"
-#include "lintdb/schema/DataTypes.h"
-#include "lintdb/schema/DocEncoder.h"
 #include "lintdb/scoring/ContextCollector.h"
+#include "lintdb/scoring/ScoredDocument.h"
 
 namespace lintdb {
-QueryExecutor::QueryExecutor(Scorer& retriever, Scorer& ranker)
-        : retriever(retriever), ranker(ranker) {}
+QueryExecutor::QueryExecutor(Scorer& ranker)
+        : ranker(ranker) {}
 
 std::vector<ScoredDocument> QueryExecutor::execute(
         QueryContext& context,
@@ -21,17 +18,10 @@ std::vector<ScoredDocument> QueryExecutor::execute(
         const SearchOptions& opts) {
     std::unique_ptr<DocIterator> doc_it = query.root->process(context, opts);
 
-    ContextCollector collector;
-    collector.add_field(context, context.colbert_context);
-
     std::vector<std::pair<idx_t, std::vector<DocValue>>> documents;
     for(; doc_it->is_valid(); doc_it->advance()) {
         std::vector<DocValue> dvs = doc_it->fields();
-        std::vector<DocValue> added_context = collector.get_context_values(doc_it->doc_id());
 
-        for (auto& dv : added_context) {
-            dvs.push_back(dv);
-        }
         documents.emplace_back(doc_it->doc_id(), dvs);
     }
 
@@ -39,21 +29,22 @@ std::vector<ScoredDocument> QueryExecutor::execute(
 #pragma omp parallel for if(documents.size() > 100)
     for(int i = 0; i < documents.size(); i++) {
         auto doc = documents[i];
-        for (auto& dv : doc.second) {
-            // ColBERT is a special case where we don't have a value to decode.
-            if (dv.unread_value) {
-                continue;
-            }
-            dv = decode_vectors(context, dv);
-        }
-        ScoredDocument scored = retriever.score(context, doc.first, doc.second);
+//        for (auto& dv : doc.second) {
+//            // ColBERT is a special case where we don't have a value to decode.
+//            if (dv.unread_value) {
+//                continue;
+//            }
+//            dv = decode_vectors(context, dv);
+//        }
+        ScoredDocument scored = doc_it->score(doc.second);
+        scored.doc_id = doc.first;
 
         if (opts.expected_id != -1 && doc.first == opts.expected_id) {
             LOG(INFO) << "\tscore: " << scored.score;
         }
 
         results[i] = scored;
-    }
+    } // end for
 
     std::sort(results.begin(), results.end(), std::greater<>());
 
