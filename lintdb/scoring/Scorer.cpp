@@ -47,7 +47,7 @@ ScoredDocument ColBERTScorer::score(
             context.getOrCreateNearestCentroids(context.colbert_context)
                     ->get_query_tensor();
 
-    auto query_span = gsl::span<float>(query.query);
+    auto query_span = gsl::span<const float>(query.query);
 
     DocumentScore score = score_document_by_residuals(
             query_span,
