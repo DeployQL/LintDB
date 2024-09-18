@@ -27,8 +27,8 @@ enum class UnaryScoringMethod {
 score_t score(const UnaryScoringMethod method, const std::vector<DocValue>& values);
 
 enum class EmbeddingScoringMethod {
-    PLAID = 1,
-    COLBERT = 2
+    PLAID = 0,
+    COLBERT = 1
 };
 
 score_t score_embeddings(const EmbeddingScoringMethod method, const std::vector<DocValue>& values, std::shared_ptr<KnnNearestCentroids> knn);

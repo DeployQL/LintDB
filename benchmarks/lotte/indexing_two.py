@@ -162,8 +162,6 @@ def eval(index_path = "local_db_2.index", dataset: str = 'lifestyle', failure_id
 
     with open(f"experiments/{experiment}.ranking.tsv", "w") as f:
         for id, query in zip(data.qids, data.queries):
-            # if failure_id is not None and id != failure_id:
-            #     continue
             embeddings = checkpoint.queryFromText([query], bsize=1)
             normalized = torch.nn.functional.normalize(embeddings, p=2, dim=2)
             converted = np.squeeze(normalized.cpu().numpy().astype('float32'))
