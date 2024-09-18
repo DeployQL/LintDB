@@ -2,10 +2,6 @@
 
 cmake_minimum_required(VERSION 3.21 FATAL_ERROR)
 
-project(lintdb
-    LANGUAGES CXX
-)
-
 set(CMAKE_CXX_STANDARD 17)
 
 find_package(Python
@@ -24,7 +20,7 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-add_subdirectory(${PROJECT_SOURCE_DIR}/../../third_party/nanobind nanobind EXCLUDE_FROM_ALL)
+add_subdirectory(${PROJECT_SOURCE_DIR}/third_party/nanobind nanobind EXCLUDE_FROM_ALL)
 find_package(nanobind CONFIG REQUIRED)
 
 nanobind_add_module(
@@ -34,8 +30,11 @@ nanobind_add_module(
 )
 
 target_link_libraries(core PRIVATE
-        lintdb_lib
+        lintdb
+        faiss
 )
+target_include_directories(core PRIVATE nanobind)
+
 
 install(TARGETS core LIBRARY DESTINATION lintdb)
 

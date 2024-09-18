@@ -4,7 +4,7 @@
 #include <faiss/IndexPQ.h>
 #include <faiss/utils/distances.h>
 #include <glog/logging.h>
-#include "lintdb/assert.h"
+#include "lintdb/utils/assert.h"
 
 namespace lintdb {
 PQDistanceTables::PQDistanceTables(
@@ -36,7 +36,7 @@ std::vector<float> PQDistanceTables::calculate_query_distances(
         auto query_token_id = query_tokens_to_score[j];
         auto sim_table = distance_tables[query_token_id];
         float score = faiss::distance_single_code<faiss::PQDecoderGeneric>(
-                ipq->pq, sim_table.data(), codes.data());
+                ipq->pq.M, ipq->pq.nbits, sim_table.data(), codes.data());
         results[j] += score;
     }
     return results;

@@ -3,13 +3,13 @@
 #include <memory>
 #include <utility>
 #include <vector>
-#include "lintdb/assert.h"
+#include "lintdb/utils/assert.h"
 #include "lintdb/quantizers/CoarseQuantizer.h"
 
 namespace lintdb {
 
 struct QueryTensor {
-    std::vector<float> query;
+    const std::vector<float>& query;
     size_t num_query_tokens;
 };
 
@@ -43,7 +43,7 @@ class KnnNearestCentroids {
         return coarse_idx[idx * total_centroids_to_calculate];
     }
 
-    inline std::vector<float> get_reordered_distances() const {
+    inline const std::vector<float>& get_reordered_distances() const {
         return reordered_distances;
     }
 

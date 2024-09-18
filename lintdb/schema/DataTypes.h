@@ -16,7 +16,7 @@
 #include <variant>
 #include <vector>
 #include "lintdb/api.h"
-#include "lintdb/assert.h"
+#include "lintdb/utils/assert.h"
 #include "lintdb/api.h"
 #include <json/reader.h>
 #include <json/writer.h>

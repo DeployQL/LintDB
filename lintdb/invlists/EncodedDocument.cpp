@@ -10,7 +10,7 @@
 #include <memory>
 #include <string_view>
 #include "lintdb/api.h"
-#include "lintdb/assert.h"
+#include "lintdb/utils/assert.h"
 
 namespace bitsery {
 template <typename S>

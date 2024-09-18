@@ -73,7 +73,6 @@ include(FindPackageHandleStandardArgs)
 cmake_push_check_state()
 set(CMAKE_REQUIRED_QUIET ${BLAS_FIND_QUIETLY})
 
-
 set(_blas_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
 if(BLA_STATIC)
   if(WIN32)

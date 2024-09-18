@@ -118,7 +118,7 @@ def run(index_path: str = "local_db.index", stop:int=40000, reuse_colbert_cluste
         'indexing': [],
         'per_doc': [],
     }
-    for b in tqdm(batch(list(zip(d.dids, d.collection)),n=1)):
+    for b in tqdm(batch(list(zip(d.dids, d.collection)),n=100)):
         ids = [i for i,_ in b]
         docs = [d for _, d in b]
 
@@ -132,7 +132,7 @@ def run(index_path: str = "local_db.index", stop:int=40000, reuse_colbert_cluste
 
         for i, ee in zip(ids, e):
             start = time.perf_counter()
-            doc = Document(i, [TensorFieldValue("colbert", e)])
+            doc = Document(i, [TensorFieldValue("colbert", ee)])
             index.add(0, [doc])
             end = time.perf_counter()
             latencies['per_doc'].append(end - start)
@@ -148,7 +148,7 @@ def run(index_path: str = "local_db.index", stop:int=40000, reuse_colbert_cluste
 
 
 @app.command()
-def eval(index_path = "local_db_2.index", dataset: str = 'lifestyle', split: str = 'dev', stop: int = 40000):
+def eval(index_path = "local_db_2.index", dataset: str = 'lifestyle', failure_id=5, expected_doc=5462, split: str = 'dev', stop: int = 40000):
     checkpoint = "colbert-ir/colbertv2.0"
     experiment=""
 
@@ -162,6 +162,8 @@ def eval(index_path = "local_db_2.index", dataset: str = 'lifestyle', split: str
 
     with open(f"experiments/{experiment}.ranking.tsv", "w") as f:
         for id, query in zip(data.qids, data.queries):
+            # if failure_id is not None and id != failure_id:
+            #     continue
             embeddings = checkpoint.queryFromText([query], bsize=1)
             normalized = torch.nn.functional.normalize(embeddings, p=2, dim=2)
             converted = np.squeeze(normalized.cpu().numpy().astype('float32'))
@@ -177,6 +179,7 @@ def eval(index_path = "local_db_2.index", dataset: str = 'lifestyle', split: str
                 100,
                 {
                     'k_top_centroids': 32,
+                    # 'expected_id': 5462,
                 }
             )
 

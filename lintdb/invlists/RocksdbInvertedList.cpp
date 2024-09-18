@@ -4,9 +4,9 @@
 #include <rocksdb/utilities/transaction.h>
 #include <iostream>
 #include "InvertedIterator.h"
-#include "lintdb/assert.h"
+#include "lintdb/utils/assert.h"
 #include "lintdb/constants.h"
-#include "lintdb/exception.h"
+#include "lintdb/utils/exception.h"
 #include "lintdb/invlists/ContextIterator.h"
 #include "lintdb/invlists/RocksdbForwardIndex.h"
 #include "lintdb/schema/DocEncoder.h"

@@ -1,6 +1,9 @@
 [build-system]
-requires = ["scikit-build-core >=0.4.3", "nanobind >=1.3.2"]
-build-backend = "scikit_build_core.build"
+requires = [
+    "scikit-build-core-conan >=0.4.0",
+    "nanobind >=1.3.2"
+]
+build-backend = "scikit_build_core_conan.build"
 
 [project]
 name = "lintdb"
@@ -23,7 +26,6 @@ dependencies = [
 Homepage = "https://github.com/deployQL/lintdb"
 
 [tool.pytest.ini_options]
-#pythonpath = [ "./builds/python/lintdb/python/Release", "lintdb/python" ]
 testpaths = [
     "lintdb/python/tests"
 ]
@@ -33,24 +35,22 @@ testpaths = [
 minimum-version = "0.4"
 
 # Setuptools-style build caching in a local directory
-build-dir = "builds/{wheel_tag}"
-
-# Build stable ABI wheels for CPython 3.12+
-#wheel.py-api = "cp310"
+build-dir = "build/{wheel_tag}"
 
 cmake.build-type = "Release"
 
 sdist.cmake = true
 wheel.packages = ["lintdb/python"]
-cmake.targets = ['lintdb_lib', 'core']
+cmake.targets = ['lintdb', 'core']
 
-[tool.scikit-build.cmake.define]
-# to use a shared library, we need to jump through some hoops for python: https://github.com/scikit-build/scikit-build/issues/272
-# SO link: https://stackoverflow.com/questions/70044257/packaging-executable-shared-library-and-python-bindings-not-finding-library
-BUILD_SHARED_LIBS = "OFF"
-CMAKE_CXX_COMPILER = "clang++"
-#CMAKE_INSTALL_LIBDIR = "lib"
-CMAKE_VERBOSE_MAKEFILE = "OFF"
-ENABLE_PYTHON = "ON"
-BUILD_TESTING = "OFF"
-#BLA_VENDOR = "Intel10_64lp"
+[tool.scikit-build-core-conan]
+path = "."
+build = "missing"
+options = ["build_python=True", "build_tests=False", "build_benchmarks=False"]
+settings = []
+config = []
+output_folder = "build"
+
+#[[tool.scikit-build-core-conan.overrides]]
+#if.platform-system = "linux"
+#options= ["build_python=true"]

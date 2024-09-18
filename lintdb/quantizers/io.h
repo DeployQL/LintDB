@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include "lintdb/exception.h"
+#include "lintdb/utils/exception.h"
 #include "lintdb/quantizers/Binarizer.h"
 #include "lintdb/quantizers/IdentityQuantizer.h"
 #include "lintdb/quantizers/ProductEncoder.h"
