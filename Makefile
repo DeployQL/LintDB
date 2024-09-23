@@ -17,8 +17,6 @@ build-debug:
 	cmake --build --preset debug -v -j12 --target lintdb_lib
 	cmake --build --preset debug -v -j12 --target lintdb-tests
 
-build-conan:
-
 
 build-python:
 	MKLROOT=${ROOT_DIR}/builds/python/vcpkg_installed/x64-linux/lib/intel64 cmake \
