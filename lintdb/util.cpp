@@ -3,7 +3,7 @@
 #include <fstream>
 #include <unordered_map>
 #include "lintdb/api.h"
-#include "lintdb/exception.h"
+#include "lintdb/utils/exception.h"
 #include "lintdb/SearchOptions.h"
 
 namespace lintdb {

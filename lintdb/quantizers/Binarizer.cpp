@@ -8,8 +8,12 @@
 #include <cmath>
 #include <fstream>
 #include <numeric>
-#include "lintdb/assert.h"
+#include "lintdb/utils/assert.h"
 #include "lintdb/util.h"
+
+#if defined(__AVX2__)
+#include <immintrin.h>
+#endif
 
 namespace lintdb {
 Binarizer::Binarizer(size_t nbits, size_t dim)
@@ -277,7 +281,6 @@ std::vector<uint8_t> Binarizer::bucketize(const std::vector<float>& residuals) {
     // residuals is a vector of size dim.
     std::vector<uint8_t> binarized(residuals.size() * nbits);
 
-#pragma omp parallel for
     for (size_t i = 0; i < residuals.size(); ++i) {
         uint8_t bucket = 0;
         bool bucket_found = false;
@@ -345,6 +348,7 @@ std::vector<uint8_t> Binarizer::create_decompression_lut() {
 }
 
 void Binarizer::sa_encode(size_t n, const float* x, residual_t* codes) {
+#pragma omp parallel for
     for (size_t i = 0; i < n; ++i) {
         // TODO (mbarta): stop making this copy.
         std::vector<float> residuals(x + i * dim, x + (i + 1) * dim);
@@ -358,11 +362,58 @@ void Binarizer::sa_encode(size_t n, const float* x, residual_t* codes) {
     }
 }
 
+#ifdef __AVX2__
+void Binarizer::sa_decode_1bit(size_t n, const residual_t* residuals, float* x) {
+    constexpr size_t npacked_vals_per_byte = 8;  // For 1-bit quantization
+    const size_t packed_dim = (dim / npacked_vals_per_byte);
+
+    // Precompute the two possible values for 1-bit quantization
+    const float low_value = bucket_weights[0];
+    const float high_value = bucket_weights[1];
+
+    // Create vectors of low and high values
+    const __m256 low_vec = _mm256_set1_ps(low_value);
+    const __m256 high_vec = _mm256_set1_ps(high_value);
+
+#pragma omp parallel for
+    for (size_t i = 0; i < n; ++i) {
+        for (size_t k = 0; k < packed_dim; ++k) {
+            uint8_t packed = residuals[i * packed_dim + k];
+
+            // Process 8 bits at a time using AVX2 instructions
+            __m256i bits = _mm256_set1_epi32(packed);
+            __m256i mask = _mm256_set_epi32(0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80);
+            __m256i unpacked = _mm256_cmpeq_epi32(_mm256_and_si256(bits, mask), mask);
+
+            // Use the mask to select between low and high values
+            __m256 result = _mm256_blendv_ps(low_vec, high_vec, _mm256_castsi256_ps(unpacked));
+
+            // Store the result
+            _mm256_storeu_ps(&x[i * dim + k * npacked_vals_per_byte], result);
+        }
+    }
+}
+
+#endif
+
 void Binarizer::sa_decode(size_t n, const residual_t* residuals, float* x) {
+// Use AVX2 instructions for 1-bit quantization
+#ifdef __AVX2__
+    if (nbits == 1) {
+        sa_decode_1bit(n, residuals, x);
+        return;
+    }
+#endif
+
+    sa_decode_generic(n, residuals, x);
+}
+
+void Binarizer::sa_decode_generic(size_t n, const residual_t* residuals, float* x) {
     const size_t npacked_vals_per_byte = (8 / nbits);
 
     const size_t packed_dim = (dim / npacked_vals_per_byte);
     // for each token doc.
+#pragma omp parallel for
     for (size_t i = 0; i < n; ++i) {
         // for each packed residual value
         for (int k = 0; k < packed_dim; ++k) {

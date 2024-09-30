@@ -9,6 +9,7 @@
 #include "lintdb/quantizers/Quantizer.h"
 #include "lintdb/query/Query.h"
 #include "lintdb/query/QueryNode.h"
+#include <omp.h>
 
 lintdb::Document create_document(size_t num_tokens, size_t dim){
     std::vector<float> vector;
@@ -85,7 +86,8 @@ static void BM_lintdb_add(benchmark::State& state) {
 }
 
 static void BM_lintdb_search(benchmark::State& state) {
-    lintdb::IndexIVF index = lintdb::IndexIVF("/home/matt/deployql/LintDB/benchmarks/lintdb-lifestyle-40k");
+    omp_set_num_threads(6);
+    lintdb::IndexIVF index = lintdb::IndexIVF("/home/matt/deployql/LintDB/benchmarks/openblastest.db"); //lintdb-lifestyle-40k");
 
     lintdb::FieldValue fv("colbert", std::vector<float>(1280, 1), 10);
     std::unique_ptr<lintdb::VectorQueryNode> root = std::make_unique<lintdb::VectorQueryNode>(fv);
@@ -93,10 +95,13 @@ static void BM_lintdb_search(benchmark::State& state) {
 
     lintdb::SearchOptions opts;
     opts.n_probe = 32;
-    opts.k_top_centroids = 2;
+    opts.k_top_centroids = 32;
 
     for(auto _ : state) {
-        index.search(0, query, 10, opts);
+        auto res = index.search(0, query, 10, opts);
+        if(res.size() == 0) {
+            std::cout << "No results" << std::endl;
+        }
     }
 }
 

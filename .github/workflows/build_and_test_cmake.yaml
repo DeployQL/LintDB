@@ -27,52 +27,30 @@ jobs:
         run: |
           git submodule update --init --recursive
       - uses: lukka/get-cmake@latest
-      - name: Setup vcpkg
-        uses: lukka/run-vcpkg@v11
-        id: runvcpkg
-        with:
-          # This one is not needed, as it is the default value anyway.
-          vcpkgDirectory: '${{ github.workspace }}/tools/vcpkg'
-          vcpkgJsonGlob: '**/cmakepresets/vcpkg.json'
-
-      - name: Prints output of run-vcpkg's action.
-        run: echo "root='${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_ROOT_OUT }}', triplet='${{ steps.runvcpkg.outputs.RUNVCPKG_VCPKG_DEFAULT_TRIPLET_OUT }}' "
-      - name: Run CMake+vcpkg+Ninja
-        uses: lukka/run-cmake@v10
-        id: runcmake
-        env:
-          CC: clang-18
-          CXX: clang++-18
-          CMAKE_C_COMPILER: clang-18
-          CMAKE_CXX_COMPILER: clang++-18
-          MKLROOT: ${{ github.workspace }}/builds/debug/vcpkg_installed/x64-linux/lib/intel64
-        with:
-          cmakeListsTxtPath: '${{ github.workspace }}/CMakeLists.txt'
-          configurePresetAdditionalArgs: "['-DOpenMP_CXX_FLAGS=-fopenmp=libiomp5', '-DOpenMP_CXX_LIB_NAMES=libiomp5', '-DOpenMP_libiomp5_LIBRARY=${{ github.workspace }}/builds/debug/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so']"
-          configurePreset: 'debug'
-          buildPreset: 'debug'
-          testPreset: 'debug'
-          testPresetCmdString:  "['lintdb-tests', '--test-dir', 'builds/debug', '--output-on-failure']"
-
       - uses: actions/setup-python@v4
         with:
           python-version: 3.10.6
+      - name: Install Conan
+        id: conan
+        uses: turtlebrowser/get-conan@main
 
       - name: Install Dependencies
-        env:
-          CC: clang-18
-          CXX: clang++-18
-          CMAKE_C_COMPILER: clang-18
-          CMAKE_CXX_COMPILER: clang++-18
         run: |
-          echo "CXX=${CXX}"
-          pip install pytest numpy
-        
-          sudo apt-get remove clang-14 clang-15
-          sudo rm /usr/bin/clang++
-          sudo ln -s /usr/bin/clang++-18 /usr/bin/clang++
+          pip install pytest numpy conan
+          sudo apt install g++ gcc libopenblas libopenblas-openmp-dev liblapack-dev
           pip install .
+
+      - name: Build
+        run: |
+          mkdir build && cd build \
+          && conan profile new default --detect \
+          && conan install .. --build=missing -s build_type=Release -s build_tests=True \
+          && conan build ..
       - name: Run Tests
+        run: |
+          cd ./build/Release/tests \
+          && ctest --output-on-failure lintdb-tests
+      - name: Run Python Tests
         run: |
           pytest lintdb/python/tests  
 

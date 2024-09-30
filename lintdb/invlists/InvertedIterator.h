@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 #include "lintdb/constants.h"
-#include "lintdb/exception.h"
+#include "lintdb/utils/exception.h"
 #include "lintdb/invlists/ContextIterator.h"
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/invlists/Iterator.h"

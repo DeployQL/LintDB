@@ -4,9 +4,6 @@ build-release:
 	MKLROOT=${ROOT_DIR}/builds/release/vcpkg_installed/x64-linux/lib/intel64 cmake \
 	--preset release \
 	-DCMAKE_CXX_COMPILER=clang++-18 \
-	-DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
-	-DOpenMP_CXX_LIB_NAMES=libiomp5 \
-	-DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/builds/release/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
 	.
 
 	cmake --build --preset release -j12
@@ -14,25 +11,21 @@ build-release:
 build-debug:
 	MKLROOT=${ROOT_DIR}/builds/debug/vcpkg_installed/x64-linux/lib/intel64 cmake \
 	--preset debug \
-	-DCMAKE_CXX_COMPILER=clang++-18 \
-	-DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
-	-DOpenMP_CXX_LIB_NAMES=libiomp5 \
-	-DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/builds/debug/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
+	-DCMAKE_CXX_COMPILER=g++ \
 	.
 
-	cmake --build --preset debug -j12
+	cmake --build --preset debug -v -j12 --target lintdb_lib
+	cmake --build --preset debug -v -j12 --target lintdb-tests
+
 
 build-python:
 	MKLROOT=${ROOT_DIR}/builds/python/vcpkg_installed/x64-linux/lib/intel64 cmake \
 	--preset python \
 	-DCMAKE_CXX_COMPILER=clang++-18 \
-	-DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
-	-DOpenMP_CXX_LIB_NAMES=libiomp5 \
-	-DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/builds/python/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
 	.
 
-	cmake --build --preset python -j12
-	cd builds/python/lintdb/python
+	cmake --build --preset python -j12 --target lintdb_lib
+	cmake --build --preset python -j12 --target core
 
 build-server:
 	MKLROOT=${ROOT_DIR}/builds/server/vcpkg_installed/x64-linux/lib/intel64 cmake \
@@ -49,12 +42,10 @@ build-benchmarks:
 	MKLROOT=${ROOT_DIR}/builds/benchmarks/vcpkg_installed/x64-linux/lib/intel64 cmake \
 	--preset benchmarks \
 	-DCMAKE_CXX_COMPILER=clang++-18 \
-	-DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
-	-DOpenMP_CXX_LIB_NAMES=libiomp5 \
-	-DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/builds/benchmarks/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
 	.
 
-	cmake --build --preset benchmarks -j12 --target bench_lintdb
+	cmake --build --preset benchmarks -j12  --target lintdb_lib
+	cmake --build --preset benchmarks -v -j12 --target bench_lintdb
 
 test:
 	cd builds/debug && cmake -E env GLOG_v=5 GLOG_logtostderr=1 ctest --output-on-failure
@@ -76,8 +67,8 @@ callgrind-py:
 	dot -Tsvg out.dot -o graph.svg
 
 callgrind-cpp: build-benchmarks
-	GLOG_v=100 valgrind --tool=callgrind --instr-atstart=yes --dump-instr=yes --collect-jumps=yes ./builds/benchmarks/benchmarks/Release/bench_lintdb
-	python -m gprof2dot --format=callgrind --output=out.dot callgrind.out.*
+	valgrind --tool=callgrind --instr-atstart=yes --dump-instr=yes --collect-jumps=yes ./builds/benchmarks/benchmarks/Release/bench_lintdb
+	python -m gprof2dot -n0 -e0 --format=callgrind --output=out.dot --strip callgrind.out.*
 	dot -Tsvg out.dot -o graph.svg
 
 callgrind-colbert: build-conda
@@ -85,7 +76,7 @@ callgrind-colbert: build-conda
 
 run-perf:
 # make sure your system allows perf to run. ex: sudo sysctl -w kernel.perf_event_paranoid=1 
-	OMP_MAX_ACTIVE_LEVELS=2 OMP_THREAD_LIMIT=12 OMP_NUM_THREADS=6 perf record -g -- python -X perf benchmarks/bench_lintdb.py single-index
+	OMP_MAX_ACTIVE_LEVELS=2 OMP_THREAD_LIMIT=12 OMP_NUM_THREADS=6 perf record -g -- ./builds/benchmarks/benchmarks/Release/bench_lintdb
 	perf script | ./debug/stackcollapse-perf.pl | ./debug/flamegraph.pl > perf.data.svg
 
 run-docs:

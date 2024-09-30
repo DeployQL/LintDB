@@ -1,14 +1,10 @@
 cmake_minimum_required(VERSION 3.25)
 
 include(CMakeFindDependencyMacro)
-
+include(GNUInstallDirs)
+include(ExternalProject)
 # allow faiss to build on m1 mac even though it's listed as unsupported.
-set(VCPKG_INSTALL_OPTIONS "--allow-unsupported")
 
-# Setup vcpkg script with CMake (note: should be placed before project() call)
-set(CMAKE_TOOLCHAIN_FILE
-    ${CMAKE_CURRENT_SOURCE_DIR}/tools/vcpkg/scripts/buildsystems/vcpkg.cmake
-    CACHE STRING "Vcpkg toolchain file")
 
 file(READ "version.txt" version)
 
@@ -19,64 +15,144 @@ project(
   LANGUAGES CXX)
 set(LINTDB_VERSION ${version})
 
-include(GNUInstallDirs)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++17 -fPIC -Wall -pthread")
 
-set(CMAKE_CXX_STANDARD 17)
+if (__x86_64__)
+  set(CMAKE_CXX_FLAGS "-msse4.2 ${CMAKE_CXX_FLAGS}")
+endif()
 
-set(CMAKE_CXX_FLAGS
-    "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -O3 -D_LIBCPP_DISABLE_AVAILABILITY"
-)
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+
 
 if(MSVC OR LINUX)
-  set(BLA_VENDOR "Intel10_64lp")
+#  set(BLA_VENDOR "Intel10_64lp")
+#  set(BLA_VENDOR_THREADING "intel")
+  set(BLA_VENDOR "OpenBLAS")
 else()
     set(BLA_VENDOR "OpenBLAS")
 endif()
 
+set(CMAKE_CXX_STANDARD 17)
 # the below is caused by github actions failing to build flatbuffers. therefore,
 # we set this value so that we use a higher sdk version to build it.
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.13)
-set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-
-# https://conda-forge.org/docs/maintainer/knowledge_base/#newer-c-features-with-old-sdk
-# if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") set(CMAKE_CXX_FLAGS
-# "${CMAKE_CXX_FLAGS} ") endif()
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
-if(SKBUILD)
-  message("Building with scikit-build")
-  cmake_path(GET CMAKE_CURRENT_BINARY_DIR PARENT_PATH BUILD_PARENT_DIR)
-  set(ENV{MKLROOT}
-      "${BUILD_PARENT_DIR}/vcpkg_installed/x64-linux/lib/intel64")
-  set(OpenMP_libiomp5_LIBRARY
-      "${BUILD_PARENT_DIR}/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so"
-  )
-  set(CMAKE_BUILD_TYPE Release)
+# OpenMP is getting pulled in through a version of blas. This needs to get figured out.
+find_package(OpenMP REQUIRED)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/libs/libfaiss.cmake)
+include_directories(third_party/faiss)
+
+find_package(LAPACK REQUIRED)
+find_package(BLAS REQUIRED)
+find_package(RocksDB REQUIRED)
+find_package(glog CONFIG REQUIRED)
+find_package(Microsoft.GSL CONFIG REQUIRED)
+find_package(jsoncpp CONFIG REQUIRED)
+find_package(Bitsery CONFIG REQUIRED)
+find_package(Drogon REQUIRED)
+
+if(OPENMP_FOUND)
+  message(STATUS "OpenMP flags: ${OpenMP_CXX_FLAGS} -- ${OpenMP_EXE_LINKER_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+  set(CMAKE_EXE_LINKER_FLAGS
+          "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
 endif()
 
-set(CMAKE_INSTALL_PREFIX ${PROJECT_SOURCE_DIR})
+include_directories(third_party/tantivy)
 
-option(ENABLE_PYTHON "Build Python extension." ON)
-option(ENABLE_BENCHMARKS "Build benchmarks." ON)
-option(ENABLE_SERVER "Build the server." OFF)
+include_directories(lintdb)
 
-add_subdirectory(lintdb)
+# Collect source files
+file(GLOB LINT_DB_SRC
+        "lintdb/*.cpp"
+        "lintdb/quantizers/*.cpp"
+        "lintdb/quantizers/impl/*.cpp"
+        "lintdb/invlists/*.cpp"
+        "lintdb/query/*.cpp"
+        "lintdb/schema/*.cpp"
+        "lintdb/scoring/*.cpp"
+)
 
-if(ENABLE_PYTHON)
+# Collect header files
+file(GLOB LINT_DB_HEADERS
+        "lintdb/*.h"
+        "lintdb/quantizers/*.h"
+        "lintdb/quantizers/impl/*.h"
+        "lintdb/invlists/*.h"
+        "lintdb/query/*.h"
+        "lintdb/schema/*.h"
+        "lintdb/scoring/*.h"
+        "lintdb/utils/*.h"
+)
+
+add_library(lintdb ${LINT_DB_SRC})
+
+target_compile_options(
+        lintdb
+        PRIVATE $<$<COMPILE_LANGUAGE:CXX>:
+        -mfma
+        -mf16c
+        -mavx2
+        -msse4.2
+        -mpopcnt
+        -Wno-sign-compare
+        -Wno-unused-variable
+        -Wno-reorder
+        -Wno-unused-local-typedefs
+        -Wno-unused-function
+        -Wno-strict-aliasing>)
+
+target_link_libraries(
+        lintdb PUBLIC OpenMP::OpenMP_CXX ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES}
+)
+
+target_link_libraries(lintdb
+        PUBLIC
+        faiss
+        JsonCpp::JsonCpp
+        Bitsery::bitsery
+        glog::glog
+        Microsoft.GSL::GSL
+        RocksDB::rocksdb
+)
+
+target_include_directories(lintdb
+        PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>)
+
+
+
+option(BUILD_PYTHON "Build Python extension." OFF)
+option(BUILD_BENCHMARKS "Build benchmarks." ON)
+option(BUILD_TESTS "Build tests." OFF)
+option(BUILD_SERVER "Build the server." OFF)
+
+
+if(BUILD_PYTHON)
+  message(STATUS "building python extension")
   add_subdirectory(lintdb/python)
 endif()
 
-IF(ENABLE_SERVER)
+IF(BUILD_SERVER)
   add_subdirectory(lintdb/server)
 endif()
 
 include(CTest)
-if(BUILD_TESTING)
+if(BUILD_TESTS)
   add_subdirectory(tests)
 endif()
 
-
-if(ENABLE_BENCHMARKS)
+if(BUILD_BENCHMARKS)
   add_subdirectory(benchmarks)
 endif()
+
+install(TARGETS lintdb
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}
+)
+foreach(header ${LINT_DB_HEADERS})
+  get_filename_component(dir ${header} DIRECTORY)
+  install(FILES ${header} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lintdb/${dir})
+endforeach()

@@ -34,7 +34,6 @@ struct ForwardIndexIterator {
     lintdb::column_index_t cf;
     string prefix;
     string end_key;
-    rocksdb::Slice prefix_slice;
     ForwardIndexKey current_key;
 
     const idx_t tenant;

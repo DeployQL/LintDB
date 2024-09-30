@@ -30,8 +30,7 @@ ScoredDocument ColBERTScorer::score(
             context.getFieldMapper()->getFieldID(context.colbert_context);
     size_t dim = context.getFieldMapper()->getFieldDimensions(colbert_field_id);
 
-    SupportedTypes colbert_data = dvs[colbert_data_idx].value;
-    ColBERTContextData colbert = std::get<ColBERTContextData>(colbert_data);
+    ColBERTContextData colbert = std::get<ColBERTContextData>(dvs[colbert_data_idx].value);
 
     size_t num_tensors = colbert.doc_codes.size();
 

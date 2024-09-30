@@ -163,6 +163,7 @@ DocumentScore score_document_by_residuals(
     DocumentScore doc;
     // find the max score for each doc_token.
     std::vector<float> max_scores(n, 0);
+#pragma omp parallel for
     for (size_t i = 0; i < m; i++) { // per num_doc_tokens
         float max_token_score = 0.0;
         for (size_t j = 0; j < n; j++) { // per num_query_tokens

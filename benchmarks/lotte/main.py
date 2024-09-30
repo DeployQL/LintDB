@@ -1,4 +1,3 @@
-import lintdb as ldb
 from datasets import load_dataset
 from collections import namedtuple
 from colbert import Indexer, Searcher

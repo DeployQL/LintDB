@@ -9,7 +9,7 @@
 
 #include <unordered_set>
 #include "lintdb/api.h"
-#include "lintdb/exception.h"
+#include "lintdb/utils/exception.h"
 #include "lintdb/invlists/IndexWriter.h"
 #include "lintdb/invlists/InvertedList.h"
 #include "lintdb/quantizers/CoarseQuantizer.h"

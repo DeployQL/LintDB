@@ -6,7 +6,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <string>
-#include "lintdb/exception.h"
+#include "exception.h"
 
 // #define __PRETTY_FUNCTION__ __FUNCSIG__
 

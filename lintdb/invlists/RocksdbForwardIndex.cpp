@@ -4,9 +4,9 @@
 #include <rocksdb/utilities/transaction.h>
 #include <iostream>
 #include <unordered_set>
-#include "lintdb/assert.h"
+#include "lintdb/utils/assert.h"
 #include "lintdb/constants.h"
-#include "lintdb/exception.h"
+#include "lintdb/utils/exception.h"
 #include "lintdb/invlists/ForwardIndexIterator.h"
 #include "lintdb/invlists/KeyBuilder.h"
 #include "lintdb/schema/DocEncoder.h"
