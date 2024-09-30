@@ -35,18 +35,9 @@ jobs:
         uses: turtlebrowser/get-conan@main
 
       - name: Install Dependencies
-        env:
-          CC: clang-18
-          CXX: clang++-18
-          CMAKE_C_COMPILER: clang-18
-          CMAKE_CXX_COMPILER: clang++-18
         run: |
-          echo "CXX=${CXX}"
-          pip install pytest numpy
-          sudo apt install libopenblas-openmp-dev liblapack-dev
-          sudo apt-get remove clang-14 clang-15
-          sudo rm /usr/bin/clang++
-          sudo ln -s /usr/bin/clang++-18 /usr/bin/clang++
+          pip install pytest numpy conan
+          sudo apt install g++ gcc libopenblas libopenblas-openmp-dev liblapack-dev
           pip install .
 
       - name: Build
