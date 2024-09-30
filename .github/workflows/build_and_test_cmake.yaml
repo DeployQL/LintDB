@@ -43,7 +43,7 @@ jobs:
         run: |
           echo "CXX=${CXX}"
           pip install pytest numpy
-        
+          sudo apt install libopenblas-openmp-dev liblapack-dev
           sudo apt-get remove clang-14 clang-15
           sudo rm /usr/bin/clang++
           sudo ln -s /usr/bin/clang++-18 /usr/bin/clang++
