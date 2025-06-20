@@ -23,8 +23,7 @@
                 "BUILD_TESTING": "ON",
                 "CMAKE_INSTALL_LIBDIR": "lib",
                 "ENABLE_PYTHON": "ON",
-                "CMAKE_VERBOSE_MAKEFILE":"ON",
-                "BLA_VENDOR":"Intel10_64lp"
+                "CMAKE_VERBOSE_MAKEFILE":"ON"
             }
         },
         {
@@ -42,8 +41,7 @@
                 "CMAKE_INSTALL_LIBDIR": "lib",
                 "CMAKE_VERBOSE_MAKEFILE":"ON",
                 "ENABLE_PYTHON": "OFF",
-                "ENABLE_BENCHMARKS": "ON",
-                "BLA_VENDOR":"Intel10_64lp"
+                "ENABLE_BENCHMARKS": "ON"
             }
         },
         {
@@ -61,8 +59,7 @@
                 "CMAKE_INSTALL_LIBDIR": "lib",
                 "CMAKE_VERBOSE_MAKEFILE":"ON",
                 "ENABLE_PYTHON": "ON",
-                "BUILD_TESTING": "OFF",
-                "BLA_VENDOR":"Intel10_64lp"
+                "BUILD_TESTING": "OFF"
             }
         },
         {
@@ -80,8 +77,7 @@
                 "CMAKE_INSTALL_LIBDIR": "lib",
                 "ENABLE_PYTHON": "OFF",
                 "BUILD_TESTING": "OFF",
-                "ENABLE_SERVER": "ON",
-                "BLA_VENDOR":"Intel10_64lp"
+                "ENABLE_SERVER": "ON"
             }
         },
         {
@@ -100,8 +96,7 @@
                 "ENABLE_BENCHMARKS": "ON",
                 "ENABLE_PYTHON": "OFF",
                 "BUILD_TESTING": "OFF",
-                "ENABLE_SERVER": "OFF",
-                "BLA_VENDOR":"Intel10_64lp"
+                "ENABLE_SERVER": "OFF"
             }
         }
     ],

@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 #include "lintdb/api.h"
-#include "lintdb/assert.h"
+#include "lintdb/utils/assert.h"
 #include "lintdb/cf.h"
 #include "lintdb/invlists/RocksdbForwardIndex.h"
 #include "lintdb/invlists/RocksdbInvertedList.h"

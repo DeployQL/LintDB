@@ -6,8 +6,8 @@
 #include <algorithm>
 #include <list>
 #include <memory>
-#include "lintdb/assert.h"
-#include "lintdb/exception.h"
+#include "lintdb/utils/assert.h"
+#include "lintdb/utils/exception.h"
 
 namespace lintdb {
 ProductEncoder::ProductEncoder(

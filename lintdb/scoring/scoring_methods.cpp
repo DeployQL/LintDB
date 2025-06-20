@@ -21,7 +21,7 @@ score_t plaid_similarity(const std::vector<DocValue>& values, std::shared_ptr<Kn
 
     // rank phase 1: use the codes to score the document using the centroid
     // scores.
-    auto reordered_distances = knn->get_reordered_distances();
+//    auto reordered_distances = knn->get_reordered_distances();
 
     // gives us a potentially quantized vector
     SupportedTypes colbert_context = values[colbert_idx].value;
@@ -31,11 +31,10 @@ score_t plaid_similarity(const std::vector<DocValue>& values, std::shared_ptr<Kn
     QueryTensor query = knn->get_query_tensor();
     float score = colbert_centroid_score(
             codes.doc_codes,
-            reordered_distances,
+            knn->get_reordered_distances(),
             query.num_query_tokens,
             knn->get_num_centroids(),
             -1);
-
     return score;
 }
 

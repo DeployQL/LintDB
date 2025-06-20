@@ -1,10 +1,14 @@
 #pragma once
 
-#include <rocksdb/db.h>
-#include <rocksdb/iterator.h>
 #include <vector>
+#include <memory>
 #include "lintdb/invlists/PostingData.h"
 #include "lintdb/version.h"
+
+namespace rocksdb {
+    class DB;
+    class ColumnFamilyHandle;
+}
 
 namespace lintdb {
 

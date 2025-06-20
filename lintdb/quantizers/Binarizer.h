@@ -42,6 +42,12 @@ struct Binarizer : public Quantizer {
 
     void sa_encode(size_t n, const float* x, residual_t* codes) override;
     void sa_decode(size_t n, const residual_t* codes, float* x) override;
+
+    void sa_decode_generic (size_t n, const residual_t* codes, float* x);
+#ifdef __AVX2__
+    void sa_decode_1bit(size_t n, const residual_t* codes, float* x);
+#endif
+
     size_t code_size() override;
 
     size_t get_nbits() override {

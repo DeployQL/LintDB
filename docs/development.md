@@ -48,6 +48,16 @@ python -m nanobind.stubgen -m lintdb.core -M py.typed -o core.pyi
 ```
 
 ---
+# Conan
+
+LintDB is moving to Conan as a package manager.
+
+### Building
+```
+conan install . --output-folder=build --build=missing 
+```
+
+---
 
 # Makefile commands
 
@@ -60,12 +70,6 @@ make build-debug
 
 # build a release target
 make build-release
-
-# run tests
-make tests
-
-# run benchmarks
-make benchmarks
 
 # profile LintDB (note some variables need to change in the Makefile)
 make callgrind

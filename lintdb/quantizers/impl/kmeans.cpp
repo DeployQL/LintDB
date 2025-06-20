@@ -5,7 +5,7 @@
 #include <gsl/span>
 #include <random>
 #include <vector>
-#include "lintdb/assert.h"
+#include "lintdb/utils/assert.h"
 
 namespace lintdb {
 std::vector<float> kmeans(

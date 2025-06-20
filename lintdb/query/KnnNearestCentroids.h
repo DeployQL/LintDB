@@ -3,7 +3,7 @@
 #include <memory>
 #include <utility>
 #include <vector>
-#include "lintdb/assert.h"
+#include "lintdb/utils/assert.h"
 #include "lintdb/quantizers/CoarseQuantizer.h"
 
 namespace lintdb {

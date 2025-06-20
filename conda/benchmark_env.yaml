@@ -9,7 +9,6 @@ dependencies:
   - faiss-cpu
   - pytorch::pytorch
   - conda-forge::numpy
-  - conda-forge::onnxruntime-cpp==1.17.3
   - pip:
     - chardet
     - typer

@@ -2,8 +2,9 @@
 #include <glog/logging.h>
 #include <rocksdb/db.h>
 #include <rocksdb/slice.h>
+#include <rocksdb/iterator.h>
 #include "lintdb/api.h"
-#include "lintdb/assert.h"
+#include "lintdb/utils/assert.h"
 #include "lintdb/constants.h"
 #include "lintdb/invlists/PostingData.h"
 

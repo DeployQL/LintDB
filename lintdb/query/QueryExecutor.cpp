@@ -26,35 +26,41 @@ std::vector<ScoredDocument> QueryExecutor::execute(
     }
 
     std::vector<ScoredDocument> results(documents.size());
-#pragma omp parallel for if(documents.size() > 100)
-    for(int i = 0; i < documents.size(); i++) {
-        auto doc = documents[i];
-//        for (auto& dv : doc.second) {
-//            // ColBERT is a special case where we don't have a value to decode.
-//            if (dv.unread_value) {
-//                continue;
-//            }
-//            dv = decode_vectors(context, dv);
-//        }
-        ScoredDocument scored = doc_it->score(doc.second);
-        scored.doc_id = doc.first;
-
-        if (opts.expected_id != -1 && doc.first == opts.expected_id) {
-            LOG(INFO) << "\tscore: " << scored.score;
-        }
-
-        results[i] = scored;
-    } // end for
-
-    std::sort(results.begin(), results.end(), std::greater<>());
-
+    std::vector<ScoredDocument> top_results_ranked;
     size_t num_to_rank = std::min(results.size(), opts.num_second_pass);
 
-    std::vector<ScoredDocument> top_results_ranked(num_to_rank);
-    for (size_t i = 0; i < num_to_rank; i++) {
-        top_results_ranked[i] = ranker.score(
-                context, results[i].doc_id, results[i].values);
-    }
+    top_results_ranked.resize(num_to_rank);
+
+#pragma omp parallel
+    {
+#pragma omp for
+        for (int i = 0; i < documents.size(); i++) {
+            auto doc = documents[i];
+            //        for (auto& dv : doc.second) {
+            //            // ColBERT is a special case where we don't have a value to decode. if (dv.unread_value) {
+            //                continue;
+            //            }
+            //            dv = decode_vectors(context, dv);
+            //        }
+            ScoredDocument scored = doc_it->score(doc.second);
+            scored.doc_id = doc.first;
+
+            if (opts.expected_id != -1 && doc.first == opts.expected_id) {
+                LOG(INFO) << "\tscore: " << scored.score;
+            }
+
+            results[i] = scored;
+        } // end for
+
+#pragma omp single
+        std::sort(results.begin(), results.end(), std::greater<>());
+
+#pragma omp for
+        for (size_t i = 0; i < num_to_rank; i++) {
+            top_results_ranked[i] =
+                    ranker.score(context, results[i].doc_id, results[i].values);
+        }
+    } // end parallel
 
     std::sort(
             top_results_ranked.begin(),

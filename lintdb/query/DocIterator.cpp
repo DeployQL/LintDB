@@ -3,6 +3,7 @@
 #include "DocValue.h"
 #include "lintdb/schema/DocEncoder.h"
 #include "lintdb/scoring/ScoredDocument.h"
+#include "lintdb/scoring/scoring_methods.h"
 
 namespace lintdb {
 TermIterator::TermIterator(
@@ -39,6 +40,7 @@ std::vector<DocValue> TermIterator::fields() const {
 }
 
 ScoredDocument TermIterator::score(std::vector<DocValue> fields) const {
+//    LOG(INFO) << "Term Scoring method";
     score_t score = lintdb::score(this->scoring_method, fields);
 
     return ScoredDocument(score, doc_id(), fields);
@@ -129,7 +131,6 @@ void ANNIterator::heapify(size_t idx) {
 
 ScoredDocument ANNIterator::score(std::vector<DocValue> fields) const {
     score_t score = lintdb::score_embeddings(this->scoring_method, fields, this->knn_);
-
     return ScoredDocument(score, 0, fields);
 }
 

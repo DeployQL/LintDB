@@ -342,7 +342,7 @@ std::unique_ptr<FaissCoarseQuantizer> FaissCoarseQuantizer::deserialize(
     faiss::Index* index = faiss::read_index(filename.c_str());
 
     auto faiss_quantizer = std::make_unique<FaissCoarseQuantizer>(index->d);
-    faiss_quantizer->index = *dynamic_cast<faiss::IndexFlatIP*>(index);
+    faiss_quantizer->index = *static_cast<faiss::IndexFlatIP*>(index);
 
     faiss_quantizer->k = faiss_quantizer->index.ntotal;
     faiss_quantizer->d = faiss_quantizer->index.d;

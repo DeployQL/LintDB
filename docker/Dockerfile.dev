@@ -1,0 +1,42 @@
+FROM ubuntu
+
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+ENV PATH /opt/conda/bin:$PATH
+
+RUN apt-get update --fix-missing && apt-get install -y wget bzip2 ca-certificates \
+    build-essential curl pkg-config \
+    zip unzip tar bzip2 \
+    git ninja-build gfortran libpthread-stubs0-dev \
+    cmake libopenblas-dev
+
+# Get Rust
+RUN curl https://sh.rustup.rs -sSf | bash -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Install Miniconda
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O /tmp/miniconda.sh && \
+    /bin/bash /tmp/miniconda.sh -b -p /opt/miniconda && \
+    rm /tmp/miniconda.sh
+
+RUN wget https://apt.llvm.org/llvm.sh && \
+    chmod +x llvm.sh && \
+    sh ./llvm.sh all
+
+# Add Miniconda to the path
+ENV PATH="/opt/miniconda/bin:$PATH"
+
+# Update conda
+RUN conda update -n base -c defaults conda -y
+
+# Create and activate a new conda environment
+RUN conda create -y -n build_env python=3.12
+SHELL ["conda", "run", "-n", "build_env", "/bin/bash", "-c"]
+RUN echo "source activate build_env" > ~/.bashrc
+ENV PATH /opt/conda/envs/build_env/bin:$PATH
+
+# Install conda-build
+RUN conda install -y conda-build
+
+RUN conda config --append channels conda-forge
+
+# CMD [ "conda", "build", "/lintdb/conda/lintdb" ]

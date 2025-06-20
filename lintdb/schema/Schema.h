@@ -5,6 +5,8 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <arrow/api.h>
+#include <arrow/type.h>
 #include "lintdb/quantizers/Quantizer.h"
 #include "lintdb/schema/DataTypes.h"
 
@@ -31,6 +33,7 @@ struct Field {
     std::vector<FieldType> field_types; /// the field types. e.g. indexed or
                                         /// stored in the database.
     FieldParameters parameters;         /// parameters for the field.
+    int field_id = -1;  /// unique identifier for the field within the schema
 
     Field() = default;
     Field(const std::string& name,
@@ -40,7 +43,8 @@ struct Field {
             : name(name),
               data_type(data_type),
               field_types(field_types),
-              parameters(parameters) {}
+              parameters(parameters),
+              field_id(-1) {}
 
     Json::Value toJson() const;
     static Field fromJson(const Json::Value& json);
@@ -88,15 +92,116 @@ struct ColbertField : public Field {
  */
 struct Schema {
     std::vector<Field> fields;
+    int next_field_id = 0;  /// counter for assigning field IDs
 
     Schema() = default;
-    explicit Schema(const std::vector<Field>& fields) : fields(fields) {}
+    explicit Schema(const std::vector<Field>& fields) : fields(fields) {
+        // Assign field IDs to all fields
+        for (auto& field : this->fields) {
+            field.field_id = next_field_id++;
+        }
+    }
 
     Json::Value toJson() const;
     static Schema fromJson(const Json::Value& json);
 
+    /**
+     * @brief Convert this schema to an Arrow schema
+     * @return std::shared_ptr<arrow::Schema> The Arrow schema
+     */
+    std::shared_ptr<arrow::Schema> to_arrow() const {
+        std::vector<std::shared_ptr<arrow::Field>> arrow_fields;
+        
+        for (const auto& field : fields) {
+            std::shared_ptr<arrow::DataType> arrow_type;
+            
+            // Convert our DataType to Arrow DataType
+            switch (field.data_type) {
+                case DataType::INTEGER:
+                    arrow_type = arrow::int64();
+                    break;
+                case DataType::FLOAT:
+                    arrow_type = arrow::float64();
+                    break;
+                case DataType::TEXT:
+                    arrow_type = arrow::utf8();
+                    break;
+                case DataType::TENSOR:
+                    // For tensors, we create a fixed-size list of floats
+                    arrow_type = arrow::fixed_size_list(
+                        arrow::float32(),
+                        field.parameters.dimensions
+                    );
+                    break;
+                case DataType::QUANTIZED_TENSOR:
+                    arrow_type = arrow::fixed_size_list(
+                        arrow::int8(),
+                        field.parameters.dimensions
+                    );
+                    break;
+                // case DataType::BINARY:
+                //     arrow_type = arrow::binary();
+                //     break;
+                default:
+                    throw std::runtime_error("Unsupported data type for Arrow conversion: " + 
+                        std::to_string(static_cast<int>(field.data_type)));
+            }
+
+            arrow_fields.push_back(arrow::field(field.name, arrow_type));
+        }
+
+        return arrow::schema(arrow_fields);
+    }
+
+    inline Field& get_field(const std::string& name) {
+        for (auto& field : fields) {
+            if (field.name == name) {
+                return field;
+            }
+        }
+        throw std::runtime_error("Field not found: " + name);
+    }
+
+    inline const Field& get_field(const std::string& name) const {
+        for (const auto& field : fields) {
+            if (field.name == name) {
+                return field;
+            }
+        }
+        throw std::runtime_error("Field not found: " + name);
+    }
+
+    inline int get_field_index(const std::string& name) const {
+        for (int i = 0; i < fields.size(); ++i) {
+            if (fields[i].name == name) {
+                return i;
+            }
+        }
+        throw std::runtime_error("Field not found: " + name);
+    }
+    
+
     inline void add_field(Field& field) {
+        field.field_id = next_field_id++;
         fields.push_back(field);
+    }
+
+    inline Field& get_field_by_id(int field_id) {
+        for (auto& field : fields) {
+            if (field.field_id == field_id) {
+                return field;
+            }
+        }
+        throw std::runtime_error("Field not found with ID: " + std::to_string(field_id));
+    }
+
+    inline const Field& get_field_by_id(int field_id) const {
+        for (const auto& field : fields) {
+            if (field.field_id == field_id) {
+                return field;
+            }
+        }
+        throw std::runtime_error("Field not found with ID: " + std::to_string(field_id));
     }
 };
 

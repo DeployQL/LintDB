@@ -1,5 +1,7 @@
 #include "ForwardIndexIterator.h"
 #include <memory>
+#include "rocksdb/db.h"
+#include "rocksdb/slice.h"
 
 namespace lintdb {
 ForwardIndexIterator::ForwardIndexIterator(
@@ -12,7 +14,6 @@ ForwardIndexIterator::ForwardIndexIterator(
 
     prefix = kb.add(tenant).build();
 
-    prefix_slice = rocksdb::Slice(this->prefix);
     auto options = rocksdb::ReadOptions();
 
     this->it = std::unique_ptr<rocksdb::Iterator>(
