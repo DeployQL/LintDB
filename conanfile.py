@@ -63,8 +63,9 @@ class LintDBConan(ConanFile):
         self.requires("glog/0.4.0")
         self.requires("jsoncpp/1.9.5")
         self.requires("ms-gsl/4.0.0")
+        self.requires("arrow/19.0.1")
         self.requires("bitsery/5.2.4")
-        self.requires("drogon/1.9.6")
+        self.requires("drogon/1.9.10", options={"with_boost": False})
         self.requires("taywee-args/6.4.6")
 
         if self.options.build_tests:

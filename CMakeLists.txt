@@ -53,6 +53,7 @@ find_package(glog CONFIG REQUIRED)
 find_package(Microsoft.GSL CONFIG REQUIRED)
 find_package(jsoncpp CONFIG REQUIRED)
 find_package(Bitsery CONFIG REQUIRED)
+find_package(Arrow REQUIRED)
 find_package(Drogon REQUIRED)
 
 if(OPENMP_FOUND)
@@ -69,10 +70,12 @@ include_directories(lintdb)
 # Collect source files
 file(GLOB LINT_DB_SRC
         "lintdb/*.cpp"
+        "lintdb/datasources/*.cpp"
         "lintdb/quantizers/*.cpp"
         "lintdb/quantizers/impl/*.cpp"
         "lintdb/invlists/*.cpp"
         "lintdb/query/*.cpp"
+        "lintdb/query/physical/*.cpp"
         "lintdb/schema/*.cpp"
         "lintdb/scoring/*.cpp"
 )
@@ -80,10 +83,12 @@ file(GLOB LINT_DB_SRC
 # Collect header files
 file(GLOB LINT_DB_HEADERS
         "lintdb/*.h"
+        "lintdb/datasources/*.h"
         "lintdb/quantizers/*.h"
         "lintdb/quantizers/impl/*.h"
         "lintdb/invlists/*.h"
         "lintdb/query/*.h"
+        "lintdb/query/physical/*.h"
         "lintdb/schema/*.h"
         "lintdb/scoring/*.h"
         "lintdb/utils/*.h"
@@ -118,6 +123,7 @@ target_link_libraries(lintdb
         glog::glog
         Microsoft.GSL::GSL
         RocksDB::rocksdb
+        arrow::arrow
 )
 
 target_include_directories(lintdb
@@ -127,7 +133,7 @@ target_include_directories(lintdb
 
 option(BUILD_PYTHON "Build Python extension." OFF)
 option(BUILD_BENCHMARKS "Build benchmarks." ON)
-option(BUILD_TESTS "Build tests." OFF)
+option(BUILD_TESTS "Build tests." ON)
 option(BUILD_SERVER "Build the server." OFF)
 
 
@@ -142,7 +148,12 @@ endif()
 
 include(CTest)
 if(BUILD_TESTS)
+  enable_testing()
   add_subdirectory(tests)
+
+  if(EXISTS "${PROJECT_SOURCE_DIR}/lintdb/query/test")
+    add_subdirectory(lintdb/query/test)
+  endif()
 endif()
 
 if(BUILD_BENCHMARKS)

@@ -1,51 +1,16 @@
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 
 build-release:
-	MKLROOT=${ROOT_DIR}/builds/release/vcpkg_installed/x64-linux/lib/intel64 cmake \
-	--preset release \
-	-DCMAKE_CXX_COMPILER=clang++-18 \
-	.
+	# MKLROOT=${ROOT_DIR}/builds/release/vcpkg_installed/x64-linux/lib/intel64 cmake \
+	conan install . --build=missing
 
 	cmake --build --preset release -j12
 
 build-debug:
-	MKLROOT=${ROOT_DIR}/builds/debug/vcpkg_installed/x64-linux/lib/intel64 cmake \
-	--preset debug \
-	-DCMAKE_CXX_COMPILER=g++ \
-	.
+	conan install .  --build=missing -s build_type=Debug
 
-	cmake --build --preset debug -v -j12 --target lintdb_lib
-	cmake --build --preset debug -v -j12 --target lintdb-tests
-
-
-build-python:
-	MKLROOT=${ROOT_DIR}/builds/python/vcpkg_installed/x64-linux/lib/intel64 cmake \
-	--preset python \
-	-DCMAKE_CXX_COMPILER=clang++-18 \
-	.
-
-	cmake --build --preset python -j12 --target lintdb_lib
-	cmake --build --preset python -j12 --target core
-
-build-server:
-	MKLROOT=${ROOT_DIR}/builds/server/vcpkg_installed/x64-linux/lib/intel64 cmake \
-	--preset server \
-	-DCMAKE_CXX_COMPILER=clang++-18 \
-	-DOpenMP_CXX_FLAGS=-fopenmp=libiomp5 \
-	-DOpenMP_CXX_LIB_NAMES=libiomp5 \
-	-DOpenMP_libiomp5_LIBRARY=${ROOT_DIR}/builds/server/vcpkg_installed/x64-linux/lib/intel64/libiomp5.so \
-	.
-
-	cmake --build --preset server -j12
-
-build-benchmarks:
-	MKLROOT=${ROOT_DIR}/builds/benchmarks/vcpkg_installed/x64-linux/lib/intel64 cmake \
-	--preset benchmarks \
-	-DCMAKE_CXX_COMPILER=clang++-18 \
-	.
-
-	cmake --build --preset benchmarks -j12  --target lintdb_lib
-	cmake --build --preset benchmarks -v -j12 --target bench_lintdb
+	cmake --preset conan-debug 
+	cmake --build --preset conan-debug 
 
 test:
 	cd builds/debug && cmake -E env GLOG_v=5 GLOG_logtostderr=1 ctest --output-on-failure

@@ -3,6 +3,7 @@
 #include "DocValue.h"
 #include "lintdb/schema/DocEncoder.h"
 #include "lintdb/scoring/ScoredDocument.h"
+#include "lintdb/scoring/scoring_methods.h"
 
 namespace lintdb {
 TermIterator::TermIterator(
